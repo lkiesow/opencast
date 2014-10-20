@@ -1,28 +1,10 @@
-Opencast Matterhorn
+Pascals Fork of Opencast Matterhorn
 ===================
+# Notice
 
-Open Source Lecture Capture & Video Management for Education
-
-Matterhorn is a free, open-source platform to support the management of
-educational audio and video content. Institutions will use Matterhorn to
-produce lecture recordings, manage existing video, serve designated
-distribution channels, and provide user interfaces to engage students with
-educational videos.
+This is a fork of the [Official Opencast Matterhorn
+Repository](https://bitbucket.org/opencast-community/matterhorn).
 
 
-Installation
-------------
-
-Installation instructions can be found at:
-
-* [Matterhorn Release Docs for Development Branch](https://opencast.jira.com/wiki/display/MHTRUNK/Install)
-
-
-Community
----------
-
-More information about the community can be found at:
-
-* [Opencast Community Website](http://opencast.org/)
-* [Mailing lists, IRC, …](http://opencast.org/communications)
-* [Issue Tracker](http://opencast.jira.com/)
+This fork is used to develop  additional features and fixes developed by Pascal Grube  which are not yet merged into the
+official Opencast Matterhorn repository.
