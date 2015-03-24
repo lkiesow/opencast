@@ -35,10 +35,13 @@ import java.util.Map;
  */
 public interface IngestService extends JobProducer {
 
+  String UTC_DATE_FORMAT = "yyyyMMdd'T'HHmmss'Z'";
+  String START_DATE_KEY = "ingest_start_date";
+
   /**
    * Ingests the compressed mediapackage and starts the default workflow as defined by the
    * <code>org.opencastproject.workflow.default.definition</code> key, found in the system configuration.
-   * 
+   *
    * @param zippedMediaPackage
    *          A zipped file containing manifest, tracks, catalogs and attachments
    * @return Workflow instance.
@@ -54,7 +57,7 @@ public interface IngestService extends JobProducer {
 
   /**
    * Ingests the compressed mediapackage and starts the workflow as defined by <code>workflowDefinitionID</code>.
-   * 
+   *
    * @param zippedMediaPackage
    *          A zipped file containing manifest, tracks, catalogs and attachments
    * @param workflowDefinitionID
@@ -75,7 +78,7 @@ public interface IngestService extends JobProducer {
   /**
    * Ingests the compressed mediapackage and starts the workflow as defined by <code>workflowDefinitionID</code>. The
    * properties specified in <code>properties</code> will be submitted as configuration data to the workflow.
-   * 
+   *
    * @param zippedMediaPackage
    *          A zipped file containing manifest, tracks, catalogs and attachments
    * @param workflowDefinitionID
@@ -102,7 +105,7 @@ public interface IngestService extends JobProducer {
    * The steps defined in that workflow will be appended to the already running workflow instance
    * <code>workflowId</code>. If that workflow can't be found, a {@link NotFoundException} will be thrown. If the
    * <code>workflowId</code> is null, a new {@link WorkflowInstance} is created.
-   * 
+   *
    * @param zippedMediaPackage
    *          A zipped file containing manifest, tracks, catalogs and attachments
    * @param workflowDefinitionID
@@ -129,7 +132,7 @@ public interface IngestService extends JobProducer {
 
   /**
    * Create a new MediaPackage in the repository.
-   * 
+   *
    * @return The created MediaPackage
    * @throws MediaPackageException
    * @throws HandleException
@@ -143,7 +146,7 @@ public interface IngestService extends JobProducer {
 
   /**
    * Add a media track to an existing MediaPackage in the repository
-   * 
+   *
    * @param uri
    *          The URL of the file to add
    * @param flavor
@@ -161,7 +164,7 @@ public interface IngestService extends JobProducer {
 
   /**
    * Add a media track to an existing MediaPackage in the repository
-   * 
+   *
    * @param mediaFile
    *          The media file to add
    * @param flavor
@@ -179,7 +182,7 @@ public interface IngestService extends JobProducer {
 
   /**
    * Add a [metadata catalog] to an existing MediaPackage in the repository
-   * 
+   *
    * @param uri
    *          The URL of the file to add
    * @param flavor
@@ -197,7 +200,7 @@ public interface IngestService extends JobProducer {
 
   /**
    * Add a [metadata catalog] to an existing MediaPackage in the repository
-   * 
+   *
    * @param catalog
    *          The catalog file to add
    * @param flavor
@@ -215,7 +218,7 @@ public interface IngestService extends JobProducer {
 
   /**
    * Add an attachment to an existing MediaPackage in the repository
-   * 
+   *
    * @param uri
    *          The URL of the file to add
    * @param flavor
@@ -233,7 +236,7 @@ public interface IngestService extends JobProducer {
 
   /**
    * Add an attachment to an existing MediaPackage in the repository
-   * 
+   *
    * @param file
    *          The file to add
    * @param flavor
@@ -252,7 +255,7 @@ public interface IngestService extends JobProducer {
   /**
    * Ingests the mediapackage and starts the default workflow as defined by the
    * <code>org.opencastproject.workflow.default.definition</code> key, found in the system configuration.
-   * 
+   *
    * @param mediaPackage
    *          The specific Matterhorn MediaPackage being ingested
    * @return Workflow instance id.
@@ -263,7 +266,7 @@ public interface IngestService extends JobProducer {
 
   /**
    * Ingests the mediapackage and starts the workflow as defined by <code>workflowDefinitionID</code>.
-   * 
+   *
    * @param mediaPackage
    *          The specific Matterhorn MediaPackage being ingested
    * @param workflowDefinitionID
@@ -280,7 +283,7 @@ public interface IngestService extends JobProducer {
   /**
    * Ingests the mediapackage and starts the workflow as defined by <code>workflowDefinitionID</code>. The properties
    * specified in <code>properties</code> will be submitted as configuration data to the workflow.
-   * 
+   *
    * @param mediaPackage
    *          The specific Matterhorn MediaPackage being ingested
    * @param workflowDefinitionID
@@ -303,7 +306,7 @@ public interface IngestService extends JobProducer {
    * The steps defined in that workflow will be appended to the already running workflow instance
    * <code>workflowId</code>. If that workflow can't be found, a {@link NotFoundException} will be thrown. If the
    * <code>workflowId</code> is null, a new {@link WorkflowInstance} is created.
-   * 
+   *
    * @param mediaPackage
    *          The specific Matterhorn MediaPackage being ingested
    * @param workflowDefinitionID
@@ -325,12 +328,11 @@ public interface IngestService extends JobProducer {
 
   /**
    * Delete an existing MediaPackage and any linked files from the temporary ingest filestore.
-   * 
+   *
    * @param mediaPackage
    *          The specific Matterhorn MediaPackage
    * @throws IngestException
    *           if an unexpected error occurs
    */
   void discardMediaPackage(MediaPackage mediaPackage) throws IOException, IngestException;
-
 }

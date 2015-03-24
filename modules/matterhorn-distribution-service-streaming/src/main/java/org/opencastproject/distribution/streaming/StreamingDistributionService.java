@@ -91,6 +91,9 @@ public class StreamingDistributionService extends AbstractJobProducer implements
   /** The base URL for streaming */
   protected String streamingUrl = null;
 
+  /** Compatibility mode for nginx and maybe other streaming servers*/
+  protected boolean flvCompatibilityMode = false;
+
   /**
    * Creates a new instance of the streaming distribution service.
    */
@@ -122,13 +125,20 @@ public class StreamingDistributionService extends AbstractJobProducer implements
         }
       }
 
+      String compatibility = StringUtils.trimToNull(cc.getBundleContext().getProperty(
+              "org.opencastproject.streaming.flvcompatibility"));
+      if (compatibility != null) {
+        flvCompatibilityMode = Boolean.parseBoolean(compatibility);
+        logger.info("Streaming distribution is using FLV compatibility mode");
+      }
+
       logger.info("Streaming distribution directory is {}", distributionDirectory);
     }
   }
 
   /**
    * {@inheritDoc}
-   * 
+   *
    * @see org.opencastproject.distribution.api.DistributionService#distribute(String,
    *      org.opencastproject.mediapackage.MediaPackage, String)
    */
@@ -158,7 +168,7 @@ public class StreamingDistributionService extends AbstractJobProducer implements
 
   /**
    * Distribute a Mediapackage element to the download distribution service.
-   * 
+   *
    * @param mediapackage
    *          The media package that contains the element to distribute.
    * @param elementId
@@ -239,7 +249,7 @@ public class StreamingDistributionService extends AbstractJobProducer implements
 
   /**
    * {@inheritDoc}
-   * 
+   *
    * @see org.opencastproject.distribution.api.DistributionService#retract(String,
    *      org.opencastproject.mediapackage.MediaPackage, String) java.lang.String)
    */
@@ -262,7 +272,7 @@ public class StreamingDistributionService extends AbstractJobProducer implements
 
   /**
    * Retracts the mediapackage with the given identifier from the distribution channel.
-   * 
+   *
    * @param channelId
    *          the channel id
    * @param mediapackage
@@ -318,7 +328,7 @@ public class StreamingDistributionService extends AbstractJobProducer implements
 
   /**
    * Gets the destination file to copy the contents of a mediapackage element.
-   * 
+   *
    * @return The file to copy the content to
    */
   protected File getDistributionFile(String channelId, MediaPackage mp, MediaPackageElement element) {
@@ -329,7 +339,15 @@ public class StreamingDistributionService extends AbstractJobProducer implements
         if (uriString.contains("mp4:")) {
           uriString += ".mp4";
           uriString = uriString.replace("mp4:", "");
-        } else uriString += ".flv";
+        } else if (uriString.contains("flv:")) {
+          uriString += ".flv";
+          uriString = uriString.replace("flv:", "");
+        } else if (uriString.contains("mp3:")) {
+          uriString += ".mp3";
+          uriString = uriString.replace("mp3:", "");
+        } else {
+          uriString += ".flv";
+        }
       }
       String[] splitUrl = uriString.substring(streamingUrl.length() + 1).split("/");
       if (splitUrl.length < 4) {
@@ -347,7 +365,7 @@ public class StreamingDistributionService extends AbstractJobProducer implements
 
   /**
    * Gets the directory containing the distributed files for this mediapackage.
-   * 
+   *
    * @return the filesystem directory
    */
   protected File getMediaPackageDirectory(String channelId, MediaPackage mediaPackage) {
@@ -356,7 +374,7 @@ public class StreamingDistributionService extends AbstractJobProducer implements
 
   /**
    * Gets the URI for the element to be distributed.
-   * 
+   *
    * @return The resulting URI after distribution
    * @throws URISyntaxException
    *           if the concrete implementation tries to create a malformed uri
@@ -368,15 +386,15 @@ public class StreamingDistributionService extends AbstractJobProducer implements
     String tag = FilenameUtils.getExtension(element.getURI().toString()) + ":";
 
     // removes the tag for flv files, but keeps it for all others (mp4 needs it)
-    if ("flv:".equals(tag))
-      tag = "";
+    if (flvCompatibilityMode && "flv:".equals(tag))
+    tag = "";
 
     return new URI(UrlSupport.concat(streamingUrl, tag + channelId, mp.getIdentifier().compact(), elementId, fileName));
   }
 
   /**
    * {@inheritDoc}
-   * 
+   *
    * @see org.opencastproject.job.api.AbstractJobProducer#process(org.opencastproject.job.api.Job)
    */
   @Override
@@ -413,7 +431,7 @@ public class StreamingDistributionService extends AbstractJobProducer implements
 
   /**
    * Callback for the OSGi environment to set the workspace reference.
-   * 
+   *
    * @param workspace
    *          the workspace
    */
@@ -423,7 +441,7 @@ public class StreamingDistributionService extends AbstractJobProducer implements
 
   /**
    * Callback for the OSGi environment to set the service registry reference.
-   * 
+   *
    * @param serviceRegistry
    *          the service registry
    */
@@ -433,7 +451,7 @@ public class StreamingDistributionService extends AbstractJobProducer implements
 
   /**
    * {@inheritDoc}
-   * 
+   *
    * @see org.opencastproject.job.api.AbstractJobProducer#getServiceRegistry()
    */
   @Override
@@ -443,7 +461,7 @@ public class StreamingDistributionService extends AbstractJobProducer implements
 
   /**
    * Callback for setting the security service.
-   * 
+   *
    * @param securityService
    *          the securityService to set
    */
@@ -453,7 +471,7 @@ public class StreamingDistributionService extends AbstractJobProducer implements
 
   /**
    * Callback for setting the user directory service.
-   * 
+   *
    * @param userDirectoryService
    *          the userDirectoryService to set
    */
@@ -463,7 +481,7 @@ public class StreamingDistributionService extends AbstractJobProducer implements
 
   /**
    * Sets a reference to the organization directory service.
-   * 
+   *
    * @param organizationDirectory
    *          the organization directory
    */
@@ -473,7 +491,7 @@ public class StreamingDistributionService extends AbstractJobProducer implements
 
   /**
    * {@inheritDoc}
-   * 
+   *
    * @see org.opencastproject.job.api.AbstractJobProducer#getSecurityService()
    */
   @Override
@@ -483,7 +501,7 @@ public class StreamingDistributionService extends AbstractJobProducer implements
 
   /**
    * {@inheritDoc}
-   * 
+   *
    * @see org.opencastproject.job.api.AbstractJobProducer#getUserDirectoryService()
    */
   @Override
@@ -493,7 +511,7 @@ public class StreamingDistributionService extends AbstractJobProducer implements
 
   /**
    * {@inheritDoc}
-   * 
+   *
    * @see org.opencastproject.job.api.AbstractJobProducer#getOrganizationDirectoryService()
    */
   @Override

@@ -40,7 +40,7 @@ public class DelegatingAuthenticationEntryPoint implements AuthenticationEntryPo
 
   /**
    * {@inheritDoc}
-   * 
+   *
    * @see org.springframework.security.web.AuthenticationEntryPoint#commence(javax.servlet.http.HttpServletRequest,
    *      javax.servlet.http.HttpServletResponse, org.springframework.security.core.AuthenticationException)
    */
@@ -60,6 +60,8 @@ public class DelegatingAuthenticationEntryPoint implements AuthenticationEntryPo
         } else {
           request.getSession().setAttribute(INITIAL_REQUEST_PATH, requestUri + "?" + queryString);
         }
+      } else {
+        request.getSession().removeAttribute(INITIAL_REQUEST_PATH);
       }
       userEntryPoint.commence(request, response, authException);
     }
