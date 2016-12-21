@@ -562,6 +562,62 @@
     <bundle start-level="82">mvn:org.opencastproject/opencast-lti/${project.version}</bundle>
   </feature>
 
+  <feature name="opencast-worker-light">
+    <feature start-level="80">opencast-core</feature>
+
+
+    <bundle start-level="82">mvn:org.opencastproject/opencast-animate-api/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-animate-impl/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-caption-api/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-caption-impl/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-cover-image-api/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-cover-image-impl/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-dictionary-api/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-dictionary-regexp/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-execute-api/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-execute-impl/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-inspection-service-api/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-inspection-service-ffmpeg/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-publication-service-api/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-publication-service-youtube-v3/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-runtime-info-ui/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-series-service-remote/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-sox-api/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-sox-impl/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-textanalyzer-api/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-textanalyzer-impl/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-textextractor-tesseract/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-timelinepreviews-api/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-timelinepreviews-ffmpeg/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-videosegmenter-api/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-videosegmenter-ffmpeg/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-waveform-api/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-waveform-ffmpeg/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-workflow-service-remote/${project.version}</bundle>
+    <!-- Fixes MH-11263 - add LTI dependency to the kernel bundle for shared opencast.httpcontext -->
+    <bundle start-level="82">mvn:org.opencastproject/opencast-lti/${project.version}</bundle>
+  </feature>
+
+  <feature name="opencast-worker-encoding">
+    <feature start-level="80">opencast-core</feature>
+
+    <bundle start-level="82">mvn:org.opencastproject/opencast-composer-ffmpeg/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-composer-service-api/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-inspection-service-api/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-inspection-service-ffmpeg/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-runtime-info-ui/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-series-service-remote/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-silencedetection-api/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-silencedetection-impl/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-smil-api/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-smil-impl/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-videoeditor-api/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-videoeditor-ffmpeg-impl/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-workflow-service-remote/${project.version}</bundle>
+    <!-- Fixes MH-11263 - add LTI dependency to the kernel bundle for shared opencast.httpcontext -->
+    <bundle start-level="82">mvn:org.opencastproject/opencast-lti/${project.version}</bundle>
+  </feature>
+
   <feature name="opencast-adminworker">
     <feature start-level="80">opencast-core</feature>
 
