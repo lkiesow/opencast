@@ -1,0 +1,27 @@
+container: lkiesow/docker-opencast-ethz-build
+
+script:
+   - test -d docs/rpmbuild/
+   - mvn -e clean install -DskipTests=true
+   - rpmdev-setuptree
+   - mv build/opencast-dist-*.tar.gz rpmbuild/SOURCES/
+   - cp docs/rpmbuild/* rpmbuild/SOURCES/
+   - cp docs/rpmbuild/opencast.spec rpmbuild/SPECS/
+   - echo "%_opencastversion $(sed -n 's_^.*<version>\([.0-9]*\).*</version>.*$_\1_p' pom.xml | head -n1)" >> .rpmmacros
+   - echo "%_opencastsrcversion $(sed -n 's_^.*<version>\(.*\)</version>.*$_\1_p' pom.xml | head -n1)" >> .rpmmacros
+   - echo "%_opencastrelease ${BUILDNUMBER}.${BUILDHASH}.$(sed -n 's_^.*<version>\(.*\)</version>.*$_\1_p' pom.xml | head -n1 | tr - .)" >> .rpmmacros
+   - rpmbuild -ba -D "ocdist allinone" rpmbuild/SPECS/opencast.spec
+   - rpmbuild -ba -D "ocdist admin" rpmbuild/SPECS/opencast.spec
+   - rpmbuild -ba -D "ocdist worker" rpmbuild/SPECS/opencast.spec
+   - rpmbuild -ba -D "ocdist worker-light" rpmbuild/SPECS/opencast.spec
+   - rpmbuild -ba -D "ocdist worker-encoding" rpmbuild/SPECS/opencast.spec
+   - rpmbuild -ba -D "ocdist ingest" rpmbuild/SPECS/opencast.spec
+   - rpmbuild -ba -D "ocdist presentation" rpmbuild/SPECS/opencast.spec
+
+files:
+   - build/opencast-dist-*.tar.gz
+   - docs/scripts/ddl/mysql5.sql
+   - docs/scripts/activemq/activemq.xml
+   - rpmbuild/RPMS/noarch/*.rpm
+
+createrepo: true
