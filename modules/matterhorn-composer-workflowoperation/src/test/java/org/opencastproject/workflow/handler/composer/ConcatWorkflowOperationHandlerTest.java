@@ -24,8 +24,6 @@ package org.opencastproject.workflow.handler.composer;
 import org.opencastproject.composer.api.ComposerService;
 import org.opencastproject.composer.api.EncoderException;
 import org.opencastproject.composer.api.EncodingProfile;
-import org.opencastproject.composer.api.EncodingProfile.MediaType;
-import org.opencastproject.composer.layout.Dimension;
 import org.opencastproject.job.api.Job;
 import org.opencastproject.mediapackage.MediaPackage;
 import org.opencastproject.mediapackage.MediaPackageBuilder;
@@ -344,8 +342,6 @@ public class ConcatWorkflowOperationHandlerTest {
     // set up mock profile
     profile = EasyMock.createNiceMock(EncodingProfile.class);
     EasyMock.expect(profile.getIdentifier()).andReturn(PROFILE_ID);
-    EasyMock.expect(profile.getApplicableMediaType()).andReturn(MediaType.Stream);
-    EasyMock.expect(profile.getOutputType()).andReturn(MediaType.AudioVisual);
     EasyMock.expect(profile.getMimeType()).andReturn(MimeTypes.MPEG4.toString()).times(2);
     EasyMock.replay(profile);
 
@@ -353,13 +349,11 @@ public class ConcatWorkflowOperationHandlerTest {
     composerService = EasyMock.createNiceMock(ComposerService.class);
     EasyMock.expect(composerService.getProfile(PROFILE_ID)).andReturn(profile);
     if (expectedFramerate > 0) {
-      EasyMock.expect(composerService.concat(
-              (String) EasyMock.anyObject(), (Dimension) EasyMock.anyObject(),
-              EasyMock.eq(expectedFramerate), (Track) EasyMock.anyObject(), (Track) EasyMock.anyObject())).andReturn(job);
+      EasyMock.expect(composerService.concat(EasyMock.anyString(), EasyMock.anyObject(),
+              EasyMock.eq(expectedFramerate), EasyMock.anyObject(), EasyMock.anyObject())).andReturn(job);
     } else {
-      EasyMock.expect(composerService.concat(
-              (String) EasyMock.anyObject(), (Dimension) EasyMock.anyObject(),
-              (Track) EasyMock.anyObject(), (Track) EasyMock.anyObject())).andReturn(job);
+      EasyMock.expect(composerService.concat(EasyMock.anyString(), EasyMock.anyObject(),
+              EasyMock.anyObject(Track.class), EasyMock.anyObject())).andReturn(job);
     }
     EasyMock.replay(composerService);
     operationHandler.setComposerService(composerService);

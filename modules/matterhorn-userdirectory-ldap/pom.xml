@@ -121,6 +121,7 @@
             </Private-Package>
             <Import-Package>
               !com.ibm.wsspi.uow,
+              !com.sun.jndi.ldap.ctl,
               !javax.ejb,
               !javax.el,
               !javax.inject,

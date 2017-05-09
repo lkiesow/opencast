@@ -24,11 +24,7 @@ package org.opencastproject.workflow.handler.composer;
 import org.opencastproject.composer.api.ComposerService;
 import org.opencastproject.composer.api.EncoderException;
 import org.opencastproject.composer.api.EncodingProfile;
-import org.opencastproject.composer.api.EncodingProfile.MediaType;
-import org.opencastproject.composer.api.LaidOutElement;
-import org.opencastproject.composer.layout.Dimension;
 import org.opencastproject.job.api.Job;
-import org.opencastproject.mediapackage.Attachment;
 import org.opencastproject.mediapackage.MediaPackage;
 import org.opencastproject.mediapackage.MediaPackageBuilder;
 import org.opencastproject.mediapackage.MediaPackageBuilderFactory;
@@ -269,7 +265,7 @@ public class CompositeWorkflowOperationHandlerTest {
     EasyMock.expect(job.getStatus()).andReturn(Job.Status.FINISHED);
     EasyMock.expect(job.getDateCreated()).andReturn(new Date());
     EasyMock.expect(job.getDateStarted()).andReturn(new Date());
-    EasyMock.expect(job.getQueueTime()).andReturn(new Long(0));
+    EasyMock.expect(job.getQueueTime()).andReturn(0L);
     EasyMock.replay(job);
 
     // set up mock service registry
@@ -283,24 +279,18 @@ public class CompositeWorkflowOperationHandlerTest {
     operationHandler.setServiceRegistry(serviceRegistry);
   }
 
-  @SuppressWarnings("unchecked")
   private void setMockups() throws EncoderException, MediaPackageException {
     // set up mock profile
     profile = EasyMock.createNiceMock(EncodingProfile.class);
     EasyMock.expect(profile.getIdentifier()).andReturn(PROFILE_ID);
-    EasyMock.expect(profile.getApplicableMediaType()).andReturn(MediaType.Stream);
-    EasyMock.expect(profile.getOutputType()).andReturn(MediaType.AudioVisual);
     EasyMock.expect(profile.getMimeType()).andReturn(MimeTypes.MPEG4.toString()).times(2);
     EasyMock.replay(profile);
 
     // set up mock composer service
     composerService = EasyMock.createNiceMock(ComposerService.class);
     EasyMock.expect(composerService.getProfile(PROFILE_ID)).andReturn(profile);
-    EasyMock.expect(
-            composerService.composite((Dimension) EasyMock.anyObject(), Option.option((LaidOutElement<Track>) EasyMock.anyObject()),
-                    (LaidOutElement<Track>) EasyMock.anyObject(),
-                    (Option<LaidOutElement<Attachment>>) EasyMock.anyObject(), (String) EasyMock.anyObject(),
-                    (String) EasyMock.anyObject())).andReturn(job);
+    EasyMock.expect(composerService.composite(EasyMock.anyObject(), Option.option(EasyMock.anyObject()),
+            EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyString(), EasyMock.anyString())).andReturn(job);
     EasyMock.replay(composerService);
     operationHandler.setComposerService(composerService);
   }

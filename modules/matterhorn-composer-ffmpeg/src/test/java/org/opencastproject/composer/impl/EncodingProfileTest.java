@@ -112,15 +112,6 @@ public class EncodingProfileTest {
   }
 
   /**
-   * Test method for {@link org.opencastproject.composer.api.EncodingProfileImpl#getOutputType()}.
-   */
-  @Test
-  public void testGetType() {
-    EncodingProfile profile = profiles.get(h264ProfileId);
-    assertEquals(MediaType.Visual, profile.getOutputType());
-  }
-
-  /**
    * Test method for {@link org.opencastproject.composer.api.EncodingProfileImpl#getSuffix()}.
    */
   @Test

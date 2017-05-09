@@ -23,7 +23,6 @@
 package org.opencastproject.composer.impl;
 
 import static org.opencastproject.util.data.Monadics.mlist;
-import static org.opencastproject.util.data.Option.none;
 import static org.opencastproject.util.data.Option.some;
 
 import org.opencastproject.composer.api.EncoderEngine;
@@ -263,34 +262,27 @@ public abstract class AbstractCmdlineEncoderEngine extends AbstractEncoderEngine
       }
 
       if (audioSource != null) {
-        logger.info("Audio track {} and video track {} successfully encoded using profile '{}'",
-                new String[] { (audioSource == null ? "N/A" : audioSource.getName()),
-                        (videoSource == null ? "N/A" : videoSource.getName()), profile.getIdentifier() });
+        logger.info("Audio track {} and video track {} successfully encoded using profile '{}'", audioSource.getName(),
+                videoSource != null ? videoSource.getName() : "N/A", profile.getIdentifier());
       } else {
-        logger.info("Video track {} successfully encoded using profile '{}'", new String[] { videoSource.getName(),
-                profile.getIdentifier() });
+        logger.info("Video track {} successfully encoded using profile '{}'", videoSource.getName(),
+                profile.getIdentifier());
       }
       fireEncoded(this, profile, audioSource, videoSource);
-      if (profile.getOutputType() != EncodingProfile.MediaType.Nothing)
-        return some(new File(parentFile.getParent(), outFileName + outSuffix));
-      else
-        return none();
+      return some(new File(parentFile.getParent(), outFileName + outSuffix));
     } catch (EncoderException e) {
       if (audioSource != null) {
-        logger.warn(
-                "Error while encoding audio track {} and video track {} using '{}': {}",
-                new String[] { (audioSource == null ? "N/A" : audioSource.getName()),
-                        (videoSource == null ? "N/A" : videoSource.getName()), profile.getIdentifier(), e.getMessage() });
+        logger.warn("Error while encoding audio track {} and video track {} using {}", audioSource.getName(),
+                (videoSource == null ? "N/A" : videoSource.getName()), profile.getIdentifier(), e);
       } else {
-        logger.warn("Error while encoding video track {} using '{}': {}", new String[] {
-                (videoSource == null ? "N/A" : videoSource.getName()), profile.getIdentifier(), e.getMessage() });
+        logger.warn("Error while encoding video track {} using {}", videoSource.getName(), profile.getIdentifier(), e);
       }
       fireEncodingFailed(this, profile, e, audioSource, videoSource);
       throw e;
     } catch (Exception e) {
-      logger.warn("Error while encoding audio {} and video {} to {}:{}, {}",
-              new Object[] { (audioSource == null ? "N/A" : audioSource.getName()),
-                      (videoSource == null ? "N/A" : videoSource.getName()), profile.getName(), e.getMessage() });
+      logger.warn("Error while encoding audio {} and video {} using {}",
+              (audioSource == null ? "N/A" : audioSource.getName()),
+              (videoSource == null ? "N/A" : videoSource.getName()), profile.getName(), e);
       fireEncodingFailed(this, profile, e, audioSource, videoSource);
       throw new CmdlineEncoderException(this, e.getMessage(), commandStr, e);
     } finally {
@@ -562,8 +554,8 @@ public abstract class AbstractCmdlineEncoderEngine extends AbstractEncoderEngine
         throw new EncoderException(this, "Encoder exited abnormally with status " + exitCode);
       }
 
-      logger.info("Media track {} successfully encoded using profile '{}'", new String[] { mediaSource.getName(),
-             profile.getIdentifier() });
+      logger.info("Media track {} successfully encoded using profile {}", mediaSource.getName(),
+              profile.getIdentifier());
       fireEncoded(this, profile, mediaSource);
       ArrayList<File> tracks = new ArrayList<File>();
       for (String outSuffix : suffixes) {
@@ -571,25 +563,18 @@ public abstract class AbstractCmdlineEncoderEngine extends AbstractEncoderEngine
       }
       return tracks;
     } catch (EncoderException e) {
-      logger.warn("Error while encoding video track {} using '{}': {}", new String[] {
-             (mediaSource == null ? "N/A" : mediaSource.getName()), profile.getIdentifier(), e.getMessage() });
+      logger.warn("Error while encoding video track {} using '{}'",
+              mediaSource.getName(), profile.getIdentifier(), e);
       fireEncodingFailed(this, profile, e, mediaSource);
       throw e;
     } catch (Exception e) {
-      logger.warn("Error while encoding media {} to {}:{}, {}",
-              new Object[] { (mediaSource == null ? "N/A" : mediaSource.getName()), profile.getName(), e.getMessage() });
+      logger.warn("Error while encoding media {} to {}:{}", mediaSource.getName(), profile.getName(), e);
       fireEncodingFailed(this, profile, e, mediaSource);
       throw new EncoderException(this, e.getMessage(), e);
     } finally {
       IoSupport.closeQuietly(in);
       IoSupport.closeQuietly(encoderProcess);
     }
-  }
-
-  protected List<String> getTags(EncodingProfile profile) {
-    ArrayList<String> tags = new ArrayList<String>();
-
-    return tags;
   }
 
 }
