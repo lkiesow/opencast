@@ -1,25 +1,31 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
+
 
 package org.opencastproject.mediapackage.track;
 
 import org.opencastproject.mediapackage.AudioStream;
 import org.opencastproject.mediapackage.MediaPackageSerializer;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -71,31 +77,21 @@ public class AudioStreamImpl extends AbstractStreamImpl implements AudioStream {
   }
 
   /**
-   * Construct an audio stream from another audio stream
-   *
-   * @param s
-   */
-  public AudioStreamImpl(AudioStreamImpl s) {
-    this.bitdepth = s.bitdepth;
-    this.bitrate = s.bitrate;
-    this.channels = s.channels;
-    this.device = s.device;
-    this.encoder = s.encoder;
-    this.identifier = s.identifier;
-    this.samplingrate = s.samplingrate;
-    this.pkLevDb = s.pkLevDb;
-    this.rmsLevDb = s.rmsLevDb;
-    this.rmsPkDb = s.rmsPkDb;
-  }
-
-  /**
    * @see org.opencastproject.mediapackage.ManifestContributor#toManifest(org.w3c.dom.Document,
    *      org.opencastproject.mediapackage.MediaPackageSerializer)
    */
+  @Override
   public Node toManifest(Document document, MediaPackageSerializer serializer) {
     Element node = document.createElement("audio");
     // Stream ID
     node.setAttribute("id", getIdentifier());
+
+    // Frame count
+    if (frameCount != null) {
+      Element frameCountNode = document.createElement("framecount");
+      frameCountNode.appendChild(document.createTextNode(Long.toString(frameCount)));
+      node.appendChild(frameCountNode);
+    }
 
     // Device
     Element deviceNode = document.createElement("device");
@@ -197,6 +193,15 @@ public class AudioStreamImpl extends AbstractStreamImpl implements AudioStream {
       sid = streamIdHint;
     AudioStreamImpl as = new AudioStreamImpl(sid);
 
+    // Frame count
+    try {
+      String frameCount = (String) xpath.evaluate("framecount/text()", node, XPathConstants.STRING);
+      if (!StringUtils.isBlank(frameCount))
+        as.frameCount = new Long(frameCount.trim());
+    } catch (NumberFormatException e) {
+      throw new IllegalStateException("Frame count was malformatted: " + e.getMessage());
+    }
+
     // bit depth
     try {
       String bd = (String) xpath.evaluate("bitdepth/text()", node, XPathConstants.STRING);
@@ -285,30 +290,37 @@ public class AudioStreamImpl extends AbstractStreamImpl implements AudioStream {
     return as;
   }
 
+  @Override
   public Integer getBitDepth() {
     return bitdepth;
   }
 
+  @Override
   public Integer getChannels() {
     return channels;
   }
 
+  @Override
   public Integer getSamplingRate() {
     return samplingrate;
   }
 
+  @Override
   public Float getBitRate() {
     return bitrate;
   }
 
+  @Override
   public Float getPkLevDb() {
     return pkLevDb;
   }
 
+  @Override
   public Float getRmsLevDb() {
     return rmsLevDb;
   }
 
+  @Override
   public Float getRmsPkDb() {
     return rmsPkDb;
   }
@@ -343,26 +355,32 @@ public class AudioStreamImpl extends AbstractStreamImpl implements AudioStream {
     this.rmsPkDb = rmsPkDb;
   }
 
+  @Override
   public void setCaptureDevice(String captureDevice) {
     this.device.type = captureDevice;
   }
 
+  @Override
   public void setCaptureDeviceVersion(String captureDeviceVersion) {
     this.device.version = captureDeviceVersion;
   }
 
+  @Override
   public void setCaptureDeviceVendor(String captureDeviceVendor) {
     this.device.vendor = captureDeviceVendor;
   }
 
+  @Override
   public void setFormat(String format) {
     this.encoder.type = format;
   }
 
+  @Override
   public void setFormatVersion(String formatVersion) {
     this.encoder.version = formatVersion;
   }
 
+  @Override
   public void setEncoderLibraryVendor(String encoderLibraryVendor) {
     this.encoder.vendor = encoderLibraryVendor;
   }

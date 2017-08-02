@@ -6,7 +6,7 @@
   <parent>
     <groupId>org.opencastproject</groupId>
     <artifactId>base</artifactId>
-    <version>1.6.1</version>
+    <version>3.0-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <properties>
@@ -26,7 +26,6 @@
     <dependency>
       <groupId>org.easymock</groupId>
       <artifactId>easymock</artifactId>
-      <version>3.1</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -49,7 +48,17 @@
     </dependency>
     <!-- Database Drivers and Connection Pooling -->
     <dependency>
-      <groupId>c3p0</groupId>
+      <groupId>com.typesafe</groupId>
+      <artifactId>config</artifactId>
+      <version>1.2.1</version>
+    </dependency>
+    <dependency>
+      <groupId>com.mchange</groupId>
+      <artifactId>mchange-commons-java</artifactId>
+      <version>0.2.11</version>
+    </dependency>
+    <dependency>
+      <groupId>com.mchange</groupId>
       <artifactId>c3p0</artifactId>
     </dependency>
     <dependency>
@@ -59,12 +68,10 @@
     <dependency>
       <groupId>mysql</groupId>
       <artifactId>mysql-connector-java</artifactId>
-      <version>5.1.9</version>
     </dependency>
     <dependency>
       <groupId>postgresql</groupId>
       <artifactId>postgresql</artifactId>
-      <version>8.4-701.jdbc4</version>
     </dependency>
   </dependencies>
   <build>
@@ -75,20 +82,31 @@
         <extensions>true</extensions>
         <configuration>
           <instructions>
-            <Bundle-SymbolicName> ${project.artifactId} </Bundle-SymbolicName>
+            <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
+            <Build-Number>${buildNumber}</Build-Number>
             <Bundle-Activator>org.opencastproject.db.Activator</Bundle-Activator>
             <Import-Package>
-                *;resolution:=optional
-             </Import-Package>
+              !com.vividsolutions.jts.*,
+              !org.apache.lucene.*,
+              !org.jboss.resource.adapter.jdbc.*,
+              !org.hibernate.*,
+              org.w3c.dom;version=0,
+              *
+            </Import-Package>
             <Embed-Dependency>
               c3p0;inline=true,
+              config;inline=true,
               h2;inline=true,
+              mchange-commons-java;inline=true,
               mysql-connector-java;inline=true,
               postgresql;inline=true
             </Embed-Dependency>
             <Export-Package>
               org.opencastproject.db;version=${project.version}
             </Export-Package>
+            <_exportcontents>
+              com.mchange.*
+            </_exportcontents>
           </instructions>
         </configuration>
       </plugin>

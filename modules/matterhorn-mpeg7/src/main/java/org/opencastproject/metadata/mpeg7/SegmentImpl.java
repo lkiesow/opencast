@@ -1,18 +1,24 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
+
 
 package org.opencastproject.metadata.mpeg7;
 
@@ -62,49 +68,49 @@ public class SegmentImpl implements Segment, AudioSegment, VideoSegment, AudioVi
   }
 
   /**
-   * @see org.opencastproject.mediapackage.mpeg7.Segment#getIdentifier()
+   * @see org.opencastproject.metadata.mpeg7.Segment#getIdentifier()
    */
   public String getIdentifier() {
     return id;
   }
 
   /**
-   * @see org.opencastproject.mediapackage.mpeg7.Segment#setMediaTime(org.opencastproject.mediapackage.mpeg7.MediaTime)
+   * @see org.opencastproject.metadata.mpeg7.Segment#setMediaTime(org.opencastproject.metadata.mpeg7.MediaTime)
    */
   public void setMediaTime(MediaTime mediaTime) {
     this.mediaTime = mediaTime;
   }
 
   /**
-   * @see org.opencastproject.mediapackage.mpeg7.Segment#getMediaTime()
+   * @see org.opencastproject.metadata.mpeg7.Segment#getMediaTime()
    */
   public MediaTime getMediaTime() {
     return mediaTime;
   }
 
   /**
-   * @see org.opencastproject.mediapackage.mpeg7.Segment#hasTextAnnotations()
+   * @see org.opencastproject.metadata.mpeg7.Segment#hasTextAnnotations()
    */
   public boolean hasTextAnnotations() {
     return annotations.size() > 0;
   }
 
   /**
-   * @see org.opencastproject.mediapackage.mpeg7.Segment#hasTextAnnotations(java.lang.String)
+   * @see org.opencastproject.metadata.mpeg7.Segment#hasTextAnnotations(java.lang.String)
    */
   public boolean hasTextAnnotations(String language) {
     return hasTextAnnotations(0.0f, 0.0f, language);
   }
 
   /**
-   * @see org.opencastproject.mediapackage.mpeg7.Segment#hasTextAnnotations(float, float)
+   * @see org.opencastproject.metadata.mpeg7.Segment#hasTextAnnotations(float, float)
    */
   public boolean hasTextAnnotations(float relevance, float confidence) {
     return hasTextAnnotations(relevance, confidence, null);
   }
 
   /**
-   * @see org.opencastproject.mediapackage.mpeg7.Segment#hasTextAnnotations(float, float, java.lang.String)
+   * @see org.opencastproject.metadata.mpeg7.Segment#hasTextAnnotations(float, float, java.lang.String)
    */
   public boolean hasTextAnnotations(float relevance, float confidence, String language) {
     for (TextAnnotation annotation : annotations) {
@@ -121,14 +127,14 @@ public class SegmentImpl implements Segment, AudioSegment, VideoSegment, AudioVi
   }
 
   /**
-   * @see org.opencastproject.mediapackage.mpeg7.Segment#getTextAnnotationCount()
+   * @see org.opencastproject.metadata.mpeg7.Segment#getTextAnnotationCount()
    */
   public int getTextAnnotationCount() {
     return annotations.size();
   }
 
   /**
-   * @see org.opencastproject.mediapackage.mpeg7.Segment#textAnnotationsByConfidence()
+   * @see org.opencastproject.metadata.mpeg7.Segment#textAnnotationsByConfidence()
    */
   public Iterator<TextAnnotation> textAnnotationsByConfidence() {
     SortedSet<TextAnnotation> set = new TreeSet<TextAnnotation>(new Comparator<TextAnnotation>() {
@@ -145,7 +151,7 @@ public class SegmentImpl implements Segment, AudioSegment, VideoSegment, AudioVi
   }
 
   /**
-   * @see org.opencastproject.mediapackage.mpeg7.Segment#textAnnotationsByRelevance()
+   * @see org.opencastproject.metadata.mpeg7.Segment#textAnnotationsByRelevance()
    */
   public Iterator<TextAnnotation> textAnnotationsByRelevance() {
     SortedSet<TextAnnotation> set = new TreeSet<TextAnnotation>(new Comparator<TextAnnotation>() {
@@ -162,7 +168,7 @@ public class SegmentImpl implements Segment, AudioSegment, VideoSegment, AudioVi
   }
 
   /**
-   * @see org.opencastproject.mediapackage.mpeg7.Segment#createTextAnnotation(float, float, String)
+   * @see org.opencastproject.metadata.mpeg7.Segment#createTextAnnotation(float, float, String)
    */
   public TextAnnotation createTextAnnotation(float relevance, float confidence, String language) {
     TextAnnotationImpl annotation = new TextAnnotationImpl(relevance, confidence, language);
@@ -171,7 +177,7 @@ public class SegmentImpl implements Segment, AudioSegment, VideoSegment, AudioVi
   }
 
   /**
-   * @see org.opencastproject.mediapackage.mpeg7.Segment#textAnnotations()
+   * @see org.opencastproject.metadata.mpeg7.Segment#textAnnotations()
    */
   public Iterator<TextAnnotation> textAnnotations() {
     return annotations.iterator();

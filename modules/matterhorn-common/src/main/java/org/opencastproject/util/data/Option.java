@@ -1,23 +1,31 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
+
 
 package org.opencastproject.util.data;
 
 import static org.opencastproject.util.data.Tuple.tuple;
 import static org.opencastproject.util.data.functions.Misc.chuck;
+
+import com.entwinemedia.fn.data.Opt;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -49,7 +57,7 @@ public abstract class Option<A> implements Iterable<A> {
     return fmap(f);
   }
 
-  /** Monadic bind operation <code>m a -> (a -> m b) -> m b</code>. */
+  /** Monadic bind operation <code>m a -&gt; (a -&gt; m b) -&gt; m b</code>. */
   public abstract <B> Option<B> bind(Function<A, Option<B>> f);
 
   /** @see org.opencastproject.util.data.functions.Functions#bind(Function) */
@@ -164,6 +172,8 @@ public abstract class Option<A> implements Iterable<A> {
    */
   public abstract <B> Either<B, A> right(B left);
 
+  public abstract Opt<A> toOpt();
+
   /** Inversion. If some return none. If none return some(zero). */
   public Option<A> inv(A zero) {
     return isSome() ? Option.<A> none() : some(zero);
@@ -252,6 +262,11 @@ public abstract class Option<A> implements Iterable<A> {
       @Override
       public <B> Either<B, A> right(B left) {
         return Either.right(a);
+      }
+
+      @Override
+      public Opt<A> toOpt() {
+        return Opt.some(a);
       }
 
       @Override
@@ -352,6 +367,11 @@ public abstract class Option<A> implements Iterable<A> {
       }
 
       @Override
+      public Opt<A> toOpt() {
+        return Opt.none();
+      }
+
+      @Override
       public int hashCode() {
         return -1;
       }
@@ -371,7 +391,7 @@ public abstract class Option<A> implements Iterable<A> {
   /**
    * Create a none with the type of <code>example</code>. This saves some nasty typing, e.g.
    * <code>Option.&lt;String&gt;none()</code> vs. <code>none("")</code>.
-   * <p/>
+   * <p>
    * Please note that this constructor is only due to Java's insufficient type inference.
    */
   public static <A> Option<A> none(A example) {
@@ -389,6 +409,14 @@ public abstract class Option<A> implements Iterable<A> {
       return some(a);
     else
       return none();
+  }
+
+  /** Convert an <code>Opt</code> into an <code>Option</code>. */
+  public static <A> Option<A> fromOpt(Opt<A> a) {
+    for (A x : a) {
+      return some(x);
+    }
+    return none();
   }
 
   /** {@link #option(Object)} as a function. */

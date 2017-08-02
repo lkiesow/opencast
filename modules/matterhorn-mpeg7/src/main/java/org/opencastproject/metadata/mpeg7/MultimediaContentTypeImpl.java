@@ -1,18 +1,24 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
+
 
 package org.opencastproject.metadata.mpeg7;
 
@@ -92,28 +98,28 @@ public class MultimediaContentTypeImpl<S extends Segment> implements MultimediaC
   }
 
   /**
-   * @see org.opencastproject.mediapackage.mpeg7.MultimediaContentType#getId()
+   * @see org.opencastproject.metadata.mpeg7.MultimediaContentType#getId()
    */
   public String getId() {
     return id;
   }
 
   /**
-   * @see org.opencastproject.mediapackage.mpeg7.MultimediaContentType#getMediaLocator()
+   * @see org.opencastproject.metadata.mpeg7.MultimediaContentType#getMediaLocator()
    */
   public MediaLocator getMediaLocator() {
     return mediaLocator;
   }
 
   /**
-   * @see org.opencastproject.mediapackage.mpeg7.MultimediaContentType#getMediaTime()
+   * @see org.opencastproject.metadata.mpeg7.MultimediaContentType#getMediaTime()
    */
   public MediaTime getMediaTime() {
     return mediaTime;
   }
 
   /**
-   * @see org.opencastproject.mediapackage.mpeg7.MultimediaContentType#getTemporalDecomposition()
+   * @see org.opencastproject.metadata.mpeg7.MultimediaContentType#getTemporalDecomposition()
    */
   public TemporalDecomposition<S> getTemporalDecomposition() {
     return temporalDecomposition;

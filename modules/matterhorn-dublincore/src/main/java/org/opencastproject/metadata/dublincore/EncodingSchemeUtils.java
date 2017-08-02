@@ -1,18 +1,24 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
+
 
 package org.opencastproject.metadata.dublincore;
 
@@ -20,6 +26,8 @@ import static org.opencastproject.util.data.Option.option;
 
 import org.opencastproject.util.data.Function;
 import org.opencastproject.util.data.Option;
+
+import com.entwinemedia.fn.data.Opt;
 
 import org.joda.time.Duration;
 import org.joda.time.format.ISODateTimeFormat;
@@ -58,9 +66,9 @@ public final class EncodingSchemeUtils {
    * UTC timezone is used for all precisions from {@link Precision#Minute} to {@link Precision#Fraction}. For years,
    * months and days the local timezone is used instead to ensure that the given date enters the DublinCore as is. If
    * UTC was used it may happen that you get the previous or next day, month or year respectively
-   * <p/>
+   * <p>
    * The language of the returned value is {@link DublinCore#LANGUAGE_UNDEFINED}.
-   * <p/>
+   * <p>
    * See <a href="http://www.w3.org/TR/NOTE-datetime">http://www.w3.org/TR/NOTE-datetime</a> for more information about
    * W3C-DTF.
    *
@@ -75,7 +83,7 @@ public final class EncodingSchemeUtils {
     if (precision == null)
       throw new IllegalArgumentException("The precision must not be null");
 
-    return new DublinCoreValue(formatDate(date, precision), DublinCore.LANGUAGE_UNDEFINED, DublinCore.ENC_SCHEME_W3CDTF);
+    return DublinCoreValue.mk(formatDate(date, precision), DublinCore.LANGUAGE_UNDEFINED, Opt.some(DublinCore.ENC_SCHEME_W3CDTF));
   }
 
   public static String formatDate(Date date, Precision precision) {
@@ -88,11 +96,11 @@ public final class EncodingSchemeUtils {
   /**
    * Encode a period with the given precision into a Dublin Core string value using the recommended DCMI Period scheme.
    * For the usage of the UTC timezone please refer to {@link #encodeDate(Date, Precision)} for further information.
-   * <p/>
+   * <p>
    * One of the dates may be null to create an open interval.
-   * <p/>
+   * <p>
    * The language of the returned value is {@link DublinCore#LANGUAGE_UNDEFINED}.
-   * <p/>
+   * <p>
    * See <a href="http://dublincore.org/documents/dcmi-period/">http://dublincore.org/documents/dcmi-period/</a> for
    * more information about DCMI Period.
    *
@@ -120,30 +128,30 @@ public final class EncodingSchemeUtils {
       b.append(" ").append("name=").append(period.getName().replace(";", "")).append(";");
     }
     b.append(" ").append("scheme=W3C-DTF;");
-    return new DublinCoreValue(b.toString(), DublinCore.LANGUAGE_UNDEFINED, DublinCore.ENC_SCHEME_PERIOD);
+    return DublinCoreValue.mk(b.toString(), DublinCore.LANGUAGE_UNDEFINED, Opt.some(DublinCore.ENC_SCHEME_PERIOD));
   }
 
   /**
    * Encode a duration measured in milliseconds into a Dublin Core string using the
    * {@link DublinCore#ENC_SCHEME_ISO8601} encoding scheme <code>PTnHnMnS</code>.
-   * <p/>
+   * <p>
    * The language of the returned value is {@link DublinCore#LANGUAGE_UNDEFINED}.
-   * <p/>
+   * <p>
    * See <a href="http://en.wikipedia.org/wiki/ISO_8601#Durations"> ISO8601 Durations</a> for details.
    *
    * @param duration
    *          the duration in milliseconds
    */
   public static DublinCoreValue encodeDuration(long duration) {
-    return new DublinCoreValue(ISOPeriodFormat.standard().print(new Duration(duration).toPeriod()),
-            DublinCore.LANGUAGE_UNDEFINED, DublinCore.ENC_SCHEME_ISO8601);
+    return DublinCoreValue.mk(ISOPeriodFormat.standard().print(new Duration(duration).toPeriod()),
+            DublinCore.LANGUAGE_UNDEFINED, Opt.some(DublinCore.ENC_SCHEME_ISO8601));
   }
 
   /**
    * Decode a string encoded in the ISO8601 encoding scheme.
-   * <p/>
+   * <p>
    * Also supports the REPLAY legacy format <code>hh:mm:ss</code>.
-   * <p/>
+   * <p>
    * See <a href="http://en.wikipedia.org/wiki/ISO_8601#Durations"> ISO8601 Durations</a> for details.
    *
    * @param value
@@ -178,7 +186,7 @@ public final class EncodingSchemeUtils {
    * @return the duration in milliseconds or null, if the value cannot be parsed or is in a different encoding scheme
    */
   public static Long decodeDuration(DublinCoreValue value) {
-    if (value.getEncodingScheme() == null || value.getEncodingScheme().equals(DublinCore.ENC_SCHEME_ISO8601)) {
+    if (!value.hasEncodingScheme() || value.getEncodingScheme().get().equals(DublinCore.ENC_SCHEME_ISO8601)) {
       return decodeDuration(value.getValue());
     }
     return null;
@@ -204,12 +212,21 @@ public final class EncodingSchemeUtils {
    * @return the date or null if decoding fails
    */
   public static Date decodeDate(DublinCoreValue value) {
-    if (value.getEncodingScheme() == null || value.getEncodingScheme().equals(DublinCore.ENC_SCHEME_W3CDTF)) {
+    if (!value.hasEncodingScheme() || value.getEncodingScheme().get().equals(DublinCore.ENC_SCHEME_W3CDTF)) {
       try {
         return parseW3CDTF(value.getValue());
       } catch (IllegalArgumentException ignore) {
       }
     }
+
+    // Try unixtime in milliseconds (backwards-compatibility with older mediapackages)
+    try {
+      long timestamp = Long.parseLong(value.getValue());
+      Date decoded = new java.util.Date(timestamp);
+      return decoded;
+    } catch (NumberFormatException nfe) {
+    }
+
     return null;
   }
 
@@ -230,6 +247,15 @@ public final class EncodingSchemeUtils {
       return parseW3CDTF(value);
     } catch (IllegalArgumentException ignore) {
     }
+
+    // Try unixtime in milliseconds (backwards-compatibility with older mediapackages)
+    try {
+      long timestamp = Long.parseLong(value);
+      Date decoded = new java.util.Date(timestamp);
+      return decoded;
+    } catch (NumberFormatException nfe) {
+    }
+
     return null;
   }
 
@@ -295,7 +321,7 @@ public final class EncodingSchemeUtils {
     boolean mayBeW3CDTFEncoded = true;
     if (schemeMatcher.find()) {
       String schemeString = schemeMatcher.group(1);
-      if (!schemeString.equalsIgnoreCase("W3C-DTF") && !schemeString.equalsIgnoreCase("W3CDTF")) {
+      if (!"W3C-DTF".equalsIgnoreCase(schemeString) && !"W3CDTF".equalsIgnoreCase(schemeString)) {
         mayBeW3CDTFEncoded = false;
       }
     }

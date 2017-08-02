@@ -1,18 +1,24 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
+
 package org.opencastproject.sox.impl;
 
 import static org.opencastproject.util.data.Option.some;
@@ -36,13 +42,16 @@ import org.opencastproject.sox.api.SoxException;
 import org.opencastproject.sox.api.SoxService;
 import org.opencastproject.util.FileSupport;
 import org.opencastproject.util.IoSupport;
+import org.opencastproject.util.LoadUtil;
 import org.opencastproject.util.NotFoundException;
 import org.opencastproject.util.data.Option;
 import org.opencastproject.workspace.api.Workspace;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.osgi.service.cm.ConfigurationException;
+import org.osgi.service.cm.ManagedService;
 import org.osgi.service.component.ComponentContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,10 +65,11 @@ import java.io.InputStreamReader;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Dictionary;
 import java.util.List;
 import java.util.UUID;
 
-public class SoxServiceImpl extends AbstractJobProducer implements SoxService {
+public class SoxServiceImpl extends AbstractJobProducer implements SoxService, ManagedService {
 
   /** The logging instance */
   private static final Logger logger = LoggerFactory.getLogger(SoxServiceImpl.class);
@@ -68,6 +78,24 @@ public class SoxServiceImpl extends AbstractJobProducer implements SoxService {
   public static final String SOX_BINARY_DEFAULT = "sox";
 
   public static final String CONFIG_SOX_PATH = "org.opencastproject.sox.path";
+
+  /** The load introduced on the system by creating a analyze job */
+  public static final float DEFAULT_ANALYZE_JOB_LOAD = 1.0f;
+
+  /** The key to look for in the service configuration file to override the {@link DEFAULT_ANALYZE_JOB_LOAD} */
+  public static final String ANALYZE_JOB_LOAD_KEY = "job.load.analyze";
+
+  /** The load introduced on the system by creating a analyze job */
+  private float analyzeJobLoad = DEFAULT_ANALYZE_JOB_LOAD;
+
+  /** The load introduced on the system by creating a normalize job */
+  public static final float DEFAULT_NORMALIZE_JOB_LOAD = 2.0f;
+
+  /** The key to look for in the service configuration file to override the {@link DEFAULT_NORMALIZE_JOB_LOAD} */
+  public static final String NORMALIZE_JOB_LOAD_KEY = "job.load.normalize";
+
+  /** The load introduced on the system by creating a normalize job */
+  private float normalizeJobLoad = DEFAULT_NORMALIZE_JOB_LOAD;
 
   /** List of available operations on jobs */
   private enum Operation {
@@ -108,8 +136,10 @@ public class SoxServiceImpl extends AbstractJobProducer implements SoxService {
    * @param cc
    *          the component context
    */
-  void activate(ComponentContext cc) {
+  @Override
+  public void activate(ComponentContext cc) {
     logger.info("Activating sox service");
+    super.activate(cc);
     // Configure sox
     String path = (String) cc.getBundleContext().getProperty(CONFIG_SOX_PATH);
     if (path == null) {
@@ -129,7 +159,7 @@ public class SoxServiceImpl extends AbstractJobProducer implements SoxService {
   public Job analyze(Track sourceAudioTrack) throws MediaPackageException, SoxException {
     try {
       return serviceRegistry.createJob(JOB_TYPE, Operation.Analyze.toString(),
-              Arrays.asList(MediaPackageElementParser.getAsXml(sourceAudioTrack)));
+              Arrays.asList(MediaPackageElementParser.getAsXml(sourceAudioTrack)), analyzeJobLoad);
     } catch (ServiceRegistryException e) {
       throw new SoxException("Unable to create a job", e);
     }
@@ -144,7 +174,8 @@ public class SoxServiceImpl extends AbstractJobProducer implements SoxService {
   public Job normalize(Track sourceAudioTrack, Float targetRmsLevDb) throws MediaPackageException, SoxException {
     try {
       return serviceRegistry.createJob(JOB_TYPE, Operation.Normalize.toString(),
-              Arrays.asList(MediaPackageElementParser.getAsXml(sourceAudioTrack), targetRmsLevDb.toString()));
+              Arrays.asList(MediaPackageElementParser.getAsXml(sourceAudioTrack), targetRmsLevDb.toString()),
+              normalizeJobLoad);
     } catch (ServiceRegistryException e) {
       throw new SoxException("Unable to create a job", e);
     }
@@ -453,6 +484,14 @@ public class SoxServiceImpl extends AbstractJobProducer implements SoxService {
   @Override
   protected OrganizationDirectoryService getOrganizationDirectoryService() {
     return organizationDirectoryService;
+  }
+
+  @Override
+  public void updated(Dictionary properties) throws ConfigurationException {
+    analyzeJobLoad = LoadUtil.getConfiguredLoadValue(properties, ANALYZE_JOB_LOAD_KEY, DEFAULT_ANALYZE_JOB_LOAD,
+            serviceRegistry);
+    normalizeJobLoad = LoadUtil.getConfiguredLoadValue(properties, NORMALIZE_JOB_LOAD_KEY, DEFAULT_NORMALIZE_JOB_LOAD,
+            serviceRegistry);
   }
 
 }

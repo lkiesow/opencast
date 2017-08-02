@@ -6,7 +6,7 @@
   <parent>
     <groupId>org.opencastproject</groupId>
     <artifactId>base</artifactId>
-    <version>1.6.1</version>
+    <version>3.0-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <properties>
@@ -35,12 +35,21 @@
       <version>${project.version}</version>
     </dependency>
     <dependency>
+      <groupId>org.opencastproject</groupId>
+      <artifactId>matterhorn-message-broker-api</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.googlecode.json-simple</groupId>
+      <artifactId>json-simple</artifactId>
+    </dependency>
+    <dependency>
       <groupId>commons-io</groupId>
       <artifactId>commons-io</artifactId>
     </dependency>
     <dependency>
       <groupId>javax.servlet</groupId>
-      <artifactId>servlet-api</artifactId>
+      <artifactId>javax.servlet-api</artifactId>
     </dependency>
     <dependency>
       <groupId>javax.xml.bind</groupId>
@@ -75,13 +84,7 @@
     <dependency>
       <groupId>org.easymock</groupId>
       <artifactId>easymock</artifactId>
-      <version>3.1</version>
       <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.opencastproject</groupId>
-      <artifactId>matterhorn-json</artifactId>
-      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>junit</groupId>
@@ -105,7 +108,7 @@
     <dependency>
       <groupId>org.eclipse.persistence</groupId>
       <artifactId>org.eclipse.persistence.core</artifactId>
-      <scope>test</scope>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.eclipse.persistence</groupId>
@@ -128,7 +131,7 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>c3p0</groupId>
+      <groupId>com.mchange</groupId>
       <artifactId>c3p0</artifactId>
       <scope>test</scope>
     </dependency>
@@ -136,31 +139,32 @@
   <build>
     <plugins>
       <plugin>
+        <groupId>de.empulse.eclipselink</groupId>
+        <artifactId>staticweave-maven-plugin</artifactId>
+      </plugin>
+      <plugin>
         <groupId>org.apache.felix</groupId>
         <artifactId>maven-bundle-plugin</artifactId>
         <extensions>true</extensions>
         <configuration>
           <instructions>
-            <Bundle-SymbolicName> ${project.artifactId} </Bundle-SymbolicName>
+            <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
+            <Build-Number>${buildNumber}</Build-Number>
             <Export-Package>
               org.opencastproject.series.impl.solr;version=${project.version},
               org.opencastproject.series.impl.persistence;version=${project.version},
               org.opencastproject.series.impl;version=${project.version},
               org.opencastproject.series.endpoint;version=${project.version}
             </Export-Package>
-            <Import-Package>
-              org.opencastproject.rest;version=${project.version},
-              org.opencastproject.metadata.dublincore;version=${project.version},
-              org.opencastproject.solr;version=${project.version},
-              *;resolution:=optional
-            </Import-Package>
             <Service-Component>
               OSGI-INF/series-service-index.xml,
               OSGI-INF/series-service-persistence.xml,
               OSGI-INF/series-service.xml,
               OSGI-INF/series-service-rest.xml
             </Service-Component>
-            <JPA-PersistenceUnits>org.opencastproject.series.impl.persistence</JPA-PersistenceUnits>
+            <Meta-Persistence>
+              META-INF/persistence.xml
+            </Meta-Persistence>
           </instructions>
         </configuration>
       </plugin>

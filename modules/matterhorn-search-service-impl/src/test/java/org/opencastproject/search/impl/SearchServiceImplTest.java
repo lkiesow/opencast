@@ -1,28 +1,37 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
 
+
 package org.opencastproject.search.impl;
 
-import static junit.framework.Assert.assertEquals;
-import static junit.framework.Assert.assertNotNull;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.opencastproject.security.api.Permissions.Action.READ;
+import static org.opencastproject.security.api.Permissions.Action.WRITE;
+import static org.opencastproject.util.persistence.PersistenceUtil.newTestEntityManagerFactory;
 
-import org.opencastproject.job.api.JaxbJob;
 import org.opencastproject.job.api.Job;
 import org.opencastproject.job.api.Job.Status;
 import org.opencastproject.job.api.JobBarrier;
+import org.opencastproject.job.api.JobImpl;
 import org.opencastproject.mediapackage.DefaultMediaPackageSerializerImpl;
 import org.opencastproject.mediapackage.MediaPackage;
 import org.opencastproject.mediapackage.MediaPackageBuilder;
@@ -31,12 +40,13 @@ import org.opencastproject.mediapackage.MediaPackageException;
 import org.opencastproject.mediapackage.MediaPackageParser;
 import org.opencastproject.mediapackage.identifier.IdBuilderFactory;
 import org.opencastproject.metadata.api.StaticMetadataService;
+import org.opencastproject.metadata.dublincore.DublinCoreCatalog;
+import org.opencastproject.metadata.dublincore.DublinCores;
 import org.opencastproject.metadata.dublincore.StaticMetadataServiceDublinCoreImpl;
 import org.opencastproject.metadata.mpeg7.Mpeg7CatalogService;
 import org.opencastproject.search.api.SearchQuery;
 import org.opencastproject.search.api.SearchResult;
 import org.opencastproject.search.api.SearchResultItem;
-import org.opencastproject.search.api.SearchService;
 import org.opencastproject.search.impl.persistence.SearchServiceDatabaseImpl;
 import org.opencastproject.search.impl.solr.SolrIndexManager;
 import org.opencastproject.search.impl.solr.SolrRequester;
@@ -50,6 +60,7 @@ import org.opencastproject.security.api.JaxbRole;
 import org.opencastproject.security.api.JaxbUser;
 import org.opencastproject.security.api.Organization;
 import org.opencastproject.security.api.OrganizationDirectoryService;
+import org.opencastproject.security.api.Permissions;
 import org.opencastproject.security.api.SecurityService;
 import org.opencastproject.security.api.User;
 import org.opencastproject.security.api.UserDirectoryService;
@@ -57,24 +68,16 @@ import org.opencastproject.series.api.SeriesService;
 import org.opencastproject.serviceregistry.api.IncidentService;
 import org.opencastproject.serviceregistry.api.ServiceRegistry;
 import org.opencastproject.serviceregistry.api.ServiceRegistryInMemoryImpl;
-import org.opencastproject.util.PathSupport;
 import org.opencastproject.util.data.Tuple;
 import org.opencastproject.workspace.api.Workspace;
-
-import com.mchange.v2.c3p0.ComboPooledDataSource;
-import com.mchange.v2.c3p0.DataSources;
-
-import junit.framework.Assert;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.solr.client.solrj.SolrServer;
 import org.easymock.EasyMock;
 import org.easymock.IAnswer;
-import org.eclipse.persistence.jpa.PersistenceProvider;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -120,24 +123,19 @@ public class SearchServiceImplTest {
   private final DefaultOrganization defaultOrganization = new DefaultOrganization();
 
   /** A user with permissions. */
-  private final User userWithPermissions = new JaxbUser("sample", defaultOrganization, new JaxbRole(ROLE_STUDENT,
-          defaultOrganization), new JaxbRole(ROLE_OTHER_STUDENT, defaultOrganization), new JaxbRole(
-          defaultOrganization.getAnonymousRole(), defaultOrganization));
+  private final User userWithPermissions = new JaxbUser("sample", "test", defaultOrganization, new JaxbRole(
+          ROLE_STUDENT, defaultOrganization), new JaxbRole(ROLE_OTHER_STUDENT, defaultOrganization), new JaxbRole(
+                  defaultOrganization.getAnonymousRole(), defaultOrganization));
 
   /** A user without permissions. */
-  private final User userWithoutPermissions = new JaxbUser("sample", defaultOrganization, new JaxbRole("ROLE_NOTHING",
-          defaultOrganization), new JaxbRole(DefaultOrganization.DEFAULT_ORGANIZATION_ANONYMOUS, defaultOrganization));
+  private final User userWithoutPermissions = new JaxbUser("sample", "test", defaultOrganization, new JaxbRole(
+          "ROLE_NOTHING", defaultOrganization), new JaxbRole(DefaultOrganization.DEFAULT_ORGANIZATION_ANONYMOUS,
+                  defaultOrganization));
 
   private final User defaultUser = userWithPermissions;
-
   private Responder<User> userResponder;
   private Responder<Organization> organizationResponder;
-
   private SearchServiceDatabaseImpl searchDatabase;
-
-  private ComboPooledDataSource pooledDataSource;
-
-  private String storage;
 
   private static class Responder<A> implements IAnswer<A> {
     private A response;
@@ -156,7 +154,6 @@ public class SearchServiceImplTest {
     }
   }
 
-  @SuppressWarnings("unchecked")
   @Before
   public void setUp() throws Exception {
     // workspace
@@ -177,7 +174,7 @@ public class SearchServiceImplTest {
     EasyMock.expect(securityService.getOrganization()).andAnswer(organizationResponder).anyTimes();
     EasyMock.replay(securityService);
 
-    User anonymous = new JaxbUser("anonymous", defaultOrganization, new JaxbRole(
+    User anonymous = new JaxbUser("anonymous", "test", defaultOrganization, new JaxbRole(
             DefaultOrganization.DEFAULT_ORGANIZATION_ANONYMOUS, defaultOrganization));
     UserDirectoryService userDirectoryService = EasyMock.createMock(UserDirectoryService.class);
     EasyMock.expect(userDirectoryService.loadUser((String) EasyMock.anyObject())).andReturn(anonymous).anyTimes();
@@ -186,31 +183,15 @@ public class SearchServiceImplTest {
     Organization organization = new DefaultOrganization();
     OrganizationDirectoryService organizationDirectoryService = EasyMock.createMock(OrganizationDirectoryService.class);
     EasyMock.expect(organizationDirectoryService.getOrganization((String) EasyMock.anyObject()))
-            .andReturn(organization).anyTimes();
+    .andReturn(organization).anyTimes();
     EasyMock.replay(organizationDirectoryService);
 
     // mpeg7 service
     Mpeg7CatalogService mpeg7CatalogService = new Mpeg7CatalogService();
 
-    long currentTime = System.currentTimeMillis();
-    storage = PathSupport.concat("target", "db" + currentTime + ".h2.db");
-
-    pooledDataSource = new ComboPooledDataSource();
-    pooledDataSource.setDriverClass("org.h2.Driver");
-    pooledDataSource.setJdbcUrl("jdbc:h2:./target/db" + currentTime);
-    pooledDataSource.setUser("sa");
-    pooledDataSource.setPassword("sa");
-
-    // Collect the persistence properties
-    Map<String, Object> props = new HashMap<String, Object>();
-    props.put("javax.persistence.nonJtaDataSource", pooledDataSource);
-    props.put("eclipselink.ddl-generation", "create-tables");
-    props.put("eclipselink.ddl-generation.output-mode", "database");
-
     // Persistence storage
     searchDatabase = new SearchServiceDatabaseImpl();
-    searchDatabase.setPersistenceProvider(new PersistenceProvider());
-    searchDatabase.setPersistenceProperties(props);
+    searchDatabase.setEntityManagerFactory(newTestEntityManagerFactory(SearchServiceDatabaseImpl.PERSISTENCE_UNIT));
     searchDatabase.activate(null);
     searchDatabase.setSecurityService(securityService);
 
@@ -223,6 +204,11 @@ public class SearchServiceImplTest {
     StaticMetadataService mdService = newStaticMetadataService(workspace);
 
     SeriesService seriesService = EasyMock.createNiceMock(SeriesService.class);
+    DublinCoreCatalog seriesCatalog = getSeriesDublinCoreCatalog("/series-dublincore.xml");
+    AccessControlList seriesAcl = new AccessControlList();
+    EasyMock.expect(seriesService.getSeries((String) EasyMock.anyObject())).andReturn(seriesCatalog).anyTimes();
+    EasyMock.expect(seriesService.getSeriesAccessControl((String) EasyMock.anyObject())).andReturn(seriesAcl)
+            .anyTimes();
     EasyMock.replay(seriesService);
 
     service.setStaticMetadataService(mdService);
@@ -238,11 +224,11 @@ public class SearchServiceImplTest {
             workspace, Arrays.asList(mdService), seriesService, mpeg7CatalogService, securityService));
 
     // acl
-    String anonymousRole = ((Organization) securityService.getOrganization()).getAnonymousRole();
-    acl = new AccessControlList(new AccessControlEntry(anonymousRole, "read", true));
+    String anonymousRole = securityService.getOrganization().getAnonymousRole();
+    acl = new AccessControlList(new AccessControlEntry(anonymousRole, Permissions.Action.READ.toString(), true));
     authorizationService = EasyMock.createNiceMock(AuthorizationService.class);
     EasyMock.expect(authorizationService.getActiveAcl((MediaPackage) EasyMock.anyObject()))
-            .andReturn(Tuple.tuple(acl, AclScope.Series)).anyTimes();
+    .andReturn(Tuple.tuple(acl, AclScope.Series)).anyTimes();
     EasyMock.expect(
             authorizationService.hasPermission((MediaPackage) EasyMock.anyObject(), (String) EasyMock.anyObject()))
             .andReturn(true).anyTimes();
@@ -256,12 +242,22 @@ public class SearchServiceImplTest {
     return service;
   }
 
+  private DublinCoreCatalog getSeriesDublinCoreCatalog(String path) {
+    // marshal the local series catalog
+    DublinCoreCatalog seriesDc = null;
+    InputStream is = null;
+    try {
+      is = SearchServiceImplTest.class.getResourceAsStream(path);
+      seriesDc = DublinCores.read(is);
+    } finally {
+      IOUtils.closeQuietly(is);
+    }
+    return seriesDc;
+  }
+
   @After
   public void tearDown() throws Exception {
     ((ServiceRegistryInMemoryImpl) serviceRegistry).dispose();
-    searchDatabase.deactivate(null);
-    DataSources.destroy(pooledDataSource);
-    FileUtils.deleteQuietly(new File(storage));
     searchDatabase = null;
     service.deactivate();
     FileUtils.deleteDirectory(new File(solrRoot));
@@ -285,14 +281,14 @@ public class SearchServiceImplTest {
     MediaPackage mediaPackage = getMediaPackage("/manifest-simple.xml");
 
     // Make sure our mocked ACL has the read and write permission
-    acl.getEntries().add(new AccessControlEntry(ROLE_STUDENT, SearchService.READ_PERMISSION, true));
-    acl.getEntries().add(new AccessControlEntry(ROLE_STUDENT, SearchService.WRITE_PERMISSION, true));
+    acl.getEntries().add(new AccessControlEntry(ROLE_STUDENT, READ.toString(), true));
+    acl.getEntries().add(new AccessControlEntry(ROLE_STUDENT, WRITE.toString(), true));
 
     // Add the media package to the search index
     Job job = service.add(mediaPackage);
-    JobBarrier barrier = new JobBarrier(serviceRegistry, 1000, job);
+    JobBarrier barrier = new JobBarrier(null, serviceRegistry, 1000, job);
     barrier.waitForJobs();
-    Assert.assertEquals("Job to add mediapckage did not finish", Job.Status.FINISHED, job.getStatus());
+    assertEquals("Job to add mediapckage did not finish", Job.Status.FINISHED, job.getStatus());
 
     // Make sure it's properly indexed and returned for authorized users
     SearchQuery q = new SearchQuery();
@@ -302,14 +298,14 @@ public class SearchServiceImplTest {
     assertEquals(1, service.getByQuery(q).size());
 
     acl.getEntries().clear();
-    acl.getEntries().add(new AccessControlEntry("ROLE_UNKNOWN", SearchService.READ_PERMISSION, true));
-    acl.getEntries().add(new AccessControlEntry(ROLE_STUDENT, SearchService.WRITE_PERMISSION, true));
+    acl.getEntries().add(new AccessControlEntry("ROLE_UNKNOWN", READ.toString(), true));
+    acl.getEntries().add(new AccessControlEntry(ROLE_STUDENT, WRITE.toString(), true));
 
     // Add the media package to the search index
     job = service.add(mediaPackage);
-    barrier = new JobBarrier(serviceRegistry, 1000, job);
+    barrier = new JobBarrier(null, serviceRegistry, 1000, job);
     barrier.waitForJobs();
-    Assert.assertEquals("Job to add mediapckage did not finish", Job.Status.FINISHED, job.getStatus());
+    assertEquals("Job to add mediapckage did not finish", Job.Status.FINISHED, job.getStatus());
 
     // This mediapackage should not be readable by the current user (due to the lack of role ROLE_UNKNOWN)
     q = new SearchQuery();
@@ -344,9 +340,9 @@ public class SearchServiceImplTest {
   public void testSearchForEpisodeWithSeriesMetadata() throws Exception {
     MediaPackage mediaPackage = getMediaPackage("/manifest-full.xml");
     Job job = service.add(mediaPackage);
-    JobBarrier barrier = new JobBarrier(serviceRegistry, 1000, job);
+    JobBarrier barrier = new JobBarrier(null, serviceRegistry, 1000, job);
     barrier.waitForJobs();
-    Assert.assertEquals("Job to add mediapckage did not finish", Job.Status.FINISHED, job.getStatus());
+    assertEquals("Job to add mediapckage did not finish", Job.Status.FINISHED, job.getStatus());
 
     SearchResult episodeMetadataResult = service.getByQuery(new SearchQuery().withText("Vegetation"));
     SearchResult seriesMetadataResult = service.getByQuery(new SearchQuery().withText("Atmospheric Science"));
@@ -362,9 +358,9 @@ public class SearchServiceImplTest {
   public void testSearchForPartialStrings() throws Exception {
     MediaPackage mediaPackage = getMediaPackage("/manifest-simple.xml");
     Job job = service.add(mediaPackage);
-    JobBarrier barrier = new JobBarrier(serviceRegistry, 1000, job);
+    JobBarrier barrier = new JobBarrier(null, serviceRegistry, 1000, job);
     barrier.waitForJobs();
-    Assert.assertEquals("Job to add mediapckage did not finish", Job.Status.FINISHED, job.getStatus());
+    assertEquals("Job to add mediapckage did not finish", Job.Status.FINISHED, job.getStatus());
 
     assertEquals(1, service.getByQuery(new SearchQuery().withText("Atmo")).size());
     assertEquals(1, service.getByQuery(new SearchQuery().withText("Atmos")).size());
@@ -394,16 +390,21 @@ public class SearchServiceImplTest {
     assertEquals(1, service.getByQuery(new SearchQuery().withText("nstitute")).size());
     assertEquals(1, service.getByQuery(new SearchQuery().withText("nstitut")).size());
     assertEquals(1, service.getByQuery(new SearchQuery().withText("Institut")).size());
+    assertEquals(1, service.getByQuery(new SearchQuery().withText("2008-03-05")).size());
   }
 
   @Test
   public void testSorting() throws Exception {
     MediaPackage mediaPackageNewer = getMediaPackage("/manifest-full.xml");
     MediaPackage mediaPackageOlder = getMediaPackage("/manifest-full-older.xml");
+    // MH-10573, ensure first job finishes publishing before job2
     Job job = service.add(mediaPackageNewer);
-    Job job2 = service.add(mediaPackageOlder);
-    JobBarrier barrier = new JobBarrier(serviceRegistry, 1000, job, job2);
+    JobBarrier barrier = new JobBarrier(null, serviceRegistry, 1000, job);
     barrier.waitForJobs();
+    Job job2 = service.add(mediaPackageOlder);
+    JobBarrier barrier2 = new JobBarrier(null,serviceRegistry, 1000, job2);
+    barrier2.waitForJobs();
+
     String olderTitle = "Older Recording";
     String newerTitle = "Land and Vegetation: Key players on the Climate Scene";
 
@@ -413,7 +414,7 @@ public class SearchServiceImplTest {
     assertEquals(olderTitle, service.getByQuery(query).getItems()[0].getDcTitle());
     query.withSort(SearchQuery.Sort.DATE_CREATED, false);
     assertEquals(newerTitle, service.getByQuery(query).getItems()[0].getDcTitle());
-    // reverse sequence as demo-data has inverse publication dates
+    // FYI: DATE_PUBLISHED is the time of Search update, not DC modified (MH-10573)
     query.withSort(SearchQuery.Sort.DATE_PUBLISHED);
     assertEquals(newerTitle, service.getByQuery(query).getItems()[0].getDcTitle());
     query.withSort(SearchQuery.Sort.DATE_PUBLISHED, false);
@@ -448,14 +449,14 @@ public class SearchServiceImplTest {
     MediaPackage mediaPackage = getMediaPackage("/manifest-simple.xml");
 
     // Make sure our mocked ACL has the read and write permission
-    acl.getEntries().add(new AccessControlEntry(ROLE_STUDENT, SearchService.READ_PERMISSION, true));
-    acl.getEntries().add(new AccessControlEntry(ROLE_STUDENT, SearchService.WRITE_PERMISSION, true));
+    acl.getEntries().add(new AccessControlEntry(ROLE_STUDENT, READ.toString(), true));
+    acl.getEntries().add(new AccessControlEntry(ROLE_STUDENT, WRITE.toString(), true));
 
     // Add the media package to the search index
     Job job = service.add(mediaPackage);
-    JobBarrier barrier = new JobBarrier(serviceRegistry, 1000, job);
+    JobBarrier barrier = new JobBarrier(null, serviceRegistry, 1000, job);
     barrier.waitForJobs();
-    Assert.assertEquals("Job to add mediapckage did not finish", Job.Status.FINISHED, job.getStatus());
+    assertEquals("Job to add mediapckage did not finish", Job.Status.FINISHED, job.getStatus());
 
     // Make sure it's properly indexed and returned
     SearchQuery q = new SearchQuery();
@@ -490,14 +491,14 @@ public class SearchServiceImplTest {
     MediaPackage mediaPackage = getMediaPackage("/manifest-full.xml");
 
     // Make sure our mocked ACL has the read and write permission
-    acl.getEntries().add(new AccessControlEntry(ROLE_STUDENT, SearchService.READ_PERMISSION, true));
-    acl.getEntries().add(new AccessControlEntry(ROLE_STUDENT, SearchService.WRITE_PERMISSION, true));
+    acl.getEntries().add(new AccessControlEntry(ROLE_STUDENT, READ.toString(), true));
+    acl.getEntries().add(new AccessControlEntry(ROLE_STUDENT, WRITE.toString(), true));
 
     // Add the media package to the search index
     Job job = service.add(mediaPackage);
-    JobBarrier barrier = new JobBarrier(serviceRegistry, 1000, job);
+    JobBarrier barrier = new JobBarrier(null, serviceRegistry, 1000, job);
     barrier.waitForJobs();
-    Assert.assertEquals("Job to add mediapckage did not finish", Job.Status.FINISHED, job.getStatus());
+    assertEquals("Job to add mediapckage did not finish", Job.Status.FINISHED, job.getStatus());
 
     // Make sure it's properly indexed and returned
     SearchQuery q = new SearchQuery();
@@ -517,12 +518,12 @@ public class SearchServiceImplTest {
     MediaPackage mediaPackage = getMediaPackage("/manifest-simple.xml");
 
     // Make sure our mocked ACL has the read and write permission
-    acl.getEntries().add(new AccessControlEntry(ROLE_STUDENT, SearchService.READ_PERMISSION, true));
-    acl.getEntries().add(new AccessControlEntry(ROLE_STUDENT, SearchService.WRITE_PERMISSION, true));
+    acl.getEntries().add(new AccessControlEntry(ROLE_STUDENT, READ.toString(), true));
+    acl.getEntries().add(new AccessControlEntry(ROLE_STUDENT, WRITE.toString(), true));
 
     // Add the media package to the search index
     Job job = service.add(mediaPackage);
-    JobBarrier barrier = new JobBarrier(serviceRegistry, 1000, job);
+    JobBarrier barrier = new JobBarrier(null, serviceRegistry, 1000, job);
     barrier.waitForJobs();
 
     // Now take the role away from the user
@@ -536,21 +537,21 @@ public class SearchServiceImplTest {
 
     // Try to delete it
     job = service.delete(mediaPackage.getIdentifier().toString());
-    barrier = new JobBarrier(serviceRegistry, 1000, job);
+    barrier = new JobBarrier(null, serviceRegistry, 1000, job);
     barrier.waitForJobs();
-    Assert.assertEquals("Job to delete mediapackage did not finish", Job.Status.FINISHED, job.getStatus());
-    Assert.assertEquals("Unauthorized user was able to delete a mediapackage", Boolean.FALSE.toString(),
+    assertEquals("Job to delete mediapackage did not finish", Job.Status.FINISHED, job.getStatus());
+    assertEquals("Unauthorized user was able to delete a mediapackage", Boolean.FALSE.toString(),
             job.getPayload());
 
     // Second try with a "fixed" roleset
-    User adminUser = new JaxbUser("admin", defaultOrganization, new JaxbRole(defaultOrganization.getAdminRole(),
-            defaultOrganization));
+    User adminUser = new JaxbUser("admin", "test", defaultOrganization, new JaxbRole(
+            defaultOrganization.getAdminRole(), defaultOrganization));
     userResponder.setResponse(adminUser);
     Date deletedDate = new Date();
     job = service.delete(mediaPackage.getIdentifier().toString());
-    barrier = new JobBarrier(serviceRegistry, 1000, job);
+    barrier = new JobBarrier(null, serviceRegistry, 1000, job);
     barrier.waitForJobs();
-    Assert.assertEquals("Unauthorized user was able to delete a mediapackage", Job.Status.FINISHED, job.getStatus());
+    assertEquals("Unauthorized user was able to delete a mediapackage", Job.Status.FINISHED, job.getStatus());
 
     // Now go back to the original security service and user
     userResponder.setResponse(defaultUser);
@@ -570,21 +571,72 @@ public class SearchServiceImplTest {
   }
 
   /**
-   * Ads a media package with one dublin core for the episode and one for the series.
-   *
-   * todo media package needs to return a series id for this test to work
+   * Test removal from the search index even when it is missing from database #MH-11616
    */
   @Test
-  @Ignore
-  public void testAddSeriesMediaPackage() throws Exception {
+  public void testDeleteIndexNotInDbMediaPackage() throws Exception {
     MediaPackage mediaPackage = getMediaPackage("/manifest-simple.xml");
 
     // Make sure our mocked ACL has the read and write permission
-    acl.getEntries().add(new AccessControlEntry(ROLE_STUDENT, SearchService.READ_PERMISSION, true));
-    acl.getEntries().add(new AccessControlEntry(ROLE_STUDENT, SearchService.WRITE_PERMISSION, true));
+    acl.getEntries().add(new AccessControlEntry(ROLE_STUDENT, READ.toString(), true));
+    acl.getEntries().add(new AccessControlEntry(ROLE_STUDENT, WRITE.toString(), true));
 
     // Add the media package to the search index
-    service.add(mediaPackage);
+    Job job = service.add(mediaPackage);
+    JobBarrier barrier = new JobBarrier(null, serviceRegistry, 1000, job);
+    barrier.waitForJobs();
+
+    // Delete the mediapackage from persistence (leave it in index)
+    Date dateDeletedFromDb = new Date();
+    searchDatabase.deleteMediaPackage(mediaPackage.getIdentifier().toString(), dateDeletedFromDb);
+
+    // Verify it is not marked as deleted
+    SearchQuery qDel = new SearchQuery();
+    qDel.withDeletedSince(dateDeletedFromDb);
+    assertEquals(0, service.getByQuery(qDel).size());
+
+    // Verify that it is still active in index
+    SearchQuery q = new SearchQuery();
+    q.includeEpisodes(true);
+    q.includeSeries(false);
+    q.withId(mediaPackage.getIdentifier().toString());
+    assertEquals(1, service.getByQuery(q).size());
+
+    // Try delete it
+    job = service.delete(mediaPackage.getIdentifier().toString());
+    barrier = new JobBarrier(null, serviceRegistry, 1000, job);
+    barrier.waitForJobs();
+    assertEquals("Job to delete mediapackage did not finish", Job.Status.FINISHED, job.getStatus());
+
+    // Verify that it is now not active in the index
+    assertEquals(0, service.getByQuery(q).size());
+
+    // Verify that it is now marked as deleted in the index
+    q = new SearchQuery();
+    q.withDeletedSince(dateDeletedFromDb);
+    assertEquals(1, service.getByQuery(q).size());
+  }
+
+  /**
+   * Adds a media package with a dublin core catalog for episode and series. Verifies series catalog can be retrieved
+   * via search service.
+   *
+   */
+  @Test
+  public void testAddSeriesMediaPackage() throws Exception {
+    String seriesId = "foobar-series";
+    MediaPackage mediaPackage = getMediaPackage("/manifest-full.xml");
+    mediaPackage.setSeries(seriesId);
+
+    // Add the media package to the search index
+    Job job = service.add(mediaPackage);
+    JobBarrier barrier = new JobBarrier(null, serviceRegistry, 1000, job);
+    barrier.waitForJobs();
+    assertEquals("Job to add mediapckage did not finish", Job.Status.FINISHED, job.getStatus());
+
+    User adminUser = new JaxbUser("admin", "test", defaultOrganization,
+            new JaxbRole(defaultOrganization.getAdminRole(), defaultOrganization));
+    userResponder.setResponse(adminUser);
 
     // Make sure it's properly indexed and returned
     SearchQuery q = new SearchQuery();
@@ -593,7 +645,7 @@ public class SearchServiceImplTest {
 
     SearchResult result = service.getByQuery(q);
     assertEquals(1, result.size());
-    assertEquals("foobar-serie", result.getItems()[0].getId());
+    assertEquals(seriesId, result.getItems()[0].getId());
   }
 
   @SuppressWarnings("unchecked")
@@ -609,8 +661,7 @@ public class SearchServiceImplTest {
       mediaPackage.setIdentifier(IdBuilderFactory.newInstance().newIdBuilder().createNew());
       searchDatabase.storeMediaPackage(mediaPackage, acl, new Date());
       String payload = MediaPackageParser.getAsXml(mediaPackage);
-      JaxbJob job = new JaxbJob();
-      job.setId(i);
+      Job job = new JobImpl(i);
       job.setArguments(args);
       job.setPayload(payload);
       job.setStatus(Status.FINISHED);
@@ -621,17 +672,17 @@ public class SearchServiceImplTest {
     EasyMock.expect(
             serviceRegistry.createJob((String) EasyMock.anyObject(), (String) EasyMock.anyObject(),
                     (List<String>) EasyMock.anyObject(), (String) EasyMock.anyObject(), EasyMock.anyBoolean()))
-            .andReturn(new JaxbJob()).anyTimes();
-    EasyMock.expect(serviceRegistry.updateJob((Job) EasyMock.anyObject())).andReturn(new JaxbJob()).anyTimes();
+                    .andReturn(new JobImpl()).anyTimes();
+    EasyMock.expect(serviceRegistry.updateJob((Job) EasyMock.anyObject())).andReturn(new JobImpl()).anyTimes();
     EasyMock.expect(serviceRegistry.getJobs((String) EasyMock.anyObject(), (Status) EasyMock.anyObject()))
-            .andReturn(jobs).anyTimes();
+    .andReturn(jobs).anyTimes();
     EasyMock.replay(serviceRegistry);
 
     service.setServiceRegistry(serviceRegistry);
 
     OrganizationDirectoryService orgDirectory = EasyMock.createNiceMock(OrganizationDirectoryService.class);
     EasyMock.expect(orgDirectory.getOrganization((String) EasyMock.anyObject())).andReturn(new DefaultOrganization())
-            .anyTimes();
+    .anyTimes();
     EasyMock.replay(orgDirectory);
 
     service.setOrganizationDirectoryService(orgDirectory);

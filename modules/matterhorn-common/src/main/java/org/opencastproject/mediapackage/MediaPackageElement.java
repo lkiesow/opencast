@@ -1,18 +1,24 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
+
 
 package org.opencastproject.mediapackage;
 
@@ -37,7 +43,7 @@ public interface MediaPackageElement extends ManifestContributor, Comparable<Med
   /**
    * Returns the element identifier.
    *
-   * @return the element identifier
+   * @return the element identifier, may be null
    */
   String getIdentifier();
 
@@ -171,7 +177,7 @@ public interface MediaPackageElement extends ManifestContributor, Comparable<Med
 
   /**
    * Returns the element's mimetype as found in the ISO Mime Type Registrations.
-   * <p/>
+   * <p>
    * For example, in case of motion jpeg slides, this method will return the mime type for <code>video/mj2</code>.
    *
    * @return the mime type
@@ -188,7 +194,7 @@ public interface MediaPackageElement extends ManifestContributor, Comparable<Med
 
   /**
    * Returns the element's type as defined for the specific media package element.
-   * <p/>
+   * <p>
    * For example, in case of a video track, the type could be <code>video/x-presentation</code>.
    *
    * @return the element flavor
@@ -227,7 +233,7 @@ public interface MediaPackageElement extends ManifestContributor, Comparable<Med
 
   /**
    * Adds a reference to the media package <code>mediaPackage</code>.
-   * <p/>
+   * <p>
    * Note that an element can only refer to one object. Therefore, any existing reference will be replaced.
    *
    * @param mediaPackage
@@ -237,7 +243,7 @@ public interface MediaPackageElement extends ManifestContributor, Comparable<Med
 
   /**
    * Adds a reference to the media package element <code>element</code>.
-   * <p/>
+   * <p>
    * Note that an element can only refere to one object. Therefore, any existing reference will be replaced. Also note
    * that if this element is part of a media package, a consistency check will be made making sure the refered element
    * is also part of the same media package. If not, a {@link MediaPackageException} will be thrown.
@@ -249,7 +255,7 @@ public interface MediaPackageElement extends ManifestContributor, Comparable<Med
 
   /**
    * Adds an arbitrary reference.
-   * <p/>
+   * <p>
    * Note that an element can only have one reference. Therefore, any existing reference will be replaced. Also note
    * that if this element is part of a media package, a consistency check will be made making sure the refered element
    * is also part of the same media package. If not, a {@link MediaPackageException} will be thrown.

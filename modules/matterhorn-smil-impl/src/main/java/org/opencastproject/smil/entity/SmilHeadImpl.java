@@ -1,31 +1,39 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
+
 package org.opencastproject.smil.entity;
 
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
-import javax.xml.bind.annotation.XmlElementRef;
-import javax.xml.bind.annotation.XmlRootElement;
 import org.opencastproject.smil.entity.api.SmilHead;
 import org.opencastproject.smil.entity.api.SmilMeta;
 import org.opencastproject.smil.entity.api.SmilObject;
 import org.opencastproject.smil.entity.media.param.SmilMediaParamGroupImpl;
 import org.opencastproject.smil.entity.media.param.api.SmilMediaParam;
 import org.opencastproject.smil.entity.media.param.api.SmilMediaParamGroup;
+
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
+
+import javax.xml.bind.annotation.XmlElementRef;
+import javax.xml.bind.annotation.XmlRootElement;
 
 /**
  * {@link SmilHead} implementation.
@@ -97,7 +105,7 @@ public class SmilHeadImpl extends SmilObjectImpl implements SmilHead {
   }
 
   /**
-   * {@inheritedDoc}
+   * {@inheritDoc}
    */
   @Override
   protected String getIdPrefix() {
@@ -105,7 +113,7 @@ public class SmilHeadImpl extends SmilObjectImpl implements SmilHead {
   }
 
   /**
-   * {@inheritedDoc}
+   * {@inheritDoc}
    */
   @Override
   public SmilObject removeElement(String elementId) {

@@ -6,7 +6,7 @@
   <parent>
     <groupId>org.opencastproject</groupId>
     <artifactId>base</artifactId>
-    <version>1.6.1</version>
+    <version>3.0-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <properties>
@@ -21,7 +21,7 @@
     </dependency>
     <dependency>
       <groupId>javax.servlet</groupId>
-      <artifactId>servlet-api</artifactId>
+      <artifactId>javax.servlet-api</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
@@ -35,13 +35,16 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>commons-lang</groupId>
-      <artifactId>commons-lang</artifactId>
+      <groupId>com.googlecode.json-simple</groupId>
+      <artifactId>json-simple</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.opencastproject</groupId>
-      <artifactId>matterhorn-json</artifactId>
-      <version>${project.version}</version>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-lang3</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>javax.ws.rs</groupId>
+      <artifactId>jsr311-api</artifactId>
     </dependency>
   </dependencies>
   <build>
@@ -237,15 +240,15 @@
         <extensions>true</extensions>
         <configuration>
           <instructions>
-            <Bundle-SymbolicName> ${project.artifactId} </Bundle-SymbolicName>
-            <Import-Package>
-              org.opencastproject.rest;version=${project.version},
-              *;resolution:=optional
-            </Import-Package>
-            <Private-Package>tools.*</Private-Package>
+            <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
+            <Build-Number>${buildNumber}</Build-Number>
+            <Export-Package>
+              org.opencastproject.lti;version=${project.version}
+            </Export-Package>
             <Service-Component>
               OSGI-INF/opencast-lti.xml
             </Service-Component>
+            <Private-Package>tools.*</Private-Package>
             <Http-Alias>/ltitools</Http-Alias>
             <Http-Classpath>/tools</Http-Classpath>
             <Http-Welcome>index.html</Http-Welcome>

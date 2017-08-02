@@ -1,18 +1,24 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
+
 package org.opencastproject.kernel.security;
 
 import org.opencastproject.security.api.Organization;
@@ -42,23 +48,17 @@ public final class SecurityFilter implements Filter {
   private static final Logger logger = LoggerFactory.getLogger(SecurityFilter.class);
 
   /** The filters for each organization */
-  private Map<String, Filter> orgSecurityFilters = null;
-
-  /** The security service */
-  protected SecurityService securityService = null;
+  private final Map<String, Filter> orgSecurityFilters = new HashMap<>();
 
   /** The filter configuration provided by the servlet container */
-  protected FilterConfig filterConfig = null;
+  protected FilterConfig filterConfig;
 
-  /**
-   * Construct a new security filter.
-   *
-   * @param securityService
-   *          the security service
-   */
-  public SecurityFilter(SecurityService securityService) {
+  /** The security service */
+  private SecurityService securityService;
+
+  /** OSGi DI. */
+  public void setSecurityService(SecurityService securityService) {
     this.securityService = securityService;
-    this.orgSecurityFilters = new HashMap<String, Filter>();
   }
 
   /**
@@ -105,8 +105,8 @@ public final class SecurityFilter implements Filter {
    *      javax.servlet.FilterChain)
    */
   @Override
-  public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException,
-          ServletException {
+  public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
+          throws IOException, ServletException {
 
     // Make sure we have an organization
     Organization org = securityService.getOrganization();

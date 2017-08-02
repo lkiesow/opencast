@@ -1,35 +1,49 @@
 # Ignore file for Opencast Matterhorn project
 #
 
-# ignore runtime artifacts
-lib/matterhorn/*
-lib/ext/*
-inbox/*
-logs/*
-work/*
-
 # ignore maven target directories
 target/
+target-grunt/
+node_modules/
+node/
+/build/
 
 # ignore Eclipse project data
 .project
 .classpath
 .metadata/
 .settings/
+.recommenders/
 
 # ignore NetBeans project data
 */nbproject/*
+*/nb-configuration.xml
 
-# just in case.. ignore SVN subdir
-*/.svn/*
+# ingore OS artifacts
+.DS_Store
 
 # Ignore all temporary editor files
 *.swp
+*.iml
+.idea
 
 # Ignore Maven files and local repository
 /.m2/
 /settings.xml
 
+# Ignore mkdocs sites
+docs/guides/*/site
+
 # Ignore Makefiles
 # Sometimes they help, but they should never be tracked
 Makefile
+/modules/matterhorn-admin-ui-ng/bower_components/
+
+# Ignore package-lock.json
+/modules/matterhorn-admin-ui-ng/package-lock.json
+
+# Ignore OS artifacts
+.DS_Store
+
+# Ignore phantomjs logs
+phantomjsdriver.log

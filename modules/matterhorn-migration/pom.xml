@@ -6,7 +6,7 @@
   <parent>
     <groupId>org.opencastproject</groupId>
     <artifactId>base</artifactId>
-    <version>1.6.1</version>
+    <version>3.0-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <properties>
@@ -21,7 +21,17 @@
     </dependency>
     <dependency>
       <groupId>org.opencastproject</groupId>
-      <artifactId>matterhorn-workflow-service-api</artifactId>
+      <artifactId>matterhorn-archive-api</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.opencastproject</groupId>
+      <artifactId>matterhorn-search-service-api</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.opencastproject</groupId>
+      <artifactId>matterhorn-search-service-impl</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
@@ -33,8 +43,8 @@
       <artifactId>commons-codec</artifactId>
     </dependency>
     <dependency>
-      <groupId>commons-lang</groupId>
-      <artifactId>commons-lang</artifactId>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-lang3</artifactId>
     </dependency>
     <dependency>
       <groupId>commons-collections</groupId>
@@ -69,6 +79,12 @@
     </dependency>
     <!-- Tests -->
     <dependency>
+      <groupId>org.opencastproject</groupId>
+      <artifactId>matterhorn-archive-schema</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <scope>test</scope>
@@ -76,7 +92,6 @@
     <dependency>
       <groupId>org.easymock</groupId>
       <artifactId>easymock</artifactId>
-      <version>3.1</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -85,19 +100,16 @@
       <plugin>
         <groupId>org.apache.felix</groupId>
         <artifactId>maven-bundle-plugin</artifactId>
-        <version>2.0.1</version>
         <extensions>true</extensions>
         <configuration>
           <instructions>
             <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
-            <Import-Package>
-              *;resolution:=optional
-            </Import-Package>
+            <Build-Number>${buildNumber}</Build-Number>
             <Export-Package>
               org.opencastproject.migration;version=${project.version}
             </Export-Package>
             <Service-Component>
-              OSGI-INF/incident-migration-service.xml
+              OSGI-INF/distribution-migration-service.xml
             </Service-Component>
           </instructions>
         </configuration>

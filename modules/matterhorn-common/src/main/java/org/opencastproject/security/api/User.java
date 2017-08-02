@@ -1,18 +1,24 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
+
 package org.opencastproject.security.api;
 
 import java.util.Set;
@@ -37,6 +43,34 @@ public interface User {
   String getPassword();
 
   /**
+   * Gets the user's name.
+   *
+   * @return the user name
+   */
+  String getName();
+
+  /**
+   * Gets the user's email address.
+   *
+   * @return the user's email address
+   */
+  String getEmail();
+
+  /**
+   * Gets the provider where the user is coming from.
+   *
+   * @return the provider where the user is coming from.
+   */
+  String getProvider();
+
+  /**
+   * Returns <code>true</code> if this user object can be managed by Matterhorn.
+   *
+   * @return <code>true</code> if this user is manageable
+   */
+  boolean isManageable();
+
+  /**
    * Returns <code>true</code> if this user object can be used to log into Matterhorn.
    *
    * @return <code>true</code> if this user can login
@@ -51,7 +85,7 @@ public interface User {
   Organization getOrganization();
 
   /**
-   * Gets the user's roles. For anonymous users, this will return {@link Anonymous}.
+   * Gets the user's roles. For anonymous users, this will return Anonymous.
    *
    * @return the user's roles
    */

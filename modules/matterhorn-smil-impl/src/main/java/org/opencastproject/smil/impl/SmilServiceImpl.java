@@ -1,24 +1,26 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
+
 package org.opencastproject.smil.impl;
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
-import javax.xml.bind.JAXBException;
 import org.opencastproject.mediapackage.MediaPackage;
 import org.opencastproject.mediapackage.Track;
 import org.opencastproject.smil.api.SmilException;
@@ -41,6 +43,12 @@ import org.opencastproject.smil.entity.media.element.SmilMediaVideoImpl;
 import org.opencastproject.smil.entity.media.param.SmilMediaParamGroupImpl;
 import org.opencastproject.smil.entity.media.param.api.SmilMediaParam;
 import org.opencastproject.smil.entity.media.param.api.SmilMediaParamGroup;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.xml.bind.JAXBException;
 
 /**
  * Implement {@link SmilService} interface.
@@ -103,11 +111,16 @@ public class SmilServiceImpl implements SmilService {
     return new SmilResponseImpl(smil, seq);
   }
 
+  @Override
+  public SmilResponse addClip(Smil smil, String parentId, Track track, long start, long duration) throws SmilException {
+     return addClip(smil, parentId, track, start, duration, null);
+  }
+
   /**
    * {@inheritDoc}
    */
   @Override
-  public SmilResponse addClip(Smil smil, String parentId, Track track, long start, long duration) throws SmilException {
+  public SmilResponse addClip(Smil smil, String parentId, Track track, long start, long duration, String pgId) throws SmilException {
     if (start < 0) {
       throw new SmilException("Start position should be positive.");
     }
@@ -135,6 +148,11 @@ public class SmilServiceImpl implements SmilService {
 
     SmilMediaParamGroup trackParamGroup = null;
     for (SmilMediaParamGroup paramGroup : smil.getHead().getParamGroups()) {
+      // support for adding multiple tracks to the same param group
+      if (pgId != null && paramGroup.getId().equals(pgId.trim())) {
+        trackParamGroup = paramGroup;
+        break;
+      }
       SmilMediaParam param = ((SmilMediaParamGroupImpl) paramGroup).getParamByName(SmilMediaParam.PARAM_NAME_TRACK_ID);
       if (param != null && param.getValue().equals(track.getIdentifier())) {
         trackParamGroup = paramGroup;

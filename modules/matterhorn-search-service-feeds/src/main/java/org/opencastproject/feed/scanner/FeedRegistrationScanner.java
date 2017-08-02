@@ -1,18 +1,24 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
+
 package org.opencastproject.feed.scanner;
 
 import static org.opencastproject.util.ReadinessIndicator.ARTIFACT;
@@ -51,7 +57,7 @@ public class FeedRegistrationScanner implements ArtifactInstaller {
   private static final Logger logger = LoggerFactory.getLogger(FeedRegistrationScanner.class);
 
   /** A map to keep track of each feed registration file and feed generator it produces */
-  protected Map<File, ServiceRegistration> generators = new HashMap<File, ServiceRegistration>();
+  protected Map<File, ServiceRegistration<?>> generators = new HashMap<>();
 
   /** The search service to use in each feed generator */
   protected SearchService searchService;
@@ -109,7 +115,7 @@ public class FeedRegistrationScanner implements ArtifactInstaller {
    */
   @Override
   public void install(File artifact) throws Exception {
-    logger.info("Installing a feed from {}", artifact.getAbsolutePath());
+    logger.info("Installing a feed from '{}'", artifact.getName());
     Properties props = new Properties();
     FileInputStream in = null;
     try {
@@ -125,12 +131,13 @@ public class FeedRegistrationScanner implements ArtifactInstaller {
     generator.setSearchService(searchService);
     generator.setSeriesService(seriesService);
     generator.initialize(props);
-    ServiceRegistration reg = bundleContext.registerService(FeedGenerator.class.getName(), generator, null);
+    ServiceRegistration<?> reg = bundleContext.registerService(FeedGenerator.class.getName(), generator, null);
     generators.put(artifact, reg);
     sumInstalledFiles++;
 
     // Determine the number of available profiles
     String[] filesInDirectory = artifact.getParentFile().list(new FilenameFilter() {
+      @Override
       public boolean accept(File arg0, String name) {
         return name.endsWith(".properties");
       }
@@ -138,7 +145,7 @@ public class FeedRegistrationScanner implements ArtifactInstaller {
 
     // Once all profiles have been loaded, announce readiness
     if (filesInDirectory.length == sumInstalledFiles) {
-      Dictionary<String, String> properties = new Hashtable<String, String>();
+      Dictionary<String, String> properties = new Hashtable<>();
       properties.put(ARTIFACT, "feed");
       logger.debug("Indicating readiness of feed");
       bundleContext.registerService(ReadinessIndicator.class.getName(), new ReadinessIndicator(), properties);

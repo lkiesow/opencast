@@ -1,23 +1,29 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
 
+
 package org.opencastproject.search.impl.solr;
 
-import static org.opencastproject.search.api.SearchService.READ_PERMISSION;
-import static org.opencastproject.search.api.SearchService.WRITE_PERMISSION;
+import static org.opencastproject.security.api.Permissions.Action.READ;
+import static org.opencastproject.security.api.Permissions.Action.WRITE;
 import static org.opencastproject.util.data.Collections.filter;
 import static org.opencastproject.util.data.Collections.head;
 import static org.opencastproject.util.data.Option.option;
@@ -25,6 +31,7 @@ import static org.opencastproject.util.data.Option.option;
 import org.opencastproject.mediapackage.MediaPackage;
 import org.opencastproject.mediapackage.MediaPackageBuilder;
 import org.opencastproject.mediapackage.MediaPackageBuilderFactory;
+import org.opencastproject.mediapackage.MediaPackageSerializer;
 import org.opencastproject.search.api.MediaSegment;
 import org.opencastproject.search.api.MediaSegmentImpl;
 import org.opencastproject.search.api.SearchQuery;
@@ -42,7 +49,7 @@ import org.opencastproject.util.data.Function0;
 import org.opencastproject.util.data.Option;
 import org.opencastproject.util.data.Predicate;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.SolrQuery.ORDER;
 import org.apache.solr.client.solrj.SolrServer;
@@ -84,16 +91,38 @@ public class SolrRequester {
   private SecurityService securityService;
 
   /**
+   * The optional serializer
+   */
+  private MediaPackageSerializer serializer = null;
+
+  /**
    * Creates a new requester for solr that will be using the given connection object to query the search index.
    *
    * @param connection
    *          the solr connection
+   * @param securityService
+   *          the security service
    */
   public SolrRequester(SolrServer connection, SecurityService securityService) {
+    this(connection, securityService, null);
+  }
+
+  /**
+   * Creates a new requester for solr that will be using the given connection object to query the search index.
+   *
+   * @param connection
+   *          the solr connection
+   * @param securityService
+   *          the security service
+   * @param serializer
+   *          the optional mediapackage serializer
+   */
+  public SolrRequester(SolrServer connection, SecurityService securityService, MediaPackageSerializer serializer) {
     if (connection == null)
       throw new IllegalStateException("Unable to run queries on null connection");
     this.solrServer = connection;
     this.securityService = securityService;
+    this.serializer = serializer;
   }
 
   /**
@@ -163,6 +192,8 @@ public class SolrRequester {
         @Override
         public MediaPackage getMediaPackage() {
           MediaPackageBuilder builder = MediaPackageBuilderFactory.newInstance().newMediaPackageBuilder();
+          if (serializer != null)
+            builder.setSerializer(serializer);
           String mediaPackageFieldValue = Schema.getOcMediapackage(doc);
           if (mediaPackageFieldValue != null) {
             try {
@@ -744,7 +775,7 @@ public class SolrRequester {
    * @throws SolrServerException
    */
   public SearchResult getForAdministrativeRead(SearchQuery q) throws SolrServerException {
-    SolrQuery query = getForAction(q, READ_PERMISSION, false);
+    SolrQuery query = getForAction(q, READ.toString(), false);
     return createSearchResult(query);
   }
 
@@ -757,7 +788,7 @@ public class SolrRequester {
    * @throws SolrServerException
    */
   public SearchResult getForRead(SearchQuery q) throws SolrServerException {
-    SolrQuery query = getForAction(q, READ_PERMISSION, true);
+    SolrQuery query = getForAction(q, READ.toString(), true);
     return createSearchResult(query);
   }
 
@@ -770,7 +801,7 @@ public class SolrRequester {
    * @throws SolrServerException
    */
   public SearchResult getForWrite(SearchQuery q) throws SolrServerException {
-    SolrQuery query = getForAction(q, WRITE_PERMISSION, true);
+    SolrQuery query = getForAction(q, WRITE.toString(), true);
     return createSearchResult(query);
   }
 
@@ -782,6 +813,16 @@ public class SolrRequester {
    */
   public void setSecurityService(SecurityService securityService) {
     this.securityService = securityService;
+  }
+
+  /**
+   * Sets the optional Mediapackage Serializer.
+   *
+   * @param serializer
+   *          the serializer
+   */
+  public void setMediaPackageSerializer(MediaPackageSerializer serializer) {
+    this.serializer = serializer;
   }
 
   /**

@@ -1,24 +1,31 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
+
 
 package org.opencastproject.silencedetection.api;
 
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.List;
+
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
@@ -30,7 +37,7 @@ import javax.xml.bind.annotation.XmlElementWrapper;
 import javax.xml.bind.annotation.XmlRootElement;
 
 /**
- * Wrapper class for holding many {@see MediaSegment}s and implements XML serialization methods.
+ * Wrapper class for holding many {@link MediaSegment}s and implements XML serialization methods.
  */
 @XmlRootElement(name = "media-segments")
 @XmlAccessorType(XmlAccessType.NONE)
@@ -61,7 +68,7 @@ public class MediaSegments {
 
   /**
    * Returns a list with media segments, that holds start and stop positions or null.
-   * @return list with {@see MediaSegment}s or null
+   * @return list with {@link MediaSegment}s or null
    */
   public List<MediaSegment> getMediaSegments() {
     return mediaSegments;
@@ -98,8 +105,8 @@ public class MediaSegments {
 
   /**
    * Deserialize from XML.
-   * @param mediaSegmentsXml {@see MediaSegments} XML as String
-   * @return deserialized {@see MediaSegments}
+   * @param mediaSegmentsXml {@link MediaSegments} XML as String
+   * @return deserialized {@link MediaSegments}
    * @throws JAXBException if an error occures
    */
   public static MediaSegments fromXml(String mediaSegmentsXml) throws JAXBException {

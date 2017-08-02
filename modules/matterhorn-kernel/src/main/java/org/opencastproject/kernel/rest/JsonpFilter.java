@@ -1,18 +1,24 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
+
 package org.opencastproject.kernel.rest;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
@@ -33,6 +39,7 @@ import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
+import javax.servlet.WriteListener;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpServletResponseWrapper;
@@ -139,7 +146,7 @@ public class JsonpFilter implements Filter {
      * @param callbackValue
      *          the jsonp callback value
      */
-    public HttpServletResponseContentWrapper(HttpServletResponse response, String callbackValue) {
+    HttpServletResponseContentWrapper(HttpServletResponse response, String callbackValue) {
       super(response);
       this.preWrapper = callbackValue + OPEN_PARENS;
       this.buffer = new ByteArrayServletOutputStream();
@@ -338,7 +345,7 @@ public class JsonpFilter implements Filter {
     /**
      * Creates a new buffered stream with the default size (32).
      */
-    public ByteArrayServletOutputStream() {
+    ByteArrayServletOutputStream() {
       this(32);
     }
 
@@ -348,7 +355,7 @@ public class JsonpFilter implements Filter {
      * @param size
      *          the buffer size
      */
-    public ByteArrayServletOutputStream(int size) {
+    ByteArrayServletOutputStream(int size) {
       if (size < 0) {
         throw new IllegalArgumentException("Negative initial size: " + size);
       }
@@ -392,11 +399,6 @@ public class JsonpFilter implements Filter {
       }
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * @see java.io.OutputStream#write(int)
-     */
     @Override
     public synchronized void write(int b) throws IOException {
       int newcount = count + 1;
@@ -404,5 +406,15 @@ public class JsonpFilter implements Filter {
       buf[count] = (byte) b;
       count = newcount;
     }
+
+    @Override
+    public boolean isReady() {
+      return false;
+    }
+
+    @Override
+    public void setWriteListener(WriteListener arg0) {
+    }
+
   }
 }

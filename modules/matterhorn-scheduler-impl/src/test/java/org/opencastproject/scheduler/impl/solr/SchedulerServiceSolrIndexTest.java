@@ -1,25 +1,26 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
+
 package org.opencastproject.scheduler.impl.solr;
 
-import junit.framework.Assert;
-import org.apache.commons.io.FileUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
 import org.opencastproject.metadata.dublincore.DCMIPeriod;
 import org.opencastproject.metadata.dublincore.DublinCore;
 import org.opencastproject.metadata.dublincore.DublinCoreCatalog;
@@ -30,6 +31,12 @@ import org.opencastproject.metadata.dublincore.Precision;
 import org.opencastproject.scheduler.api.SchedulerQuery;
 import org.opencastproject.util.NotFoundException;
 import org.opencastproject.util.PathSupport;
+
+import org.apache.commons.io.FileUtils;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.io.File;
 import java.text.DateFormat;
@@ -130,33 +137,24 @@ public class SchedulerServiceSolrIndexTest {
   }
 
   @Test
-  public void testLastModified() throws Exception {
+  public void testEventStatus() throws Exception {
     DublinCoreCatalog firstCatalog = dcService.newInstance();
     firstCatalog.add(DublinCore.PROPERTY_IDENTIFIER, "1");
     firstCatalog.add(DublinCore.PROPERTY_TITLE, "First");
     firstCatalog.add(DublinCore.PROPERTY_SPATIAL, "Device one");
 
-    DublinCoreCatalog secondCatalog = dcService.newInstance();
-    secondCatalog.add(DublinCore.PROPERTY_IDENTIFIER, "2");
-    secondCatalog.add(DublinCore.PROPERTY_TITLE, "Second");
-    secondCatalog.add(DublinCore.PROPERTY_SPATIAL, "Device one");
-
-    DublinCoreCatalog thirdCatalog = dcService.newInstance();
-    thirdCatalog.add(DublinCore.PROPERTY_IDENTIFIER, "1");
-    thirdCatalog.add(DublinCore.PROPERTY_TITLE, "Third");
-    thirdCatalog.add(DublinCore.PROPERTY_SPATIAL, "Device two");
-
     index.index(firstCatalog);
-    Date beforeSecondIndexing = new Date();
-    index.index(secondCatalog);
-    Date afterSecondIndexing = new Date();
-    index.index(thirdCatalog);
 
-    SchedulerQuery filter = new SchedulerQuery().setSpatial("Device one");
+    SchedulerQuery filter = new SchedulerQuery().setOptOut(true).setBlacklisted(false);
+    DublinCoreCatalogList search = index.search(filter);
+    Assert.assertEquals(0, search.getTotalCount());
 
-    Date lastModified = index.getLastModifiedDate(filter);
-    Assert.assertTrue("Wrong last modified returned",
-            !beforeSecondIndexing.after(lastModified) && !afterSecondIndexing.before(lastModified));
+    index.indexOptOut(1, true);
+    index.indexBlacklisted(1, true);
+
+    filter = new SchedulerQuery().setOptOut(true).setBlacklisted(true);
+    search = index.search(filter);
+    Assert.assertEquals(1, search.getTotalCount());
   }
 
   @Test

@@ -1,18 +1,24 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
+
 package org.opencastproject.ingest.endpoint;
 
 import org.opencastproject.ingest.api.IngestService;
@@ -20,21 +26,18 @@ import org.opencastproject.mediapackage.MediaPackage;
 import org.opencastproject.mediapackage.MediaPackageBuilderFactory;
 import org.opencastproject.mediapackage.MediaPackageElementFlavor;
 import org.opencastproject.mediapackage.MediaPackageParser;
+import org.opencastproject.mediapackage.identifier.UUIDIdBuilderImpl;
 import org.opencastproject.util.NotFoundException;
+import org.opencastproject.util.UploadJob;
 import org.opencastproject.workflow.api.WorkflowInstance;
 import org.opencastproject.workflow.api.WorkflowInstanceImpl;
 
-import com.mchange.v2.c3p0.ComboPooledDataSource;
-
-import junit.framework.Assert;
-
 import org.apache.commons.fileupload.MockHttpServletRequest;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.easymock.EasyMock;
 import org.easymock.IAnswer;
-import org.eclipse.persistence.jpa.PersistenceProvider;
-import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.osgi.framework.BundleContext;
@@ -42,23 +45,22 @@ import org.osgi.service.component.ComponentContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.beans.PropertyVetoException;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.util.HashMap;
 import java.util.Map;
 
+import javax.servlet.ReadListener;
 import javax.servlet.ServletInputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
 public class IngestRestServiceTest {
+
   private static final Logger logger = LoggerFactory.getLogger(IngestRestServiceTest.class);
   protected IngestRestService restService;
-  private ComboPooledDataSource pooledDataSource = null;
   private File testDir = null;
   private LimitVerifier limitVerifier;
 
@@ -73,18 +75,14 @@ public class IngestRestServiceTest {
     }
     testDir.mkdir();
 
-    setupPooledDataSource();
-
-    Map<String, Object> props = setupPersistenceProperties();
-
     restService = new IngestRestService();
-    restService.setPersistenceProvider(new PersistenceProvider());
-    restService.setPersistenceProperties(props);
 
     // Create a mock ingest service
     IngestService ingestService = EasyMock.createNiceMock(IngestService.class);
     EasyMock.expect(ingestService.createMediaPackage()).andReturn(
             MediaPackageBuilderFactory.newInstance().newMediaPackageBuilder().createNew());
+    EasyMock.expect(ingestService.createMediaPackage("1a6f70ab-4262-4523-9f8e-babce22a1ea8")).andReturn(
+            MediaPackageBuilderFactory.newInstance().newMediaPackageBuilder().createNew(new UUIDIdBuilderImpl().fromString("1a6f70ab-4262-4523-9f8e-babce22a1ea8")));
     EasyMock.expect(
             ingestService.addAttachment((URI) EasyMock.anyObject(), (MediaPackageElementFlavor) EasyMock.anyObject(),
                     (MediaPackage) EasyMock.anyObject())).andReturn(
@@ -92,50 +90,49 @@ public class IngestRestServiceTest {
     EasyMock.expect(
             ingestService.addCatalog((URI) EasyMock.anyObject(), (MediaPackageElementFlavor) EasyMock.anyObject(),
                     (MediaPackage) EasyMock.anyObject())).andReturn(
-            MediaPackageBuilderFactory.newInstance().newMediaPackageBuilder().createNew());
+                    MediaPackageBuilderFactory.newInstance().newMediaPackageBuilder().createNew());
     EasyMock.expect(
             ingestService.addTrack((URI) EasyMock.anyObject(), (MediaPackageElementFlavor) EasyMock.anyObject(),
                     (MediaPackage) EasyMock.anyObject())).andReturn(
-            MediaPackageBuilderFactory.newInstance().newMediaPackageBuilder().createNew());
+                    MediaPackageBuilderFactory.newInstance().newMediaPackageBuilder().createNew());
+    EasyMock.expect(
+            ingestService.addTrack((URI) EasyMock.anyObject(), (MediaPackageElementFlavor) EasyMock.anyObject(),
+                    (String[]) EasyMock.anyObject(), (MediaPackage) EasyMock.anyObject())).andReturn(
+                    MediaPackageBuilderFactory.newInstance().newMediaPackageBuilder().createNew());
     EasyMock.expect(
             ingestService.addAttachment((InputStream) EasyMock.anyObject(), (String) EasyMock.anyObject(),
                     (MediaPackageElementFlavor) EasyMock.anyObject(), (MediaPackage) EasyMock.anyObject())).andReturn(
-            MediaPackageBuilderFactory.newInstance().newMediaPackageBuilder().createNew());
+                    MediaPackageBuilderFactory.newInstance().newMediaPackageBuilder().createNew());
+    EasyMock.expect(
+            ingestService.addAttachment((InputStream) EasyMock.anyObject(), (String) EasyMock.anyObject(),
+                    (MediaPackageElementFlavor) EasyMock.anyObject(), (String[]) EasyMock.anyObject(), (MediaPackage) EasyMock.anyObject())).andReturn(
+                    MediaPackageBuilderFactory.newInstance().newMediaPackageBuilder().createNew());
     EasyMock.expect(
             ingestService.addCatalog((InputStream) EasyMock.anyObject(), (String) EasyMock.anyObject(),
                     (MediaPackageElementFlavor) EasyMock.anyObject(), (MediaPackage) EasyMock.anyObject())).andReturn(
-            MediaPackageBuilderFactory.newInstance().newMediaPackageBuilder().createNew());
+                    MediaPackageBuilderFactory.newInstance().newMediaPackageBuilder().createNew());
+    EasyMock.expect(
+            ingestService.addCatalog((InputStream) EasyMock.anyObject(), (String) EasyMock.anyObject(),
+                    (MediaPackageElementFlavor) EasyMock.anyObject(), (String[]) EasyMock.anyObject(), (MediaPackage) EasyMock.anyObject())).andReturn(
+                    MediaPackageBuilderFactory.newInstance().newMediaPackageBuilder().createNew());
     EasyMock.expect(
             ingestService.addTrack((InputStream) EasyMock.anyObject(), (String) EasyMock.anyObject(),
                     (MediaPackageElementFlavor) EasyMock.anyObject(), (MediaPackage) EasyMock.anyObject())).andReturn(
+                    MediaPackageBuilderFactory.newInstance().newMediaPackageBuilder().createNew());
+    EasyMock.expect(
+            ingestService.addTrack((InputStream) EasyMock.anyObject(), (String) EasyMock.anyObject(),
+                    (MediaPackageElementFlavor) EasyMock.anyObject(), (String[]) EasyMock.anyObject(), (MediaPackage) EasyMock.anyObject())).andReturn(
+                    MediaPackageBuilderFactory.newInstance().newMediaPackageBuilder().createNew());
+    EasyMock.expect(
+            ingestService.addPartialTrack((InputStream) EasyMock.anyObject(), (String) EasyMock.anyObject(),
+                    (MediaPackageElementFlavor) EasyMock.anyObject(), EasyMock.anyLong(),
+                    (MediaPackage) EasyMock.anyObject())).andReturn(
             MediaPackageBuilderFactory.newInstance().newMediaPackageBuilder().createNew());
     EasyMock.replay(ingestService);
 
     // Set the service, and activate the rest endpoint
     restService.setIngestService(ingestService);
     restService.activate(null);
-  }
-
-  private Map<String, Object> setupPersistenceProperties() {
-    // Collect the persistence properties
-    Map<String, Object> props = new HashMap<String, Object>();
-    props.put("javax.persistence.nonJtaDataSource", pooledDataSource);
-    props.put("eclipselink.ddl-generation", "create-tables");
-    props.put("eclipselink.ddl-generation.output-mode", "database");
-    return props;
-  }
-
-  private void setupPooledDataSource() throws PropertyVetoException {
-    pooledDataSource = new ComboPooledDataSource();
-    pooledDataSource.setDriverClass("org.h2.Driver");
-    pooledDataSource.setJdbcUrl("jdbc:h2:./target/db" + System.currentTimeMillis());
-    pooledDataSource.setUser("sa");
-    pooledDataSource.setPassword("sa");
-  }
-
-  @After
-  public void tearDown() throws Exception {
-    pooledDataSource.close();
   }
 
   @Test
@@ -174,17 +171,7 @@ public class IngestRestServiceTest {
   }
 
   public void setupAndTestLimit(String limit, int expectedLimit, boolean expectedEnabled) {
-    try {
-      setupPooledDataSource();
-    } catch (PropertyVetoException e) {
-      e.printStackTrace();
-    }
-
-    Map<String, Object> props = setupPersistenceProperties();
-
     restService = new IngestRestService();
-    restService.setPersistenceProvider(new PersistenceProvider());
-    restService.setPersistenceProperties(props);
 
     // Create a mock ingest service
     IngestService ingestService = EasyMock.createNiceMock(IngestService.class);
@@ -239,17 +226,7 @@ public class IngestRestServiceTest {
   }
 
   public void setupAndTestIngestingLimit(String limit, int numberOfIngests, int expectedOK, int expectedBusy) {
-    try {
-      setupPooledDataSource();
-    } catch (PropertyVetoException e) {
-      Assert.fail("Test failed due to exception " + e.getMessage());
-    }
-
-    Map<String, Object> props = setupPersistenceProperties();
-
     restService = new IngestRestService();
-    restService.setPersistenceProvider(new PersistenceProvider());
-    restService.setPersistenceProperties(props);
     restService.setIngestService(setupAddZippedMediaPackageIngestService());
     restService.activate(setupAddZippedMediaPackageComponentContext(limit));
 
@@ -271,7 +248,7 @@ public class IngestRestServiceTest {
     private int ok = 0;
     private int error = 0;
 
-    public LimitVerifier(int numberOfIngests) {
+    LimitVerifier(int numberOfIngests) {
       this.numberOfIngests = numberOfIngests;
     }
 
@@ -320,6 +297,20 @@ public class IngestRestServiceTest {
       @Override
       public int read() throws IOException {
         return 0;
+      }
+
+      @Override
+      public boolean isFinished() {
+        return false;
+      }
+
+      @Override
+      public boolean isReady() {
+        return false;
+      }
+
+      @Override
+      public void setReadListener(ReadListener readListener) {
       }
     };
     return servletInputStream;
@@ -382,11 +373,17 @@ public class IngestRestServiceTest {
     Assert.assertEquals(Status.OK.getStatusCode(), response.getStatus());
     MediaPackage mp = (MediaPackage) response.getEntity();
     Assert.assertNotNull(mp);
+
+    response = restService.createMediaPackage("1a6f70ab-4262-4523-9f8e-babce22a1ea8");
+    Assert.assertEquals(Status.OK.getStatusCode(), response.getStatus());
+    mp = (MediaPackage) response.getEntity();
+    Assert.assertNotNull(mp);
+
   }
 
   @Test
   public void testAddMediaPackageTrack() throws Exception {
-    Response response = restService.addMediaPackageTrack("http://foo/av.mov", "presenter/source",
+    Response response = restService.addMediaPackageTrack("http://foo/av.mov", "presenter/source","testtag",
             MediaPackageParser.getAsXml(((MediaPackage) restService.createMediaPackage().getEntity())));
     Assert.assertEquals(Status.OK.getStatusCode(), response.getStatus());
   }
@@ -449,6 +446,18 @@ public class IngestRestServiceTest {
     }
   }
 
+  @Test
+  public void testAddMediaPackagePartialTrack() throws Exception {
+    String mediaPackage = MediaPackageParser.getAsXml(((MediaPackage) restService.createMediaPackage().getEntity()));
+
+    Response response = restService.addMediaPackagePartialTrack("http://foo/av.mov", "presenter/source+partial", 1000L,
+            mediaPackage);
+    Assert.assertEquals(Status.OK.getStatusCode(), response.getStatus());
+
+    response = restService.addMediaPackagePartialTrack(newPartialMockRequest());
+    Assert.assertEquals(Status.OK.getStatusCode(), response.getStatus());
+  }
+
   private HttpServletRequest newMockRequest() throws Exception {
     MediaPackage mp = MediaPackageBuilderFactory.newInstance().newMediaPackageBuilder().createNew();
     StringBuilder requestBody = new StringBuilder();
@@ -460,6 +469,30 @@ public class IngestRestServiceTest {
     requestBody.append("\r\n");
     requestBody.append(MediaPackageParser.getAsXml(mp));
     requestBody.append("\r\n");
+    requestBody.append("-----1234\r\n");
+    requestBody.append("Content-Disposition: form-data; name=\"file\"; filename=\"catalog.txt\"\r\n");
+    requestBody.append("Content-Type: text/whatever\r\n");
+    requestBody.append("\r\n");
+    requestBody.append("This is the content of the file\n");
+    requestBody.append("\r\n");
+    requestBody.append("-----1234");
+    return new MockHttpServletRequest(requestBody.toString().getBytes("UTF-8"), "multipart/form-data; boundary=---1234");
+  }
+
+  private HttpServletRequest newPartialMockRequest() throws Exception {
+    MediaPackage mp = MediaPackageBuilderFactory.newInstance().newMediaPackageBuilder().createNew();
+    StringBuilder requestBody = new StringBuilder();
+    requestBody.append("-----1234\r\n");
+    requestBody.append("Content-Disposition: form-data; name=\"flavor\"\r\n");
+    requestBody.append("\r\ntest/flavor\r\n");
+    requestBody.append("-----1234\r\n");
+    requestBody.append("Content-Disposition: form-data; name=\"mediaPackage\"\r\n");
+    requestBody.append("\r\n");
+    requestBody.append(MediaPackageParser.getAsXml(mp));
+    requestBody.append("\r\n");
+    requestBody.append("-----1234\r\n");
+    requestBody.append("Content-Disposition: form-data; name=\"startTime\"\r\n");
+    requestBody.append("\r\n2000\r\n");
     requestBody.append("-----1234\r\n");
     requestBody.append("Content-Disposition: form-data; name=\"file\"; filename=\"catalog.txt\"\r\n");
     requestBody.append("Content-Type: text/whatever\r\n");

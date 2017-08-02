@@ -1,18 +1,24 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
+
 
 package org.opencastproject.oaipmh.server;
 
@@ -25,12 +31,11 @@ import java.util.List;
  * XML generator for a regular (non-error) OAI response.
  */
 public abstract class OaiVerbXmlGen extends OaiXmlGen {
+  protected final Params p;
 
-  protected final String verb;
-
-  public OaiVerbXmlGen(OaiPmhRepository repository, String verb) {
+  public OaiVerbXmlGen(OaiPmhRepository repository, Params p) {
     super(repository);
-    this.verb = verb;
+    this.p = p;
   }
 
   /**
@@ -40,21 +45,21 @@ public abstract class OaiVerbXmlGen extends OaiXmlGen {
    *        further attributes
    */
   Element request(Node... attrs) {
-    return $e("request", merge(attrs, $a("verb", verb), $txt(repository.getBaseUrl())));
+    return $e("request", merge(attrs, $aSome("verb", p.getVerb()), $txt(p.getRepositoryUrl())));
   }
 
   /**
    * Create the verb tag.
    */
   Element verb(Node... nodes) {
-    return $e(verb, nodes);
+    return $e(p.getVerb().getOrElse("NOVERB"), nodes);
   }
 
   /**
    * Create the verb tag.
    */
   Element verb(List<Node> nodes) {
-    return $e(verb, nodes);
+    return $e(p.getVerb().getOrElse("NOVERB"), nodes);
   }
 
 }

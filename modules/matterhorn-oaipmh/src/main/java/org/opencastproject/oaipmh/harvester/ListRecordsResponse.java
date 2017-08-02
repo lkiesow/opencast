@@ -1,22 +1,31 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
-
 package org.opencastproject.oaipmh.harvester;
 
+import static org.apache.commons.lang3.StringUtils.trimToNull;
+import static org.opencastproject.util.data.Option.option;
+
+import org.opencastproject.oaipmh.OaiPmhConstants;
 import org.opencastproject.util.data.Option;
+
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -24,20 +33,37 @@ import org.w3c.dom.NodeList;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-import static org.apache.commons.lang.StringUtils.trimToNull;
-import static org.opencastproject.util.data.Option.option;
-
 /**
  * The "ListRecords" response.
  * See <a href="http://www.openarchives.org/OAI/openarchivesprotocol.html#ListRecords">4.5 ListRecords</a> for further
  * information.
- * <p/>
+ * <p>
  * todo implement missing element accessors
  */
 public class ListRecordsResponse extends OaiPmhResponse {
 
   public ListRecordsResponse(Document doc) {
     super(doc);
+  }
+
+  public boolean isErrorBadArgument() {
+    return isError(OaiPmhConstants.ERROR_BAD_ARGUMENT);
+  }
+
+  public boolean isErrorBadResumptionToken() {
+    return isError(OaiPmhConstants.ERROR_BAD_RESUMPTION_TOKEN);
+  }
+
+  public boolean isErrorCannotDisseminateFormat() {
+    return isError(OaiPmhConstants.ERROR_CANNOT_DISSEMINATE_FORMAT);
+  }
+
+  public boolean isErrorNoRecordsMatch() {
+    return isError(OaiPmhConstants.ERROR_NO_RECORDS_MATCH);
+  }
+
+  public boolean isErrorNoSetHierarchy() {
+    return isError(OaiPmhConstants.ERROR_NO_SET_HIERARCHY);
   }
 
   /**
@@ -141,20 +167,18 @@ public class ListRecordsResponse extends OaiPmhResponse {
   private abstract static class ResponseIterator implements Iterator<Node> {
 
     private NodeList elems;
-      private Option<String> token;
-      private String metadataPrefix;
-      private int i;
+    private Option<String> token;
+    private int i;
 
     ResponseIterator(ListRecordsResponse response) {
       initIteration(response);
-      }
+    }
 
     private void initIteration(ListRecordsResponse response) {
       elems = extractNodes(response);
-        token = response.getResumptionToken();
-        metadataPrefix = response.getMetadataPrefix();
-        i = 0;
-      }
+      token = response.getResumptionToken();
+      i = 0;
+    }
 
     protected abstract OaiPmhRepositoryClient getClient();
 
@@ -163,29 +187,34 @@ public class ListRecordsResponse extends OaiPmhResponse {
      */
     protected abstract NodeList extractNodes(ListRecordsResponse response);
 
-      @Override
-      public boolean hasNext() {
-        return hasNextInCurrent() || token.isSome();
-      }
-
-      @Override
-      public Node next() {
-        if (!hasNext())
-          throw new NoSuchElementException();
-        if (!hasNextInCurrent()) {
-          // get next document
-        initIteration(getClient().resumeListRecords(metadataPrefix, token.get()));
+    @Override
+    public boolean hasNext() {
+      if (hasNextInCurrent()) {
+        return true;
+      } else {
+        if (token.isSome()) {
+          initIteration(getClient().resumeListRecords(token.get()));
+          return hasNextInCurrent();
+        } else {
+          return false;
         }
+      }
+    }
+
+    @Override
+    public Node next() {
+      if (!hasNext())
+        throw new NoSuchElementException();
       return elems.item(i++);
-      }
+    }
 
-      @Override
-      public void remove() {
-        throw new UnsupportedOperationException();
-      }
+    @Override
+    public void remove() {
+      throw new UnsupportedOperationException();
+    }
 
-      private boolean hasNextInCurrent() {
+    private boolean hasNextInCurrent() {
       return i < elems.getLength();
-  }
+    }
   }
 }

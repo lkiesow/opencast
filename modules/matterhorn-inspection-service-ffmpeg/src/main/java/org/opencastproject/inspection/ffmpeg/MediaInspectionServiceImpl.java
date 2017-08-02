@@ -1,24 +1,29 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
+
 package org.opencastproject.inspection.ffmpeg;
 
-import org.apache.commons.lang.StringUtils;
-import org.apache.tika.parser.Parser;
 import org.opencastproject.inspection.api.MediaInspectionException;
 import org.opencastproject.inspection.api.MediaInspectionService;
+import org.opencastproject.inspection.api.util.Options;
 import org.opencastproject.job.api.AbstractJobProducer;
 import org.opencastproject.job.api.Job;
 import org.opencastproject.mediapackage.MediaPackageElement;
@@ -29,7 +34,10 @@ import org.opencastproject.security.api.SecurityService;
 import org.opencastproject.security.api.UserDirectoryService;
 import org.opencastproject.serviceregistry.api.ServiceRegistry;
 import org.opencastproject.serviceregistry.api.ServiceRegistryException;
+import org.opencastproject.util.LoadUtil;
 import org.opencastproject.workspace.api.Workspace;
+
+import org.apache.tika.parser.Parser;
 import org.osgi.service.cm.ConfigurationException;
 import org.osgi.service.cm.ManagedService;
 import org.osgi.service.component.ComponentContext;
@@ -40,9 +48,29 @@ import java.net.URI;
 import java.util.Arrays;
 import java.util.Dictionary;
 import java.util.List;
+import java.util.Map;
 
 /** Inspects media via ffprobe. */
 public class MediaInspectionServiceImpl extends AbstractJobProducer implements MediaInspectionService, ManagedService {
+
+  /** The load introduced on the system by creating an inspect job */
+  public static final float DEFAULT_INSPECT_JOB_LOAD = 1.0f;
+
+  /** The load introduced on the system by creating an enrich job */
+  public static final float DEFAULT_ENRICH_JOB_LOAD = 1.0f;
+
+  /** The key to look for in the service configuration file to override the {@link DEFAULT_INSPECT_JOB_LOAD} */
+  public static final String INSPECT_JOB_LOAD_KEY = "job.load.inspect";
+
+  /** The key to look for in the service configuration file to override the {@link DEFAULT_ENRICH_JOB_LOAD} */
+  public static final String ENRICH_JOB_LOAD_KEY = "job.load.enrich";
+
+  /** The load introduced on the system by creating an inspect job */
+  private float inspectJobLoad = DEFAULT_INSPECT_JOB_LOAD;
+
+  /** The load introduced on the system by creating an enrich job */
+  private float enrichJobLoad = DEFAULT_ENRICH_JOB_LOAD;
+
   private static final Logger logger = LoggerFactory.getLogger(MediaInspectionServiceImpl.class);
 
   /** List of available operations on jobs */
@@ -73,13 +101,14 @@ public class MediaInspectionServiceImpl extends AbstractJobProducer implements M
     super(JOB_TYPE);
   }
 
+  @Override
   public void activate(ComponentContext cc) {
+    super.activate(cc);
     /* Configure analyzer */
     final String path = cc.getBundleContext().getProperty(FFmpegAnalyzer.FFPROBE_BINARY_CONFIG);
     final String ffprobeBinary;
     if (path == null) {
-      logger.debug("DEFAULT " + FFmpegAnalyzer.FFPROBE_BINARY_CONFIG + ": "
-          + FFmpegAnalyzer.FFPROBE_BINARY_DEFAULT);
+      logger.debug("DEFAULT " + FFmpegAnalyzer.FFPROBE_BINARY_CONFIG + ": " + FFmpegAnalyzer.FFPROBE_BINARY_DEFAULT);
       ffprobeBinary = FFmpegAnalyzer.FFPROBE_BINARY_DEFAULT;
     } else {
       logger.debug("FFprobe config binary: {}", path);
@@ -88,21 +117,16 @@ public class MediaInspectionServiceImpl extends AbstractJobProducer implements M
     inspector = new MediaInspector(workspace, tikaParser, ffprobeBinary);
   }
 
-  /**
-   * {@inheritDoc}
-   *
-   * @see org.osgi.service.cm.ManagedService#updated(java.util.Dictionary)
-   */
   @Override
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings("rawtypes")
   public void updated(Dictionary properties) throws ConfigurationException {
     if (properties == null)
       return;
-    final String path = StringUtils.trimToNull((String) properties.get(FFmpegAnalyzer.FFPROBE_BINARY_CONFIG));
-    if (path != null) {
-      logger.info("Setting the path to ffprobe to " + path);
-      inspector = new MediaInspector(workspace, tikaParser, path);
-    }
+
+    inspectJobLoad = LoadUtil.getConfiguredLoadValue(properties, INSPECT_JOB_LOAD_KEY, DEFAULT_INSPECT_JOB_LOAD,
+            serviceRegistry);
+    enrichJobLoad = LoadUtil.getConfiguredLoadValue(properties, ENRICH_JOB_LOAD_KEY, DEFAULT_ENRICH_JOB_LOAD,
+            serviceRegistry);
   }
 
   /**
@@ -118,15 +142,18 @@ public class MediaInspectionServiceImpl extends AbstractJobProducer implements M
     try {
       op = Operation.valueOf(operation);
       MediaPackageElement inspectedElement = null;
+      Map<String, String> options = null;
       switch (op) {
         case Inspect:
           URI uri = URI.create(arguments.get(0));
-          inspectedElement = inspector.inspectTrack(uri);
+          options = Options.fromJson(arguments.get(1));
+          inspectedElement = inspector.inspectTrack(uri, options);
           break;
         case Enrich:
           MediaPackageElement element = MediaPackageElementParser.getFromXml(arguments.get(0));
           boolean overwrite = Boolean.parseBoolean(arguments.get(1));
-          inspectedElement = inspector.enrich(element, overwrite);
+          options = Options.fromJson(arguments.get(2));
+          inspectedElement = inspector.enrich(element, overwrite, options);
           break;
         default:
           throw new IllegalStateException("Don't know how to handle operation '" + operation + "'");
@@ -148,8 +175,20 @@ public class MediaInspectionServiceImpl extends AbstractJobProducer implements M
    */
   @Override
   public Job inspect(URI uri) throws MediaInspectionException {
+    return inspect(uri, Options.NO_OPTION);
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * @see org.opencastproject.inspection.api.MediaInspectionService#inspect(java.net.URI, java.util.Map)
+   */
+  @Override
+  public Job inspect(URI uri, final Map<String,String> options) throws MediaInspectionException {
+    assert (options != null);
     try {
-      return serviceRegistry.createJob(JOB_TYPE, Operation.Inspect.toString(), Arrays.asList(uri.toString()));
+      return serviceRegistry.createJob(JOB_TYPE, Operation.Inspect.toString(), Arrays.asList(uri.toString(),
+              Options.toJson(options)), inspectJobLoad);
     } catch (ServiceRegistryException e) {
       throw new MediaInspectionException(e);
     }
@@ -162,14 +201,28 @@ public class MediaInspectionServiceImpl extends AbstractJobProducer implements M
    *      boolean)
    */
   @Override
-  public Job enrich(final MediaPackageElement element, final boolean override) throws MediaInspectionException,
-         MediaPackageException {
-           try {
-             return serviceRegistry.createJob(JOB_TYPE, Operation.Enrich.toString(),
-                 Arrays.asList(MediaPackageElementParser.getAsXml(element), Boolean.toString(override)));
-           } catch (ServiceRegistryException e) {
-             throw new MediaInspectionException(e);
-           }
+  public Job enrich(final MediaPackageElement element, final boolean override)
+          throws MediaInspectionException, MediaPackageException {
+    return enrich(element, override, Options.NO_OPTION);
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * @see org.opencastproject.inspection.api.MediaInspectionService#enrich(org.opencastproject.mediapackage.MediaPackageElement,
+   *      boolean, java.util.Map)
+   */
+  @Override
+  public Job enrich(final MediaPackageElement element, final boolean override, final Map<String,String> options)
+          throws MediaInspectionException, MediaPackageException {
+    assert (options != null);
+    try {
+      return serviceRegistry.createJob(JOB_TYPE, Operation.Enrich.toString(),
+              Arrays.asList(MediaPackageElementParser.getAsXml(element), Boolean.toString(override),
+              Options.toJson(options)), enrichJobLoad);
+    } catch (ServiceRegistryException e) {
+      throw new MediaInspectionException(e);
+    }
   }
 
   protected void setWorkspace(Workspace workspace) {
@@ -195,7 +248,7 @@ public class MediaInspectionServiceImpl extends AbstractJobProducer implements M
    * Callback for setting the security service.
    *
    * @param securityService
-   *         the securityService to set
+   *          the securityService to set
    */
   public void setSecurityService(SecurityService securityService) {
     this.securityService = securityService;
@@ -205,7 +258,7 @@ public class MediaInspectionServiceImpl extends AbstractJobProducer implements M
    * Callback for setting the user directory service.
    *
    * @param userDirectoryService
-   *         the userDirectoryService to set
+   *          the userDirectoryService to set
    */
   public void setUserDirectoryService(UserDirectoryService userDirectoryService) {
     this.userDirectoryService = userDirectoryService;
@@ -215,7 +268,7 @@ public class MediaInspectionServiceImpl extends AbstractJobProducer implements M
    * Sets a reference to the organization directory service.
    *
    * @param organizationDirectory
-   *         the organization directory
+   *          the organization directory
    */
   public void setOrganizationDirectoryService(OrganizationDirectoryService organizationDirectory) {
     this.organizationDirectoryService = organizationDirectory;

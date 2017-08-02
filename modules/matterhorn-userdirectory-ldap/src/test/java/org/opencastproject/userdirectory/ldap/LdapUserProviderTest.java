@@ -1,18 +1,24 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
+
 package org.opencastproject.userdirectory.ldap;
 
 import org.opencastproject.security.api.DefaultOrganization;
@@ -32,7 +38,8 @@ public class LdapUserProviderTest {
   @Before
   public void setUp() throws Exception {
     service = new LdapUserProviderInstance("sample_pid", new DefaultOrganization(), "ou=people,dc=berkeley,dc=edu",
-            "(uid={0})", "ldap://ldap.berkeley.edu", null, null, "berkeleyEduAffiliations,departmentNumber", 100, 10);
+            "(uid={0})", "ldap://ldap.berkeley.edu", null, null, "berkeleyEduAffiliations,departmentNumber", null, 100,
+            10);
   }
 
   @Ignore("Ignore this test by default, since it requires internet connectivity, and the user's details may change.")

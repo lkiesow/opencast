@@ -1,18 +1,24 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
+
 package org.opencastproject.security.api;
 
 import org.opencastproject.util.EqualsUtil;
@@ -42,6 +48,9 @@ public final class JaxbRole implements Role {
   /** The description */
   @XmlElement(name = "organization")
   protected JaxbOrganization organization;
+
+  @XmlElement(name = "type")
+  protected Type type = Type.INTERNAL;
 
   /**
    * No-arg constructor needed by JAXB
@@ -78,11 +87,29 @@ public final class JaxbRole implements Role {
     this.description = description;
   }
 
+
+  /**
+   * Constructs a role with the specified name, organization, description, and persistence settings.
+   *
+   * @param name
+   *          the name
+   * @param organization
+   *          the organization
+   * @param description
+   *          the description
+   * @param type
+   *          the role {@link type}
+   */
+  public JaxbRole(String name, JaxbOrganization organization, String description, Type type) throws IllegalArgumentException {
+    this(name, organization, description);
+    this.type = type;
+  }
+
   public static JaxbRole fromRole(Role role) {
     if (role instanceof JaxbRole)
       return (JaxbRole) role;
     JaxbOrganization org = JaxbOrganization.fromOrganization(role.getOrganization());
-    return new JaxbRole(role.getName(), org, role.getDescription());
+    return new JaxbRole(role.getName(), org, role.getDescription(), role.getType());
   }
 
   /**
@@ -117,6 +144,15 @@ public final class JaxbRole implements Role {
   /**
    * {@inheritDoc}
    *
+   * @see org.opencastproject.security.api.Role#getType()
+   */
+  public Type getType() {
+    return type;
+  }
+
+  /**
+   * {@inheritDoc}
+   *
    * @see java.lang.Object#hashCode()
    */
   @Override
@@ -146,5 +182,4 @@ public final class JaxbRole implements Role {
   public String toString() {
     return new StringBuilder(name).append(":").append(organization).toString();
   }
-
 }

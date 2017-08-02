@@ -1,18 +1,24 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
+
 package org.opencastproject.rest;
 
 import static java.lang.String.format;
@@ -23,18 +29,18 @@ import org.opencastproject.serviceregistry.api.ServiceRegistry;
 /**
  * Refined implementation of {@link org.opencastproject.rest.AbstractJobProducerEndpoint} suitable for use in an
  * OSGi environment.
- * <p/>
+ * <p>
  * OSGi dependency injection methods are provided to reduce the amount of boilerplate code needed per
  * service implementation.
- * <p/>
+ * <p>
  * Declare as type variable the {@linkplain AbstractJobProducerEndpoint#getService() job producing service} on which the
  * endpoint depends.
- * <p/>
+ * <p>
  * <strong>Example:</strong> The endpoint for the WorkflowService can be declared like this:
  * <pre>
  *   public final class WorkflowServiceEndpoint extends OsgiAbstractJobProducerEndpoint&lt;WorkflowServiceImpl&gt;
  * </pre>
- * <p/>
+ * <p>
  * <strong>Implementation note:</strong> Type variable <code>A</code> <em>cannot</em> have upper bound
  * {@link org.opencastproject.job.api.JobProducer}. Even though this may seem reasonable it will cause trouble
  * with OSGi dependency injection. The dependency will most likely be declared on the service's <em>interface</em>

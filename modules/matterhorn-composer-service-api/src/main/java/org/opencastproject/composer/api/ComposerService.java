@@ -1,18 +1,24 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
+
 package org.opencastproject.composer.api;
 
 import org.opencastproject.composer.layout.Dimension;
@@ -22,6 +28,8 @@ import org.opencastproject.mediapackage.Catalog;
 import org.opencastproject.mediapackage.MediaPackageException;
 import org.opencastproject.mediapackage.Track;
 import org.opencastproject.util.data.Option;
+
+import java.util.Map;
 
 /**
  * Encodes media and (optionally) periodically alerts a statusService endpoint of the status of this encoding job.
@@ -37,9 +45,10 @@ public interface ComposerService {
    *          The source track
    * @param profileId
    *          The profile to use for encoding
-   * @return The receipt for this encoding job. The receipt can be used with {@link ComposerService#getJob(long)} to
+   * @return The receipt for this encoding job. The receipt can be used with ComposerService#getJob to
    *         obtain the status of an encoding job.
    * @throws EncoderException
+   * @throws MediaPackageException
    */
   Job encode(Track sourceTrack, String profileId) throws EncoderException, MediaPackageException;
 
@@ -67,9 +76,9 @@ public interface ComposerService {
    * @param compositeTrackSize
    *          The composite track dimension
    * @param upperTrack
-   *          the upper track of the composition
+   *          an optional upper track of the composition
    * @param lowerTrack
-   *          the lower track of the composition
+   *          lower track of the composition
    * @param watermark
    *          The optional watermark attachment
    * @param profileId
@@ -82,12 +91,12 @@ public interface ComposerService {
    * @throws MediaPackageException
    *           if the mediapackage is invalid
    */
-  Job composite(Dimension compositeTrackSize, LaidOutElement<Track> upperTrack, LaidOutElement<Track> lowerTrack,
+  Job composite(Dimension compositeTrackSize, Option<LaidOutElement<Track>> upperTrack, LaidOutElement<Track> lowerTrack,
           Option<LaidOutElement<Attachment>> watermark, String profileId, String background) throws EncoderException,
           MediaPackageException;
 
   /**
-   * Concat multiple tracks having the same codec to a single track. Required ffmpeg version 1.1
+   * Concat multiple tracks to a single track. Required ffmpeg version 1.1
    *
    * @param profileId
    *          The encoding profile to use
@@ -102,6 +111,20 @@ public interface ComposerService {
    *           if the mediapackage is invalid
    */
   Job concat(String profileId, Dimension outputDimension, Track... tracks) throws EncoderException,
+          MediaPackageException;
+
+  /**
+   * Concat multiple tracks to a single track. Required ffmpeg version 1.1
+   *
+   * @param profileId The encoding profile to use
+   * @param outputDimension The output dimensions
+   * @param outputFrameRate The output frame rate
+   * @param tracks an array of track to concat in order of the array
+   * @return The receipt for this concat job
+   * @throws EncoderException if encoding fails
+   * @throws MediaPackageException if the mediapackage is invalid
+   */
+  Job concat(String profileId, Dimension outputDimension, float outputFrameRate, Track... tracks) throws EncoderException,
           MediaPackageException;
 
   /**
@@ -133,7 +156,7 @@ public interface ComposerService {
    *          start time in miliseconds
    * @param duration
    *          duration in miliseconds
-   * @return The receipt for this encoding job. The receipt can be used with {@link ComposerService#getJob(long)} to
+   * @return The receipt for this encoding job. The receipt can be used with ComposerService#getJob to
    *         obtain the status of an encoding job.
    * @throws EncoderException
    *           if trimming fails
@@ -163,6 +186,25 @@ public interface ComposerService {
   Job image(Track sourceTrack, String profileId, double... time) throws EncoderException, MediaPackageException;
 
   /**
+   * Extracts an image from the media package element identified by <code>sourceTrack</code>. The image is taken by the
+   * given properties and the corresponding encoding profile.
+   *
+   * @param sourceTrack
+   *          the source video track
+   * @param profileId
+   *          identifier of the encoding profile
+   * @param properties
+   *          the properties applied to the encoding profile
+   * @return the extracted image as an attachment
+   * @throws EncoderException
+   *           if image extraction fails
+   * @throws MediaPackageException
+   *           if the mediapackage is invalid
+   */
+  Job image(Track sourceTrack, String profileId, Map<String, String> properties) throws EncoderException,
+          MediaPackageException;
+
+  /**
    * Converts the given image to a different image format using the specified image profile.
    *
    * @param image
@@ -185,8 +227,6 @@ public interface ComposerService {
    *          media track to which captions will be embedded
    * @param captions
    *          captions to be inserted
-   * @param language
-   *          caption language
    * @return Receipt for this embedding job
    * @throws EmbedderException
    *           if exception occurs during embedding process
@@ -206,7 +246,7 @@ public interface ComposerService {
    * @param profileId
    *          identifier of the encoding profile
    * @return Receipt for this embedding job
-   * @throws EmbedderException
+   * @throws EncoderException
    *           if exception occurs during embedding process
    * @throws MediaPackageException
    *           if the track is invalid
@@ -226,5 +266,18 @@ public interface ComposerService {
    * @return The encoding profile, or null if no profile is registered with that ID
    */
   EncodingProfile getProfile(String profileId);
+
+  /**
+   * Encode one track to multiple other tracks in one encoding operation, using that track's audio and video streams.
+   *
+   * @param sourceTrack
+   *          The source track
+   * @param profileId
+   *          The profile to use for encoding
+   * @throws EncoderException
+   * @throws MediaPackageException
+   */
+  Job parallelEncode(Track sourceTrack, String profileId) throws EncoderException, MediaPackageException;
+
 
 }

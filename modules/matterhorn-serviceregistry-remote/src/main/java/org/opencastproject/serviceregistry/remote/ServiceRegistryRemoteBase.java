@@ -1,22 +1,30 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
+
 package org.opencastproject.serviceregistry.remote;
 
-import static org.apache.commons.lang.StringUtils.isBlank;
+import static com.entwinemedia.fn.Stream.$;
+import static org.apache.commons.lang3.StringUtils.isBlank;
 
+import org.opencastproject.job.api.JaxbJob;
 import org.opencastproject.job.api.JaxbJobList;
 import org.opencastproject.job.api.Job;
 import org.opencastproject.job.api.Job.Status;
@@ -36,12 +44,14 @@ import org.opencastproject.serviceregistry.api.ServiceRegistry;
 import org.opencastproject.serviceregistry.api.ServiceRegistryException;
 import org.opencastproject.serviceregistry.api.ServiceStatistics;
 import org.opencastproject.serviceregistry.api.SystemLoad;
+import org.opencastproject.serviceregistry.api.SystemLoad.NodeLoad;
+import org.opencastproject.serviceregistry.api.SystemLoadParser;
 import org.opencastproject.util.HttpUtil;
 import org.opencastproject.util.NotFoundException;
 import org.opencastproject.util.QueryStringBuilder;
 import org.opencastproject.util.UrlSupport;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
@@ -55,6 +65,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
@@ -65,7 +76,7 @@ import java.util.List;
  * <p>
  * This means that it is suited to run inside protected environments as long as there is an implementation of the
  * service running somwhere that provides the matching communication endpoint, which is the case with the default
- * implementation at {@link org.opencastproject.serviceregistry.impl.ServiceRegistryJpaImpl}.
+ * implementation at org.opencastproject.serviceregistry.impl.ServiceRegistryJpaImpl.
  * <p>
  * Other than with the other <code>-remote</code> implementations, this one needs to be configured to find it's
  * counterpart implementation. It may either point to a load balancer hiding a number of running instances or to one
@@ -163,13 +174,23 @@ public abstract class ServiceRegistryRemoteBase implements ServiceRegistry {
     throw new ServiceRegistryException("Unable to disable '" + host + "'. HTTP status=" + responseStatusCode);
   }
 
+  /**
+   * {@inheritDoc}
+   * @throws ServiceRegistryException
+   *
+   * @see org.opencastproject.serviceregistry.api.ServiceRegistry#registerHost(String, String, long, int, float)
+   */
   @Override
-  public void registerHost(String host, int maxConcurrentJobs) throws ServiceRegistryException {
+  public void registerHost(String host, String address, long memory, int cores, float maxLoad)
+          throws ServiceRegistryException {
     final HttpPost post = post("registerhost");
     try {
       List<BasicNameValuePair> params = new ArrayList<BasicNameValuePair>();
       params.add(new BasicNameValuePair("host", host));
-      params.add(new BasicNameValuePair("maxJobs", Integer.toString(maxConcurrentJobs)));
+      params.add(new BasicNameValuePair("address", address));
+      params.add(new BasicNameValuePair("memory", Long.toString(memory)));
+      params.add(new BasicNameValuePair("cores", Integer.toString(cores)));
+      params.add(new BasicNameValuePair("maxLoad", Float.toString(maxLoad)));
       post.setEntity(new UrlEncodedFormEntity(params, "UTF-8"));
     } catch (UnsupportedEncodingException e) {
       throw new ServiceRegistryException("Can not url encode post parameters", e);
@@ -316,29 +337,57 @@ public abstract class ServiceRegistryRemoteBase implements ServiceRegistry {
 
   @Override
   public Job createJob(String type, String operation) throws ServiceRegistryException {
-    return createJob(type, operation, null, null, true);
+    return createJob(type, operation, null, null, true, 1.0f);
+  }
+
+  @Override
+  public Job createJob(String type, String operation, Float jobLoad) throws ServiceRegistryException {
+    return createJob(type, operation, null, null, true, jobLoad);
   }
 
   @Override
   public Job createJob(String type, String operation, List<String> arguments) throws ServiceRegistryException {
-    return createJob(type, operation, arguments, null, true);
+    return createJob(type, operation, arguments, null, true, 1.0f);
+  }
+
+  @Override
+  public Job createJob(String type, String operation, List<String> arguments, Float jobLoad) throws ServiceRegistryException {
+    return createJob(type, operation, arguments, null, true, jobLoad);
   }
 
   @Override
   public Job createJob(String type, String operation, List<String> arguments, String payload)
           throws ServiceRegistryException {
-    return createJob(type, operation, arguments, payload, true);
+    return createJob(type, operation, arguments, payload, true, 1.0f);
+  }
+
+  @Override
+  public Job createJob(String type, String operation, List<String> arguments, String payload, Float jobLoad)
+          throws ServiceRegistryException {
+    return createJob(type, operation, arguments, payload, true, jobLoad);
   }
 
   @Override
   public Job createJob(String type, String operation, List<String> arguments, String payload, boolean queueable)
           throws ServiceRegistryException {
-    return createJob(type, operation, arguments, payload, queueable, getCurrentJob());
+    return createJob(type, operation, arguments, payload, queueable, getCurrentJob(), 1.0f);
+  }
+
+  @Override
+  public Job createJob(String type, String operation, List<String> arguments, String payload, boolean queueable, Float jobLoad)
+          throws ServiceRegistryException {
+    return createJob(type, operation, arguments, payload, queueable, getCurrentJob(), jobLoad);
   }
 
   @Override
   public Job createJob(String type, String operation, List<String> arguments, String payload, boolean queueable,
           Job parentJob) throws ServiceRegistryException {
+    return createJob(type, operation, arguments, payload, queueable, parentJob, 1.0f);
+  }
+
+  @Override
+  public Job createJob(String type, String operation, List<String> arguments, String payload, boolean queueable,
+          Job parentJob, Float jobLoad) throws ServiceRegistryException {
     final HttpPost post = post("job");
     try {
       List<BasicNameValuePair> params = new ArrayList<BasicNameValuePair>();
@@ -353,6 +402,7 @@ public abstract class ServiceRegistryRemoteBase implements ServiceRegistry {
       if (payload != null)
         params.add(new BasicNameValuePair("payload", payload));
       params.add(new BasicNameValuePair("start", Boolean.toString(queueable)));
+      params.add(new BasicNameValuePair("jobLoad", Float.toString(jobLoad)));
       post.setEntity(new UrlEncodedFormEntity(params));
     } catch (UnsupportedEncodingException e) {
       throw new ServiceRegistryException("Can not url encode post parameters", e);
@@ -380,7 +430,7 @@ public abstract class ServiceRegistryRemoteBase implements ServiceRegistry {
     final HttpPut put = put("job/" + job.getId() + ".xml");
     try {
       List<BasicNameValuePair> params = new ArrayList<BasicNameValuePair>();
-      params.add(new BasicNameValuePair("job", JobParser.toXml(job)));
+      params.add(new BasicNameValuePair("job", JobParser.toXml(new JaxbJob(job))));
       put.setEntity(new UrlEncodedFormEntity(params));
     } catch (UnsupportedEncodingException e) {
       throw new ServiceRegistryException("Can not url encode post parameters", e);
@@ -439,8 +489,8 @@ public abstract class ServiceRegistryRemoteBase implements ServiceRegistry {
       response = getHttpClient().execute(get);
       responseStatusCode = response.getStatusLine().getStatusCode();
       if (responseStatusCode == HttpStatus.SC_OK) {
-        JaxbJobList jaxbJobList = JobParser.parseJobList(response.getEntity().getContent());
-        return new ArrayList<Job>(jaxbJobList.getJobs());
+        final JaxbJobList jaxbJobList = JobParser.parseJobList(response.getEntity().getContent());
+        return $(jaxbJobList.getJobs()).map(JaxbJob.fnToJob()).toList();
       }
     } catch (IOException e) {
       throw new ServiceRegistryException("Unable to get job id=" + id, e);
@@ -462,8 +512,8 @@ public abstract class ServiceRegistryRemoteBase implements ServiceRegistry {
       response = getHttpClient().execute(get);
       responseStatusCode = response.getStatusLine().getStatusCode();
       if (responseStatusCode == HttpStatus.SC_OK) {
-        JaxbJobList jaxbJobList = JobParser.parseJobList(response.getEntity().getContent());
-        return new ArrayList<Job>(jaxbJobList.getJobs());
+        final JaxbJobList jaxbJobList = JobParser.parseJobList(response.getEntity().getContent());
+        return $(jaxbJobList.getJobs()).map(JaxbJob.fnToJob()).toList();
       }
     } catch (IOException e) {
       throw new ServiceRegistryException("Unable to get jobs", e);
@@ -471,6 +521,27 @@ public abstract class ServiceRegistryRemoteBase implements ServiceRegistry {
       getHttpClient().close(response);
     }
     throw new ServiceRegistryException("Unable to retrieve jobs via http:" + response.getStatusLine());
+  }
+
+  @Override
+  public List<Job> getActiveJobs() throws ServiceRegistryException {
+    QueryStringBuilder qsb = new QueryStringBuilder("activeJobs.xml");
+    final HttpGet get = get(qsb.toString());
+    HttpResponse response = null;
+    int responseStatusCode;
+    try {
+      response = getHttpClient().execute(get);
+      responseStatusCode = response.getStatusLine().getStatusCode();
+      if (responseStatusCode == HttpStatus.SC_OK) {
+        final JaxbJobList jaxbJobList = JobParser.parseJobList(response.getEntity().getContent());
+        return $(jaxbJobList.getJobs()).map(JaxbJob.fnToJob()).toList();
+      }
+    } catch (IOException e) {
+      throw new ServiceRegistryException("Unable to get active jobs", e);
+    } finally {
+      getHttpClient().close(response);
+    }
+    throw new ServiceRegistryException("Unable to retrieve active jobs via http:" + response.getStatusLine());
   }
 
   @Override
@@ -642,11 +713,23 @@ public abstract class ServiceRegistryRemoteBase implements ServiceRegistry {
 
   @Override
   public long countByHost(String serviceType, String host, Status status) throws ServiceRegistryException {
+    if (isBlank(serviceType))
+      throw new IllegalArgumentException("Service type must not be null");
+    if (isBlank(host))
+      throw new IllegalArgumentException("Host must not be null");
+    if (status == null)
+      throw new IllegalArgumentException("Status must not be null");
     return count(serviceType, host, null, status);
   }
 
   @Override
   public long countByOperation(String serviceType, String operation, Status status) throws ServiceRegistryException {
+    if (isBlank(serviceType))
+      throw new IllegalArgumentException("Service type must not be null");
+    if (isBlank(operation))
+      throw new IllegalArgumentException("Operation must not be null");
+    if (status == null)
+      throw new IllegalArgumentException("Status must not be null");
     return count(serviceType, null, operation, status);
   }
 
@@ -686,7 +769,7 @@ public abstract class ServiceRegistryRemoteBase implements ServiceRegistry {
   /**
    * {@inheritDoc}
    *
-   * @see org.opencastproject.serviceregistry.api.ServiceRegistry#getCountOfAbnormalServices()
+   * @see org.opencastproject.serviceregistry.api.ServiceRegistry#countOfAbnormalServices()
    */
   @Override
   public long countOfAbnormalServices() throws ServiceRegistryException {
@@ -709,27 +792,71 @@ public abstract class ServiceRegistryRemoteBase implements ServiceRegistry {
   }
 
   @Override
-  public SystemLoad getLoad() throws ServiceRegistryException {
-    throw new UnsupportedOperationException();
-  }
+  public SystemLoad getCurrentHostLoads(boolean activeOnly) throws ServiceRegistryException {
+    QueryStringBuilder queryStringBuilder = new QueryStringBuilder("currentload");
+    queryStringBuilder.add("activeOnly", Boolean.toString(activeOnly));
 
-  @Override
-  public int getMaxConcurrentJobs() throws ServiceRegistryException {
-    final HttpGet get = get("maxconcurrentjobs");
+    final HttpGet get = get(queryStringBuilder.toString());
     HttpResponse response = null;
     int responseStatusCode;
     try {
       response = getHttpClient().execute(get);
       responseStatusCode = response.getStatusLine().getStatusCode();
       if (responseStatusCode == HttpStatus.SC_OK) {
-        return Integer.parseInt(EntityUtils.toString(response.getEntity()));
+        try (InputStream in = response.getEntity().getContent()) {
+          SystemLoad systemLoad = SystemLoadParser.parse(in);
+          return systemLoad;
+        }
       }
     } catch (IOException e) {
-      throw new ServiceRegistryException("Unable to get service statistics", e);
+      throw new ServiceRegistryException("Unable to get node loads", e);
     } finally {
       getHttpClient().close(response);
     }
-    throw new ServiceRegistryException("Unable to get service statistics (" + responseStatusCode + ")");
+    throw new ServiceRegistryException("Unable to get node loads (" + responseStatusCode + ")");
+  }
+
+  private SystemLoad getMaxLoads(String host) throws ServiceRegistryException {
+    QueryStringBuilder queryStringBuilder = new QueryStringBuilder("maxload");
+
+    if (StringUtils.isNotBlank(StringUtils.trimToEmpty(host)))
+      queryStringBuilder.add("host", StringUtils.trimToEmpty(host));
+    final HttpGet get = get(queryStringBuilder.toString());
+    HttpResponse response = null;
+    int responseStatusCode;
+    try {
+      response = getHttpClient().execute(get);
+      responseStatusCode = response.getStatusLine().getStatusCode();
+      if (responseStatusCode == HttpStatus.SC_OK) {
+        SystemLoad systemLoad = SystemLoadParser.parse(response.getEntity().getContent());
+        return systemLoad;
+      }
+    } catch (IOException e) {
+      throw new ServiceRegistryException("Unable to get node loads", e);
+    } finally {
+      getHttpClient().close(response);
+    }
+    throw new ServiceRegistryException("Unable to get node loads (" + responseStatusCode + ")");
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * @see org.opencastproject.serviceregistry.api.ServiceRegistry#getMaxLoads()
+   */
+  @Override
+  public SystemLoad getMaxLoads() throws ServiceRegistryException {
+    return getMaxLoads(null);
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * @see org.opencastproject.serviceregistry.api.ServiceRegistry#getMaxLoadOnNode(java.lang.String)
+   */
+  @Override
+  public NodeLoad getMaxLoadOnNode(String host) throws ServiceRegistryException {
+    return getMaxLoads(host).get(host);
   }
 
   @Override

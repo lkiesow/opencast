@@ -1,27 +1,28 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
+
 package org.opencastproject.util.doc;
 
-import freemarker.core.ParseException;
-import freemarker.template.Configuration;
-import freemarker.template.DefaultObjectWrapper;
-import freemarker.template.Template;
-import freemarker.template.TemplateException;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,12 +33,17 @@ import java.io.StringWriter;
 import java.io.Writer;
 import java.util.Map;
 
+import freemarker.core.ParseException;
+import freemarker.template.Configuration;
+import freemarker.template.DefaultObjectWrapper;
+import freemarker.template.Template;
+import freemarker.template.TemplateException;
+
 /**
  * This provides methods for handling documentation generation The is mainly for generating REST documentation but it
  * could be used for other things as well
  *
  * @see DocData
- * @see org.opencastproject.runtimeinfo.rest.DocRestData
  */
 public final class DocUtil {
 
@@ -65,9 +71,9 @@ public final class DocUtil {
 
   /**
    * Handles the replacement of the variable strings within textual templates and also allows the setting of variables
-   * for the control of logical branching within the text template as well<br/>
+   * for the control of logical branching within the text template as well<br>
    * Uses and expects freemarker (http://freemarker.org/) style templates (that is using ${name} as the marker for a
-   * replacement)<br/>
+   * replacement)<br>
    * NOTE: These should be compatible with Velocity (http://velocity.apache.org/) templates if you use the formal
    * notation (formal: ${variable}, shorthand: $variable)
    *
@@ -76,9 +82,9 @@ public final class DocUtil {
    * @param textTemplate
    *          a freemarker/velocity style text template, cannot be null or empty string
    * @param data
-   *          a set of replacement values which are in the map like so:<br/>
-   *          key => value (String => Object)<br/>
-   *          "username" => "aaronz"<br/>
+   *          a set of replacement values which are in the map like so:<br>
+   *          key =&gt; value (String =&gt; Object)<br>
+   *          "username" =&gt; "aaronz"<br>
    * @return the processed template
    */
   public static String processTextTemplate(String templateName, String textTemplate, Map<String, Object> data) {
@@ -137,7 +143,6 @@ public final class DocUtil {
    * @throws IllegalArgumentException
    *           if the input data is invalid in some way
    * @see DocData
-   * @see org.opencastproject.runtimeinfo.rest.DocRestData
    */
   public static String generate(DocData data) {
     String template = loadTemplate(data.getDefaultTemplatePath());
@@ -156,7 +161,6 @@ public final class DocUtil {
    * @throws IllegalArgumentException
    *           if the input data is invalid in some way
    * @see DocData
-   * @see org.opencastproject.runtimeinfo.rest.DocRestData
    */
   public static String generate(DocData data, String template) {
     if (template == null) {

@@ -6,7 +6,7 @@
   <parent>
     <groupId>org.opencastproject</groupId>
     <artifactId>base</artifactId>
-    <version>1.6.1</version>
+    <version>3.0-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <properties>
@@ -20,20 +20,30 @@
       <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>com.googlecode.guava-osgi</groupId>
-      <artifactId>guava-osgi</artifactId>
+      <groupId>org.opencastproject</groupId>
+      <artifactId>matterhorn-message-broker-api</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.opencastproject</groupId>
+      <artifactId>matterhorn-scheduler-api</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
     </dependency>
     <dependency>
       <groupId>commons-io</groupId>
       <artifactId>commons-io</artifactId>
     </dependency>
     <dependency>
-      <groupId>commons-lang</groupId>
-      <artifactId>commons-lang</artifactId>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-lang3</artifactId>
     </dependency>
     <dependency>
       <groupId>javax.servlet</groupId>
-      <artifactId>servlet-api</artifactId>
+      <artifactId>javax.servlet-api</artifactId>
     </dependency>
     <dependency>
       <groupId>javax.xml.bind</groupId>
@@ -85,13 +95,17 @@
       <version>${project.version}</version>
     </dependency>
     <dependency>
+      <groupId>com.google.code.gson</groupId>
+      <artifactId>gson</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.eclipse.persistence</groupId>
       <artifactId>javax.persistence</artifactId>
     </dependency>
     <dependency>
       <groupId>org.eclipse.persistence</groupId>
       <artifactId>org.eclipse.persistence.core</artifactId>
-      <scope>test</scope>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.eclipse.persistence</groupId>
@@ -114,38 +128,38 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>c3p0</groupId>
+      <groupId>com.mchange</groupId>
       <artifactId>c3p0</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.easymock</groupId>
       <artifactId>easymock</artifactId>
-      <version>3.1</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
   <build>
     <plugins>
       <plugin>
+        <groupId>de.empulse.eclipselink</groupId>
+        <artifactId>staticweave-maven-plugin</artifactId>
+      </plugin>
+      <plugin>
         <groupId>org.apache.felix</groupId>
         <artifactId>maven-bundle-plugin</artifactId>
         <extensions>true</extensions>
         <configuration>
           <instructions>
-            <Bundle-SymbolicName> ${project.artifactId} </Bundle-SymbolicName>
-            <Import-Package>
-              javax.persistence,
-              *;resolution:=optional
-            </Import-Package>
+            <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
+            <Build-Number>${buildNumber}</Build-Number>
             <Export-Package> org.opencastproject.capture.admin.*;version=${project.version} </Export-Package>
             <Service-Component>
               OSGI-INF/capture-admin-service.xml,
               OSGI-INF/capture-admin-service-rest.xml
             </Service-Component>
-            <JPA-PersistenceUnits>
-              org.opencastproject.capture.admin.impl.CaptureAgentStateServiceImpl
-            </JPA-PersistenceUnits>
+            <Meta-Persistence>
+              META-INF/persistence.xml
+            </Meta-Persistence>
           </instructions>
         </configuration>
       </plugin>

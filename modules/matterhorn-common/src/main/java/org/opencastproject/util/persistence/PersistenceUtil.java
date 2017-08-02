@@ -1,37 +1,43 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
 
+
 package org.opencastproject.util.persistence;
 
-import com.mchange.v2.c3p0.ComboPooledDataSource;
-import org.opencastproject.fn.juc.Immutables;
+import static org.opencastproject.util.data.Monadics.mlist;
+import static org.opencastproject.util.data.Option.none;
+import static org.opencastproject.util.data.Option.option;
+import static org.opencastproject.util.data.Option.some;
+import static org.opencastproject.util.data.Tuple.tuple;
+
+import org.opencastproject.fun.juc.Immutables;
 import org.opencastproject.util.data.Either;
 import org.opencastproject.util.data.Function;
 import org.opencastproject.util.data.Option;
 import org.opencastproject.util.data.Tuple;
+
+import com.mchange.v2.c3p0.ComboPooledDataSource;
+
 import org.osgi.service.component.ComponentContext;
 
-import javax.persistence.EntityManager;
-import javax.persistence.EntityManagerFactory;
-import javax.persistence.NoResultException;
-import javax.persistence.NonUniqueResultException;
-import javax.persistence.Query;
-import javax.persistence.TemporalType;
-import javax.persistence.spi.PersistenceProvider;
-import javax.sql.DataSource;
 import java.beans.PropertyVetoException;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -41,11 +47,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.opencastproject.util.data.Monadics.mlist;
-import static org.opencastproject.util.data.Option.none;
-import static org.opencastproject.util.data.Option.option;
-import static org.opencastproject.util.data.Option.some;
-import static org.opencastproject.util.data.Tuple.tuple;
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.NoResultException;
+import javax.persistence.NonUniqueResultException;
+import javax.persistence.Query;
+import javax.persistence.TemporalType;
+import javax.persistence.spi.PersistenceProvider;
+import javax.sql.DataSource;
+
 /** Functions supporting persistence. */
 
 /**
@@ -129,8 +139,6 @@ public final class PersistenceUtil {
 
   /**
    * Equip a persistence environment with an exception handler.
-   *
-   * @see #newPersistenceEnvironment(javax.persistence.EntityManagerFactory, org.opencastproject.util.data.Function)
    */
   public static <F> PersistenceEnv2<F> equip2(final PersistenceEnv penv, final Function<Exception, F> exHandler) {
     return new PersistenceEnv2<F>() {
@@ -152,11 +160,12 @@ public final class PersistenceUtil {
 
   /**
    * Create a new, concurrently usable persistence environment which uses JPA local transactions.
-   * <p/>
+   * <p>
    * Transaction propagation is supported on a per thread basis.
    *
-   * @deprecated use {@link PersistenceEnvs#persistenceEnvironment(EntityManagerFactory)}
+   * @deprecated
    */
+  @Deprecated
   public static PersistenceEnv newPersistenceEnvironment(final EntityManagerFactory emf) {
     return PersistenceEnvs.persistenceEnvironment(emf);
   }
@@ -191,8 +200,9 @@ public final class PersistenceUtil {
    * Create a named query with a list of parameters. Values of type {@link Date} are recognized and set as a timestamp (
    * {@link TemporalType#TIMESTAMP}.
    *
-   * @deprecated use {@link Queries#named#query(EntityManager, String, Class, Object[])}
+   * @deprecated
    */
+  @Deprecated
   public static Query createNamedQuery(EntityManager em, String queryName, Tuple<String, ?>... params) {
     final Query q = em.createNamedQuery(queryName);
     for (Tuple<String, ?> p : params) {
@@ -209,8 +219,9 @@ public final class PersistenceUtil {
   /**
    * Run an update (UPDATE or DELETE) query and ensure that at least one row got affected.
    *
-   * @deprecated use {@link Queries#named#update(EntityManager, String, Object[])}
+   * @deprecated
    */
+  @Deprecated
   public static boolean runUpdate(EntityManager em, String queryName, Tuple<String, ?>... params) {
     return createNamedQuery(em, queryName, params).executeUpdate() > 0;
   }
@@ -218,8 +229,9 @@ public final class PersistenceUtil {
   /**
    * Run a query (SELECT) that should return a single result.
    *
-   * @deprecated use {@link Queries#named#findSingle(EntityManager, String, Object[])}
+   * @deprecated
    */
+  @Deprecated
   public static <A> Option<A> runSingleResultQuery(EntityManager em, String queryName, Tuple<String, ?>... params) {
     try {
       return some((A) createNamedQuery(em, queryName, params).getSingleResult());
@@ -233,8 +245,9 @@ public final class PersistenceUtil {
   /**
    * Run a query that should return the first result of it.
    *
-   * @deprecated use {@link Queries#named#findFirst(EntityManager, String, Object[])}
+   * @deprecated
    */
+  @Deprecated
   public static <A> Option<A> runFirstResultQuery(EntityManager em, String queryName, Tuple<String, ?>... params) {
     try {
       return some((A) createNamedQuery(em, queryName, params).setMaxResults(1).getSingleResult());
@@ -248,13 +261,17 @@ public final class PersistenceUtil {
   /**
    * Execute a <code>COUNT(x)</code> query.
    *
-   * @deprecated use {@link Queries#named#count(EntityManager, String, Object[])}
+   * @deprecated
    */
+  @Deprecated
   public static long runCountQuery(EntityManager em, String queryName, Tuple<String, ?>... params) {
     return ((Number) createNamedQuery(em, queryName, params).getSingleResult()).longValue();
   }
 
-  /** @deprecated use {@link Queries#find(Class, Object)} */
+  /**
+   * @deprecated
+   */
+  @Deprecated
   public static <A> Function<EntityManager, Option<A>> findById(final Class<A> clazz, final Object primaryKey) {
     return new Function<EntityManager, Option<A>>() {
       @Override
@@ -273,6 +290,7 @@ public final class PersistenceUtil {
    *          map to the desired result object
    * @deprecated
    */
+  @Deprecated
   public static <A, B> Option<A> find(EntityManager em, final Function<B, A> toA, final String queryName,
           final Tuple<String, ?>... params) {
     return PersistenceUtil.<B> runSingleResultQuery(em, queryName, params).map(toA);
@@ -281,17 +299,19 @@ public final class PersistenceUtil {
   /**
    * Find multiple objects.
    *
-   * @deprecated use {@link Queries#named#findAll(EntityManager, String, Object[])}
+   * @deprecated
    */
+  @Deprecated
   public static <A> List<A> findAll(EntityManager em, final String queryName, final Tuple<String, ?>... params) {
-    return (List<A>) createNamedQuery(em, queryName, params).getResultList();
+    return createNamedQuery(em, queryName, params).getResultList();
   }
 
   /**
    * Find multiple objects with optional pagination.
    *
-   * @deprecated use {@link Queries#named#findAll(EntityManager, String, Option, Option, Object[])}
+   * @deprecated
    */
+  @Deprecated
   public static <A> List<A> findAll(EntityManager em, final String queryName, Option<Integer> offset,
           Option<Integer> limit, final Tuple<String, ?>... params) {
     final Query q = createNamedQuery(em, queryName, params);
@@ -299,7 +319,7 @@ public final class PersistenceUtil {
       q.setFirstResult(x);
     for (Integer x : limit)
       q.setMaxResults(x);
-    return (List<A>) q.getResultList();
+    return q.getResultList();
   }
 
   /**
@@ -309,8 +329,9 @@ public final class PersistenceUtil {
    *          the query parameters
    * @param toA
    *          map to the desired result object
-   * @deprecated use {@link Queries#named#findAll(EntityManager, String, Object[])} instead
+   * @deprecated
    */
+  @Deprecated
   public static <A, B> List<A> findAll(EntityManager em, final Function<B, A> toA, final String queryName,
           final Tuple<String, ?>... params) {
     return mlist((List<B>) createNamedQuery(em, queryName, params).getResultList()).map(toA).value();
@@ -323,8 +344,9 @@ public final class PersistenceUtil {
    *          the query parameters
    * @param toA
    *          map to the desired result object
-   * @deprecated use {@link Queries#named#findAll(EntityManager, String, Option, Option, Object[])} instead
+   * @deprecated
    */
+  @Deprecated
   public static <A, B> List<A> findAll(EntityManager em, final Function<B, A> toA, Option<Integer> offset,
           Option<Integer> limit, final String queryName, final Tuple<String, ?>... params) {
     final Query q = createNamedQuery(em, queryName, params);
@@ -337,9 +359,8 @@ public final class PersistenceUtil {
 
   /**
    * Create function to persist object <code>a</code> using {@link EntityManager#persist(Object)}.
-   *
-   * @deprecated use {@link Queries#persist(A)}
    */
+  @Deprecated
   public static <A> Function<EntityManager, A> persist(final A a) {
     return new Function<EntityManager, A>() {
       @Override
@@ -352,9 +373,8 @@ public final class PersistenceUtil {
 
   /**
    * Create function to merge an object <code>a</code> with the persisten context of the given entity manage.
-   *
-   * @deprecated use {@link Queries#merge(A)}
    */
+  @Deprecated
   public static <A> Function<EntityManager, A> merge(final A a) {
     return new Function<EntityManager, A>() {
       @Override
@@ -379,10 +399,9 @@ public final class PersistenceUtil {
     pooledDataSource.setPassword(pwd);
 
     // Set up the persistence properties
-    final Map<String, Object> props = Immutables.<String, Object>map(
-            persistenceProps,
-            tuple("javax.persistence.nonJtaDataSource", pooledDataSource),
-            tuple("eclipselink.target-database", vendor));
+    final Map<String, Object> props = Immutables
+            .<String, Object> map(persistenceProps, tuple("javax.persistence.nonJtaDataSource", pooledDataSource),
+                    tuple("eclipselink.target-database", vendor));
 
     final EntityManagerFactory emf = pp.createEntityManagerFactory(emName, props);
     if (emf == null) {
@@ -407,8 +426,7 @@ public final class PersistenceUtil {
             "sa",
             "sa",
             Immutables.map(tuple("eclipselink.ddl-generation", "create-tables"),
-                           tuple("eclipselink.ddl-generation.output-mode", "database")),
-            testPersistenceProvider());
+                    tuple("eclipselink.ddl-generation.output-mode", "database")), testPersistenceProvider());
   }
 
   /** Create a new persistence provider for unit tests. */
@@ -422,8 +440,9 @@ public final class PersistenceUtil {
    *
    * @param emName
    *          name of the persistence unit (see META-INF/persistence.xml)
-   * @deprecated use {@link PersistenceEnvs#testPersistenceEnv(String)}
+   * @deprecated
    */
+  @Deprecated
   public static PersistenceEnv newTestPersistenceEnv(String emName) {
     return newPersistenceEnvironment(newTestEntityManagerFactory(emName));
   }

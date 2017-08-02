@@ -1,20 +1,29 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
+
 package org.opencastproject.fsresources;
 
+import org.opencastproject.util.ConfigurationException;
+
+import org.apache.commons.lang3.StringUtils;
 import org.osgi.service.component.ComponentContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,7 +37,6 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.StringTokenizer;
-import java.util.logging.Level;
 import java.util.zip.CRC32;
 
 import javax.activation.MimetypesFileTypeMap;
@@ -58,6 +66,7 @@ public class StaticResourceServlet extends HttpServlet {
     FULL_RANGE = new ArrayList<Range>();
     MIME_TYPES_MAP = new MimetypesFileTypeMap();
   }
+
   /** The filesystem directory to serve files fro */
   protected String distributionDirectory;
 
@@ -76,16 +85,20 @@ public class StaticResourceServlet extends HttpServlet {
   public void activate(ComponentContext cc) {
     if (cc != null) {
       String ccDistributionDirectory = cc.getBundleContext().getProperty("org.opencastproject.download.directory");
-      logger.info("serving static files from '{}'", ccDistributionDirectory);
-      if (ccDistributionDirectory != null) {
+      if (StringUtils.isNotEmpty(ccDistributionDirectory)) {
         this.distributionDirectory = ccDistributionDirectory;
+      } else {
+        String storageDir = cc.getBundleContext().getProperty("org.opencastproject.storage.dir");
+        if (StringUtils.isNotEmpty(storageDir)) {
+          this.distributionDirectory = new File(storageDir, "downloads").getPath();
+        }
       }
     }
 
     if (distributionDirectory == null) {
-      distributionDirectory = System.getProperty("java.io.tmpdir") + File.separator + "opencast" + File.separator
-              + "static";
+      throw new ConfigurationException("Distribution directory not set");
     }
+    logger.info("Serving static files from '{}'", distributionDirectory);
 
     InputStream is = this.getClass().getResourceAsStream("/META-INF/mime.types");
     BufferedReader reader = new BufferedReader(new InputStreamReader(is));
@@ -94,15 +107,9 @@ public class StaticResourceServlet extends HttpServlet {
       while ((line = reader.readLine()) != null) {
         MIME_TYPES_MAP.addMimeTypes(line);
       }
-    } catch (IOException ex) {
-      java.util.logging.Logger.getLogger(StaticResourceServlet.class.getName()).log(Level.SEVERE, null, ex);
+    } catch (IOException e) {
+      logger.error("Failed to read mime type map from JAR", e);
     }
-  }
-
-  /**
-   * OSGI Deactivation callback
-   */
-  public void deactivate() {
   }
 
   /**
@@ -154,6 +161,9 @@ public class StaticResourceServlet extends HttpServlet {
           } catch (IOException e1) {
             logger.warn("unable to send http 500 error: {}", e1);
             return;
+          } catch (IllegalStateException e2) {
+            logger.trace("unable to send http 500 error. Client side was probably closed during file copy.", e2);
+            return;
           }
         }
       } else {
@@ -183,6 +193,9 @@ public class StaticResourceServlet extends HttpServlet {
               return;
             } catch (IOException e1) {
               logger.warn("unable to send http 500 error: {}", e1);
+              return;
+            } catch (IllegalStateException e2) {
+              logger.trace("unable to send http 500 error. Client side was probably closed during file copy.", e2);
               return;
             }
           }
@@ -250,6 +263,7 @@ public class StaticResourceServlet extends HttpServlet {
       throw exception;
     }
   }
+
   /**
    * MIME multipart separation string
    */
@@ -382,6 +396,7 @@ public class StaticResourceServlet extends HttpServlet {
     try {
       istream.skip(start);
     } catch (IOException e) {
+      logger.trace("Cannot skip to input stream position {}. The user probably closed the client side.", start, e);
       return e;
     }
     // MH-10447, fix for files of size 2048*C bytes
@@ -393,7 +408,7 @@ public class StaticResourceServlet extends HttpServlet {
       if (len > 0) {
         len = istream.read(buffer, 0, len);
         if (len > 0) {
-          // This test coud actually be "if (len != -1)"
+          // This test could actually be "if (len != -1)"
           ostream.write(buffer, 0, len);
           bytesToRead -= len;
           if (bytesToRead == 0)
@@ -409,6 +424,9 @@ public class StaticResourceServlet extends HttpServlet {
           break;
       }
     } catch (IOException e) {
+      logger.trace("IOException after starting the byte copy, current length {}, buffer {}."
+              + " The user probably closed the client side after the file started copying.",
+              len, buffer, e);
       return e;
     }
     return null;

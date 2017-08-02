@@ -1,18 +1,24 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
+
 
 package org.opencastproject.metadata.dublincore;
 
@@ -22,27 +28,30 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
+
 /**
  * This interface is mainly intended to encapsulate Dublin Core metadata, but it is also capable of maintaining
  * proprietary metadata alongside the Dublin Core.
- * <p/>
+ * <p>
  * Dublin Core is an initiative to create a digital "library card catalog" for the Web. Dublin Core, in its simple form,
  * is made up of 15 metadata (data that describes data) elements that offer expanded cataloging information and improved
  * document indexing for search engine programs.
- * <p/>
- * Two forms of Dublin Core exist: <def>Simple Dublin Core</def> and <def>Qualified Dublin Core</def>. Simple Dublin
+ * <p>
+ * Two forms of Dublin Core exist: <code>Simple Dublin Core</code> and <code>Qualified Dublin Core</code>. Simple Dublin
  * Core expresses properties as literal strings using just the 15 metadata elements from the Dublin Core Metadata
  * Element Sets. Each element can have multiple values, but order is defined. Values may have an associated language. <br>
  * Please see <a href="http://dublincore.org/documents/dces/">http://dublincore.org/documents/dces/</a> for further
  * information.
- * <p/>
+ * <p>
  * Qualified Dublin Core increases the specificity of metadata by extending the set of properties (elements) and by
  * adding information about encoding schemes. While enabling searches to be more specific, qualifiers are also more
  * complex and can pose challenges to interoperability. <br>
  * Please see <a href="http://dublincore.org/documents/dcmi-terms/">http://dublincore.org/documents/dcmi-terms/</a> and
  * <a href="http://dublincore.org/documents/dc-xml-guidelines/">http://dublincore.org/documents/dc-xml-guidelines/</a>
  * Section 5 for further information.
- * <p/>
+ * <p>
  * <h3>Current limitations</h3>
  * <ul>
  * <li>This interface assumes that Dublin Core metadata is stored as XML. According to the Dublin Core specification
@@ -50,28 +59,29 @@ import java.util.Set;
  * <li>Encoding schemes aren't fully supported yet.
  * </ul>
  */
+@ParametersAreNonnullByDefault
 public interface DublinCore {
 
   /**
-   * Namespace name of the <def>/terms/</def> namespace. See <a
+   * Namespace name of the <code>/terms/</code> namespace. See <a
    * href="http://dublincore.org/documents/dcmi-terms/">http://dublincore.org/documents/dcmi-terms/</a> for details.
    */
   String TERMS_NS_URI = "http://purl.org/dc/terms/";
 
   /**
-   * Namespace prefix if the <def>/terms/</def> namespace. See <a
+   * Namespace prefix if the <code>/terms/</code> namespace. See <a
    * href="http://dublincore.org/documents/dcmi-terms/">http://dublincore.org/documents/dcmi-terms/</a> for details.
    */
   String TERMS_NS_PREFIX = "dcterms";
 
   /**
-   * Namespace name of the <def>/elements/1.1/</def> namespace. See <a
+   * Namespace name of the <code>/elements/1.1/</code> namespace. See <a
    * href="http://dublincore.org/documents/dces/">http://dublincore.org/documents/dces/</a> for details.
    */
   String ELEMENTS_1_1_NS_URI = "http://purl.org/dc/elements/1.1/";
 
   /**
-   * Namespace prefix if the <def>Elements 1.1</def> namespace. See <a
+   * Namespace prefix if the <code>Elements 1.1</code> namespace. See <a
    * href="http://dublincore.org/documents/dces/">http://dublincore.org/documents/dces/</a> for details.
    */
   String ELEMENTS_1_1_NS_PREFIX = "dc";
@@ -407,73 +417,73 @@ public interface DublinCore {
   EName PROPERTY_VALID = new EName(TERMS_NS_URI, "valid");
 
   /**
-   * Syntax encoding scheme <def>Box</def>. See <a
+   * Syntax encoding scheme <code>Box</code>. See <a
    * href="http://dublincore.org/documents/dcmi-terms/#H5">http://dublincore.org/documents/dcmi-terms/#H5</a>
    */
   EName ENC_SCHEME_BOX = new EName(TERMS_NS_URI, "Box");
 
   /**
-   * Syntax encoding scheme <def>ISO3166</def>. See <a
+   * Syntax encoding scheme <code>ISO3166</code>. See <a
    * href="http://dublincore.org/documents/dcmi-terms/#H5">http://dublincore.org/documents/dcmi-terms/#H5</a>
    */
   EName ENC_SCHEME_ISO3166 = new EName(TERMS_NS_URI, "ISO3166");
 
   /**
-   * Syntax encoding scheme <def>ISO639-1</def>. See <a
+   * Syntax encoding scheme <code>ISO639-1</code>. See <a
    * href="http://dublincore.org/documents/dcmi-terms/#H5">http://dublincore.org/documents/dcmi-terms/#H5</a>
    */
   EName ENC_SCHEME_ISO639_2 = new EName(TERMS_NS_URI, "ISO639-1");
 
   /**
-   * Syntax encoding scheme <def>ISO639-3</def>. See <a
+   * Syntax encoding scheme <code>ISO639-3</code>. See <a
    * href="http://dublincore.org/documents/dcmi-terms/#H5">http://dublincore.org/documents/dcmi-terms/#H5</a>
    */
   EName ENC_SCHEME_ISO639_3 = new EName(TERMS_NS_URI, "ISO639-3");
 
   /**
-   * Syntax encoding scheme <def>Period</def>. See <a
+   * Syntax encoding scheme <code>Period</code>. See <a
    * href="http://dublincore.org/documents/dcmi-terms/#H5">http://dublincore.org/documents/dcmi-terms/#H5</a>
    */
   EName ENC_SCHEME_PERIOD = new EName(TERMS_NS_URI, "Period");
 
   /**
-   * Syntax encoding scheme <def>Point</def>. See <a
+   * Syntax encoding scheme <code>Point</code>. See <a
    * href="http://dublincore.org/documents/dcmi-terms/#H5">http://dublincore.org/documents/dcmi-terms/#H5</a>
    */
   EName ENC_SCHEME_POINT = new EName(TERMS_NS_URI, "Point");
 
   /**
-   * Syntax encoding scheme <def>RFC1766</def>. See <a
+   * Syntax encoding scheme <code>RFC1766</code>. See <a
    * href="http://dublincore.org/documents/dcmi-terms/#H5">http://dublincore.org/documents/dcmi-terms/#H5</a>
    */
   EName ENC_SCHEME_RFC1766 = new EName(TERMS_NS_URI, "RFC1766");
 
   /**
-   * Syntax encoding scheme <def>RFC3066</def>. See <a
+   * Syntax encoding scheme <code>RFC3066</code>. See <a
    * href="http://dublincore.org/documents/dcmi-terms/#H5">http://dublincore.org/documents/dcmi-terms/#H5</a>
    */
   EName ENC_SCHEME_RFC3066 = new EName(TERMS_NS_URI, "RFC3066");
 
   /**
-   * Syntax encoding scheme <def>RFC4646</def>. See <a
+   * Syntax encoding scheme <code>RFC4646</code>. See <a
    * href="http://dublincore.org/documents/dcmi-terms/#H5">http://dublincore.org/documents/dcmi-terms/#H5</a>
    */
   EName ENC_SCHEME_RFC4646 = new EName(TERMS_NS_URI, "RFC4646");
 
   /**
-   * Syntax encoding scheme <def>URI</def>. See <a
+   * Syntax encoding scheme <code>URI</code>. See <a
    * href="http://dublincore.org/documents/dcmi-terms/#H5">http://dublincore.org/documents/dcmi-terms/#H5</a>
    */
   EName ENC_SCHEME_URI = new EName(TERMS_NS_URI, "URI");
 
   /**
-   * Syntax encoding scheme <def>W3CDTF</def>. See <a
+   * Syntax encoding scheme <code>W3CDTF</code>. See <a
    * href="http://dublincore.org/documents/dcmi-terms/#H5">http://dublincore.org/documents/dcmi-terms/#H5</a>
    */
   EName ENC_SCHEME_W3CDTF = new EName(TERMS_NS_URI, "W3CDTF");
 
   /**
-   * Syntax encoding scheme <def>ISO8601</def> used for durations. See <a
+   * Syntax encoding scheme <code>ISO8601</code> used for durations. See <a
    * href="http://en.wikipedia.org/wiki/ISO_8601#Durations">http://en.wikipedia.org/wiki/ISO_8601#Durations</a>
    */
   EName ENC_SCHEME_ISO8601 = new EName(TERMS_NS_URI, "ISO8601");
@@ -485,7 +495,7 @@ public interface DublinCore {
 
   /**
    * Language code that matches any language.
-   * <p/>
+   * <p>
    * Use this code whenever you need values in <em>all</em> languages or you don't care about the language. Note that
    * all methods taking this as a legal value for the language parameter are adviced to return at first a value for
    * {@link #LANGUAGE_UNDEFINED} if multiple values exist and only one value is wanted.
@@ -507,7 +517,7 @@ public interface DublinCore {
    * Get all values of a property no matter what language they have.
    *
    * @param property
-   *         the property qname
+   *         the property's expanded name
    * @return a list of values
    */
   List<DublinCoreValue> get(EName property);
@@ -515,20 +525,23 @@ public interface DublinCore {
   /** Get all contained values grouped by property. */
   Map<EName, List<DublinCoreValue>> getValues();
 
+  /** Get all values as a flat list. */
+  List<DublinCoreValue> getValuesFlat();
+
   /**
    * Like {@link #get(EName, String)} but returns only the first value of the list. This method is intended to be a
    * convenience method for those properties that have only one value.
-   * <p/>
+   * <p>
    * Please note, that if you pass {@link #LANGUAGE_ANY}, values with an {@link #LANGUAGE_UNDEFINED undefined language}
    * are returned preferably.
    *
    * @param property
-   *         the property qname
+   *         the property's expanded name
    * @param language
    *         a language code, {@link #LANGUAGE_UNDEFINED} or {@link #LANGUAGE_ANY}
    * @return the value or null
    */
-  String getFirst(EName property, String language);
+  @Nullable String getFirst(EName property, String language);
 
   /**
    * Get the first value of a property, no matter what language it is in. Like a call of
@@ -536,11 +549,11 @@ public interface DublinCore {
    * language} are returned preferably.
    *
    * @param property
-   *         the property qname
+   *         the property's expanded name
    * @return the value or null
    * @see #getFirst(EName, String)
    */
-  String getFirst(EName property);
+  @Nullable String getFirst(EName property);
 
   /**
    * Get the first value of a property, no matter what language it is in. Like a call of
@@ -548,30 +561,30 @@ public interface DublinCore {
    * language} are returned preferably.
    *
    * @param property
-   *         the property qname
+   *         the property's expanded name
    * @return the value or null
    * @see #getFirst(EName, String)
    */
-  DublinCoreValue getFirstVal(EName property);
+  @Nullable DublinCoreValue getFirstVal(EName property);
 
   /**
    * Return all values separated by a delimiter.
    *
    * @param property
-   *         the property qname
+   *         the property's expanded name
    * @param language
    *         a language code, {@link #LANGUAGE_UNDEFINED} or {@link #LANGUAGE_ANY}
    * @param delimiter
    *         a delimiter
-   * @return the concatenated values or null
+   * @return the concatenated values or null (FIXME bad API. Should not return null)
    */
-  String getAsText(EName property, String language, String delimiter);
+  @Nullable String getAsText(EName property, String language, String delimiter);
 
   /**
    * Return all languages this property has values in.
    *
    * @param property
-   *         the property qname
+   *         the property's expanded name
    * @return a set of languages which may be empty in case the property does not have any value. Note that the state of
    *         having no language defined ({@link #LANGUAGE_UNDEFINED}) is treated like a language.
    */
@@ -581,7 +594,7 @@ public interface DublinCore {
    * Check, if a property has multiple values assigned.
    *
    * @param property
-   *         the property qname
+   *         the property's expanded name
    * @param language
    *         a language code, {@link #LANGUAGE_UNDEFINED} or {@link #LANGUAGE_ANY}
    */
@@ -591,7 +604,7 @@ public interface DublinCore {
    * Check if a property has multiple values, ignoring any language information.
    *
    * @param property
-   *         the property qname
+   *         the property's expanded name
    */
   boolean hasMultipleValues(EName property);
 
@@ -599,7 +612,7 @@ public interface DublinCore {
    * Check if a property has at least one value assigned.
    *
    * @param property
-   *         the property qname
+   *         the property's expanded name
    * @param language
    *         a language code, {@link #LANGUAGE_UNDEFINED} or {@link #LANGUAGE_ANY}
    */
@@ -610,50 +623,50 @@ public interface DublinCore {
    * {@link #hasValue(EName)} with <code>language = {@link #LANGUAGE_ANY}</code>
    *
    * @param property
-   *         the property qname
+   *         the property's expanded name
    */
   boolean hasValue(EName property);
 
   /**
    * Set a property to the given value, overwriting an existing value in the given language.
-   * <p/>
+   * <p>
    * Please note that it is not allowed to pass {@link #LANGUAGE_ANY} as <code>language</code>.
    *
    * @param property
-   *         the property qname
+   *         the property's expanded name
    * @param value
    *         the value or null to remove all values of the given language for this property
    * @param language
    *         a language code or {@link #LANGUAGE_UNDEFINED}
    */
-  void set(EName property, String value, String language);
+  void set(EName property, @Nullable String value, String language);
 
   /**
    * Set a value without language information to a property, overwriting an existing value. This is like calling
    * {@link #set(EName, String, String)} with <code>language = {@link #LANGUAGE_UNDEFINED}</code>
    *
    * @param property
-   *         the property qname
+   *         the property's expanded name
    * @param value
    *         the value or null to remove all values of {@link #LANGUAGE_UNDEFINED} for this property
    */
-  void set(EName property, String value);
+  void set(EName property, @Nullable String value);
 
   /**
    * Set a property to a value, overwriting an existing value.
    *
    * @param property
-   *         the property qname
+   *         the property's expanded name
    * @param value
    *         the value or null to completely remove the property (all values in all languages)
    */
-  void set(EName property, DublinCoreValue value);
+  void set(EName property, @Nullable DublinCoreValue value);
 
   /**
    * Set a property to a list of values, overwriting any existing.
    *
    * @param property
-   *         the property name
+   *         the property's expanded name
    * @param values
    *         the values or an empty list
    */
@@ -661,11 +674,11 @@ public interface DublinCore {
 
   /**
    * Add a value to a property.
-   * <p/>
+   * <p>
    * Please note that it is not allowed to pass {@link #LANGUAGE_ANY} as <code>language</code>.
    *
    * @param property
-   *         the property qname
+   *         the property's expanded name
    * @param value
    *         the value
    * @param language
@@ -678,7 +691,7 @@ public interface DublinCore {
    * with <code>language = {@link #LANGUAGE_UNDEFINED}</code>
    *
    * @param property
-   *         the property qname
+   *         the property's expanded name
    * @param value
    *         the value
    */
@@ -688,7 +701,7 @@ public interface DublinCore {
    * Add a value to a property.
    *
    * @param property
-   *         the property qname
+   *         the property's expanded name
    * @param value
    *         the value
    */
@@ -703,7 +716,7 @@ public interface DublinCore {
    * </ul>
    *
    * @param property
-   *         the property qname
+   *         the property's expanded name
    * @param language
    *         a language code, {@link #LANGUAGE_UNDEFINED} or {@link #LANGUAGE_ANY}
    */
@@ -713,7 +726,7 @@ public interface DublinCore {
    * Remove a complete property.
    *
    * @param property
-   *         the property qname
+   *         the property's expanded name
    */
   void remove(EName property);
 
@@ -721,21 +734,9 @@ public interface DublinCore {
   void clear();
 
   /**
-   * Return all supported properties.
+   * Return all contained properties.
    *
    * @return a set of property names
    */
   Set<EName> getProperties();
-
-  /**
-   * Bind a prefix to a namespace name to support proprietary metadata properties. For further information about
-   * namespaces and their binding, please see <a
-   * href="http://www.w3.org/TR/xml-names">http://www.w3.org/TR/xml-names</a>
-   *
-   * @param prefix
-   *         the prefix
-   * @param namespaceName
-   *         the namespace name, usually a URI
-   */
-  void bindPrefix(String prefix, String namespaceName);
 }

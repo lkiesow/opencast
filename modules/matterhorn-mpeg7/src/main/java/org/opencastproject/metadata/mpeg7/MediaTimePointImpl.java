@@ -1,18 +1,24 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
+
 
 package org.opencastproject.metadata.mpeg7;
 
@@ -118,63 +124,63 @@ public class MediaTimePointImpl implements MediaTimePoint {
   }
 
   /**
-   * @see org.opencastproject.mediapackage.mpeg7.MediaTimePoint#getDay()
+   * @see org.opencastproject.metadata.mpeg7.MediaTimePoint
    */
   public int getDay() {
     return day;
   }
 
   /**
-   * @see org.opencastproject.mediapackage.mpeg7.MediaTimePoint#getHour()
+   * @see org.opencastproject.metadata.mpeg7.MediaTimePoint#getHour()
    */
   public int getHour() {
     return hour;
   }
 
   /**
-   * @see org.opencastproject.mediapackage.mpeg7.MediaTimePoint#getMinutes()
+   * @see org.opencastproject.metadata.mpeg7.MediaTimePoint#getMinutes()
    */
   public int getMinutes() {
     return minute;
   }
 
   /**
-   * @see org.opencastproject.mediapackage.mpeg7.MediaTimePoint#getMonth()
+   * @see org.opencastproject.metadata.mpeg7.MediaTimePoint#getMonth()
    */
   public int getMonth() {
     return month;
   }
 
   /**
-   * @see org.opencastproject.mediapackage.mpeg7.MediaTimePoint#getNFractions()
+   * @see org.opencastproject.metadata.mpeg7.MediaTimePoint#getNFractions()
    */
   public int getNFractions() {
     return fractions;
   }
 
   /**
-   * @see org.opencastproject.mediapackage.mpeg7.MediaTimePoint#getSeconds()
+   * @see org.opencastproject.metadata.mpeg7.MediaTimePoint#getSeconds()
    */
   public int getSeconds() {
     return second;
   }
 
   /**
-   * @see org.opencastproject.mediapackage.mpeg7.MediaTimePoint#getYear()
+   * @see org.opencastproject.metadata.mpeg7.MediaTimePoint#getYear()
    */
   public int getYear() {
     return year;
   }
 
   /**
-   * @see org.opencastproject.mediapackage.mpeg7.MediaTimePoint#getFractionsPerSecond()
+   * @see org.opencastproject.metadata.mpeg7.MediaTimePoint#getFractionsPerSecond()
    */
   public int getFractionsPerSecond() {
     return fractionsPerSecond;
   }
 
   /**
-   * @see org.opencastproject.mediapackage.mpeg7.MediaTimePoint#getTimeInMilliseconds()
+   * @see org.opencastproject.metadata.mpeg7.MediaTimePoint#getTimeInMilliseconds()
    */
   public long getTimeInMilliseconds() {
     long milliseconds = second * MS_PER_SECOND;
@@ -187,7 +193,7 @@ public class MediaTimePointImpl implements MediaTimePoint {
   }
 
   /**
-   * @see org.opencastproject.mediapackage.mpeg7.MediaTimePoint#isRelative()
+   * @see org.opencastproject.metadata.mpeg7.MediaTimePoint#isRelative()
    */
   public boolean isRelative() {
     return referenceTimePoint != null;

@@ -1,18 +1,24 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
+
 package org.opencastproject.ingest.api;
 
 import org.opencastproject.job.api.JobProducer;
@@ -124,10 +130,10 @@ public interface IngestService extends JobProducer {
    * @throws NotFoundException
    *           if either one of the workflow definition or workflow instance was not found
    * @throws UnauthorizedException
-   *           if the current user does not have {@link #READ_PERMISSION} on the workflow instance's mediapackage.
+   *           if the current user does not have read permissions on the workflow instance's mediapackage.
    */
   WorkflowInstance addZippedMediaPackage(InputStream zippedMediaPackage, String workflowDefinitionID,
-          Map<String, String> wfConfig, Long worfklowId) throws MediaPackageException, IOException, IngestException,
+          Map<String, String> wfConfig, Long workflowId) throws MediaPackageException, IOException, IngestException,
           NotFoundException, UnauthorizedException;
 
   /**
@@ -144,6 +150,22 @@ public interface IngestService extends JobProducer {
   MediaPackage createMediaPackage() throws MediaPackageException, ConfigurationException, HandleException, IOException,
           IngestException;
 
+ /**
+   * Create a new MediaPackage in the repository.
+   * @param  mediaPackageID
+   *   The Id for the new Mediapackage
+   * @return The created MediaPackage
+   * @throws MediaPackageException
+   * @throws HandleException
+   * @throws ConfigurationException
+   * @throws IOException
+   * @throws IngestException
+   *           if an unexpected error occurs
+   */
+  MediaPackage createMediaPackage(String mediaPackageID) throws MediaPackageException, ConfigurationException, HandleException, IOException,
+          IngestException;
+
+
   /**
    * Add a media track to an existing MediaPackage in the repository
    *
@@ -152,14 +174,34 @@ public interface IngestService extends JobProducer {
    * @param flavor
    *          The flavor of the media that is being added
    * @param mediaPackage
-   *          The specific Matterhorn MediaPackage to which Media is being added
-   * @return MediaPackageManifest The manifest of a specific Matterhorn MediaPackage element
+   *          The specific Opencast MediaPackage to which Media is being added
+   * @return MediaPackageManifest The manifest of a specific Opencast MediaPackage element
    * @throws MediaPackageException
    * @throws IOException
    * @throws IngestException
    *           if an unexpected error occurs
    */
   MediaPackage addTrack(URI uri, MediaPackageElementFlavor flavor, MediaPackage mediaPackage)
+          throws MediaPackageException, IOException, IngestException;
+
+    /**
+   * Add a media track to an existing MediaPackage in the repository
+   *
+   * @param uri
+   *          The URL of the file to add
+   * @param flavor
+   *          The flavor of the media that is being added
+   * @param tags
+   *           Tags to add to the Track 
+   * @param mediaPackage
+   *          The specific Opencast MediaPackage to which Media is being added
+   * @return MediaPackageManifest The manifest of a specific Opencast MediaPackage element
+   * @throws MediaPackageException
+   * @throws IOException
+   * @throws IngestException
+   *           if an unexpected error occurs
+   */
+  MediaPackage addTrack(URI uri, MediaPackageElementFlavor flavor, String[] tags, MediaPackage mediaPackage)
           throws MediaPackageException, IOException, IngestException;
 
   /**
@@ -170,8 +212,8 @@ public interface IngestService extends JobProducer {
    * @param flavor
    *          The flavor of the media that is being added
    * @param mediaPackage
-   *          The specific Matterhorn MediaPackage to which Media is being added
-   * @return MediaPackage The updated Matterhorn MediaPackage element
+   *          The specific Opencast MediaPackage to which Media is being added
+   * @return MediaPackage The updated Opencast MediaPackage element
    * @throws MediaPackageException
    * @throws IOException
    * @throws IngestException
@@ -179,6 +221,68 @@ public interface IngestService extends JobProducer {
    */
   MediaPackage addTrack(InputStream mediaFile, String fileName, MediaPackageElementFlavor flavor,
           MediaPackage mediaPackage) throws MediaPackageException, IOException, IngestException;
+
+   /**
+   * Add a media track to an existing MediaPackage in the repository
+   *
+   * @param mediaFile
+   *          The media file to add
+   * @param flavor
+   *          The flavor of the media that is being added
+   * @param tags
+   *          Tags to Add to the Track
+   * @param mediaPackage
+   *          The specific Opencast MediaPackage to which Media is being added
+   * @return MediaPackage The updated Opencast MediaPackage element
+   * @throws MediaPackageException
+   * @throws IOException
+   * @throws IngestException
+   *           if an unexpected error occurs
+   */
+  MediaPackage addTrack(InputStream mediaFile, String fileName, MediaPackageElementFlavor flavor, String [] tags,
+          MediaPackage mediaPackage) throws MediaPackageException, IOException, IngestException;
+
+  /**
+   * Adds a partial media track to the existing MediaPackage in the repository
+   *
+   * @param uri
+   *          the URL of the file to add
+   * @param flavor
+   *          the flavor of the media that is being added
+   * @param startTime
+   *          the start time
+   * @param mediaPackage
+   *          the mediapackage
+   * @return the updated mediapackage
+   * @throws IOException
+   *           if reading or writing of the partial track fails
+   * @throws IngestException
+   *           if an unexpected error occurs
+   */
+  MediaPackage addPartialTrack(URI uri, MediaPackageElementFlavor flavor, long startTime, MediaPackage mediaPackage)
+          throws IOException, IngestException;
+
+  /**
+   * Adds a partial media track to the existing MediaPackage in the repository
+   *
+   * @param mediaFile
+   *          the media file to add
+   * @param fileName
+   *          the file name
+   * @param flavor
+   *          the flavor of the media that is being added
+   * @param startTime
+   *          the start time
+   * @param mediaPackage
+   *          the mediapackage
+   * @return the updated mediapackage
+   * @throws IOException
+   *           if reading or writing of the partial track fails
+   * @throws IngestException
+   *           if an unexpected error occurs
+   */
+  MediaPackage addPartialTrack(InputStream mediaFile, String fileName, MediaPackageElementFlavor flavor,
+          long startTime, MediaPackage mediaPackage) throws IOException, IngestException;
 
   /**
    * Add a [metadata catalog] to an existing MediaPackage in the repository
@@ -188,8 +292,8 @@ public interface IngestService extends JobProducer {
    * @param flavor
    *          The flavor of the media that is being added
    * @param mediaPackage
-   *          The specific Matterhorn MediaPackage to which Media is being added
-   * @return MediaPackage The updated Matterhorn MediaPackage element
+   *          The specific Opencast MediaPackage to which Media is being added
+   * @return MediaPackage The updated Opencast MediaPackage element
    * @throws MediaPackageException
    * @throws IOException
    * @throws IngestException
@@ -206,14 +310,34 @@ public interface IngestService extends JobProducer {
    * @param flavor
    *          The flavor of the media that is being added
    * @param mediaPackage
-   *          The specific Matterhorn MediaPackage to which Media is being added
-   * @return MediaPackage The updated Matterhorn MediaPackage element
+   *          The specific Opencast MediaPackage to which Media is being added
+   * @return MediaPackage The updated Opencast MediaPackage element
    * @throws MediaPackageException
    * @throws IOException
    * @throws IngestException
    *           if an unexpected error occurs
    */
   MediaPackage addCatalog(InputStream catalog, String fileName, MediaPackageElementFlavor flavor,
+          MediaPackage mediaPackage) throws MediaPackageException, IOException, IngestException;
+
+    /**
+   * Add a [metadata catalog] to an existing MediaPackage in the repository
+   *
+   * @param catalog
+   *          The catalog file to add
+   * @param flavor
+   *          The flavor of the media that is being added
+   * @param  tags
+   *          The tags for the media that is being added:
+   * @param mediaPackage
+   *          The specific Opencast MediaPackage to which Media is being added
+   * @return MediaPackage The updated Opencast MediaPackage element
+   * @throws MediaPackageException
+   * @throws IOException
+   * @throws IngestException
+   *           if an unexpected error occurs
+   */
+  MediaPackage addCatalog(InputStream catalog, String fileName, MediaPackageElementFlavor flavor, String[] tags,
           MediaPackage mediaPackage) throws MediaPackageException, IOException, IngestException;
 
   /**
@@ -224,8 +348,8 @@ public interface IngestService extends JobProducer {
    * @param flavor
    *          The flavor of the media that is being added
    * @param mediaPackage
-   *          The specific Matterhorn MediaPackage to which Media is being added
-   * @return MediaPackage The updated Matterhorn MediaPackage element
+   *          The specific Opencast MediaPackage to which Media is being added
+   * @return MediaPackage The updated Opencast MediaPackage element
    * @throws MediaPackageException
    * @throws IOException
    * @throws IngestException
@@ -242,8 +366,8 @@ public interface IngestService extends JobProducer {
    * @param flavor
    *          The flavor of the media that is being added
    * @param mediaPackage
-   *          The specific Matterhorn MediaPackage to which Media is being added
-   * @return MediaPackage The updated Matterhorn MediaPackage element
+   *          The specific Opencast MediaPackage to which Media is being added
+   * @return MediaPackage The updated Opencast MediaPackage element
    * @throws MediaPackageException
    * @throws IOException
    * @throws IngestException
@@ -252,12 +376,32 @@ public interface IngestService extends JobProducer {
   MediaPackage addAttachment(InputStream file, String fileName, MediaPackageElementFlavor flavor,
           MediaPackage mediaPackage) throws MediaPackageException, IOException, IngestException;
 
+    /**
+   * Add an attachment to an existing MediaPackage in the repository
+   *
+   * @param file
+   *          The file to add
+   * @param flavor
+   *          The flavor of the media that is being added
+   * @param tags
+   *          The tags of the media thas is being added
+   * @param mediaPackage
+   *          The specific Opencast MediaPackage to which Media is being added
+   * @return MediaPackage The updated Opencast MediaPackage element
+   * @throws MediaPackageException
+   * @throws IOException
+   * @throws IngestException
+   *           if an unexpected error occurs
+   */
+  MediaPackage addAttachment(InputStream file, String fileName, MediaPackageElementFlavor flavor, String[] tags,
+          MediaPackage mediaPackage) throws MediaPackageException, IOException, IngestException;
+
   /**
    * Ingests the mediapackage and starts the default workflow as defined by the
    * <code>org.opencastproject.workflow.default.definition</code> key, found in the system configuration.
    *
    * @param mediaPackage
-   *          The specific Matterhorn MediaPackage being ingested
+   *          The specific Opencast MediaPackage being ingested
    * @return Workflow instance id.
    * @throws IngestException
    *           if an unexpected error occurs
@@ -268,7 +412,7 @@ public interface IngestService extends JobProducer {
    * Ingests the mediapackage and starts the workflow as defined by <code>workflowDefinitionID</code>.
    *
    * @param mediaPackage
-   *          The specific Matterhorn MediaPackage being ingested
+   *          The specific Opencast MediaPackage being ingested
    * @param workflowDefinitionID
    *          workflow to be used with this media package
    * @return Workflow instance id.
@@ -285,7 +429,7 @@ public interface IngestService extends JobProducer {
    * specified in <code>properties</code> will be submitted as configuration data to the workflow.
    *
    * @param mediaPackage
-   *          The specific Matterhorn MediaPackage being ingested
+   *          The specific Opencast MediaPackage being ingested
    * @param workflowDefinitionID
    *          workflow to be used with this media package
    * @param properties
@@ -308,7 +452,7 @@ public interface IngestService extends JobProducer {
    * <code>workflowId</code> is null, a new {@link WorkflowInstance} is created.
    *
    * @param mediaPackage
-   *          The specific Matterhorn MediaPackage being ingested
+   *          The specific Opencast MediaPackage being ingested
    * @param workflowDefinitionID
    *          workflow to be used with this media package
    * @param properties
@@ -321,7 +465,7 @@ public interface IngestService extends JobProducer {
    * @throws NotFoundException
    *           if either one of the workflow definition or workflow instance was not found
    * @throws UnauthorizedException
-   *           if the current user does not have {@link #READ_PERMISSION} on the workflow instance's mediapackage.
+   *           if the current user does not have read permissions on the workflow instance's mediapackage.
    */
   WorkflowInstance ingest(MediaPackage mediaPackage, String workflowDefinitionID, Map<String, String> properties,
           Long workflowId) throws IllegalStateException, IngestException, NotFoundException, UnauthorizedException;
@@ -330,7 +474,7 @@ public interface IngestService extends JobProducer {
    * Delete an existing MediaPackage and any linked files from the temporary ingest filestore.
    *
    * @param mediaPackage
-   *          The specific Matterhorn MediaPackage
+   *          The specific Opencast MediaPackage
    * @throws IngestException
    *           if an unexpected error occurs
    */

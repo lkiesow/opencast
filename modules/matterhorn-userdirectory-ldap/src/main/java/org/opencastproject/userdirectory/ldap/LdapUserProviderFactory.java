@@ -1,18 +1,24 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
+
 package org.opencastproject.userdirectory.ldap;
 
 import org.opencastproject.security.api.Organization;
@@ -20,7 +26,7 @@ import org.opencastproject.security.api.OrganizationDirectoryService;
 import org.opencastproject.security.api.UserProvider;
 import org.opencastproject.util.NotFoundException;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.cm.ConfigurationException;
@@ -74,6 +80,9 @@ public class LdapUserProviderFactory implements ManagedServiceFactory {
 
   /** The key to look up the number of minutes to cache users */
   private static final String CACHE_EXPIRATION = "org.opencastproject.userdirectory.ldap.cache.expiration";
+
+  /** The key to indicate a prefix that will be added to every role read from the LDAP */
+  private static final String ROLE_PREFIX_KEY = "org.opencastproject.userdirectory.ldap.roleprefix";
 
   /** A map of pid to ldap user provider instance */
   private Map<String, ServiceRegistration> providerRegistrations = new ConcurrentHashMap<String, ServiceRegistration>();
@@ -133,6 +142,7 @@ public class LdapUserProviderFactory implements ManagedServiceFactory {
     String userDn = (String) properties.get(SEARCH_USER_DN);
     String password = (String) properties.get(SEARCH_PASSWORD);
     String roleAttributesGlob = (String) properties.get(ROLE_ATTRIBUTES_KEY);
+    String rolePrefix = (String) properties.get(ROLE_PREFIX_KEY);
 
     int cacheSize = 1000;
     logger.debug("Using cache size " + properties.get(CACHE_SIZE) + " for " + LdapUserProviderFactory.class.getName());
@@ -173,7 +183,7 @@ public class LdapUserProviderFactory implements ManagedServiceFactory {
       throw new ConfigurationException(ORGANIZATION_KEY, "not found");
     }
     LdapUserProviderInstance provider = new LdapUserProviderInstance(pid, org, searchBase, searchFilter, url, userDn,
-            password, roleAttributesGlob, cacheSize, cacheExpiration);
+            password, roleAttributesGlob, rolePrefix, cacheSize, cacheExpiration);
     providerRegistrations.put(pid, bundleContext.registerService(UserProvider.class.getName(), provider, null));
 
   }

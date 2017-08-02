@@ -1,26 +1,32 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
+
 package org.opencastproject.util;
+
+import static org.opencastproject.util.data.functions.Misc.chuck;
 
 import org.opencastproject.util.data.Function;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-
-import static org.opencastproject.util.data.functions.Misc.chuck;
 
 /** Reflection utils. */
 public final class ReflectionUtil {
@@ -54,7 +60,7 @@ public final class ReflectionUtil {
 
     /**
      * Call all parameterless methods of <code>c</code> on object <code>o</code>.
-     * <p/>
+     * <p>
      * Does not call any bridge, synthetic or native methods and also no methods declared in Object.
      */
     public static <A, B extends A> void run(Class<A> c, B o) {
@@ -63,7 +69,7 @@ public final class ReflectionUtil {
 
     /**
      * Call all parameterless methods of object <code>a</code>.
-     * <p/>
+     * <p>
      * Does not call any bridge, synthetic or native methods and also no methods declared in Object.
      */
     public static <A> void run(A a) {
@@ -87,11 +93,11 @@ public final class ReflectionUtil {
 
     /**
      * Helper method for the transfer idiom.
-     * <p/>
+     * <p>
      * Take <code>target</code> and apply it to <code>f</code>. Take the result and call all
      * parameterless methods on it that are described by class <code>source</code>. This way <code>f</code>
      * is able to create a transfer object that sets all properties of <code>target</code>.
-     * <p/>
+     * <p>
      * The advantage of this style is that each time the <code>source</code> class changes the compiler
      * will yield an error if a field is missed in the transfer. The common getter/setter or constructor idiom
      * does not detect errors of this kind at compile time.

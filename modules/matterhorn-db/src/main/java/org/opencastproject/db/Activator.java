@@ -1,102 +1,116 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
+
 package org.opencastproject.db;
 
 import com.mchange.v2.c3p0.ComboPooledDataSource;
 import com.mchange.v2.c3p0.DataSources;
 
-import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleActivator;
 import org.osgi.framework.BundleContext;
-import org.osgi.framework.BundleEvent;
-import org.osgi.framework.BundleException;
-import org.osgi.framework.BundleListener;
-import org.osgi.framework.ServiceReference;
 import org.osgi.framework.ServiceRegistration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.Serializable;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.Dictionary;
 import java.util.Hashtable;
-import java.util.Map;
 
 import javax.sql.DataSource;
 
-/**
- * Registers shared persistence properties as a map. This allows bundles using JPA to obtain persistence properties
- * without hard coding values in each bundle.
- */
+/** Registers {@link DataSource}. */
 public class Activator implements BundleActivator {
 
   /** The logging facility */
-  protected static final Logger logger = LoggerFactory.getLogger(Activator.class);
+  private static final Logger logger = LoggerFactory.getLogger(Activator.class);
 
-  /**
-   * The persistence properties service registration
-   */
-  protected ServiceRegistration propertiesRegistration = null;
+  /** The default max idle time for the connection pool */
+  private static final int DEFAULT_MAX_IDLE_TIME = 3600;
 
-  protected String rootDir;
-  protected ServiceRegistration datasourceRegistration;
-  protected ComboPooledDataSource pooledDataSource;
-  protected BundleContext bundleContext;
-  protected BundleListener jpaClientBundleListener;
+  private String rootDir;
+  private ServiceRegistration<?> datasourceRegistration;
+  private ComboPooledDataSource pooledDataSource;
 
-  public Activator() {
-  }
-
-  public Activator(String rootDir) {
-    this.rootDir = rootDir;
-  }
-
-  /**
-   * {@inheritDoc}
-   *
-   * @see org.osgi.framework.BundleActivator#start(org.osgi.framework.BundleContext)
-   */
   @Override
   public void start(BundleContext bundleContext) throws Exception {
-    this.bundleContext = bundleContext;
-
     // Use the configured storage directory
     rootDir = bundleContext.getProperty("org.opencastproject.storage.dir") + File.separator + "db";
 
-    // Register the Datasource, defaulting to an embedded H2 database if DB configurations are not specified
-    String vendor = getConfigProperty(bundleContext.getProperty("org.opencastproject.db.vendor"), "HSQL");
+    // Register the data source, defaulting to an embedded H2 database if DB configurations are not specified
     String jdbcDriver = getConfigProperty(bundleContext.getProperty("org.opencastproject.db.jdbc.driver"),
             "org.h2.Driver");
-    String jdbcUrl = getConfigProperty(bundleContext.getProperty("org.opencastproject.db.jdbc.url"), "jdbc:h2:"
-            + rootDir);
+    String jdbcUrl = getConfigProperty(bundleContext.getProperty("org.opencastproject.db.jdbc.url"),
+            "jdbc:h2:" + rootDir);
     String jdbcUser = getConfigProperty(bundleContext.getProperty("org.opencastproject.db.jdbc.user"), "sa");
     String jdbcPass = getConfigProperty(bundleContext.getProperty("org.opencastproject.db.jdbc.pass"), "sa");
+
+    Integer maxPoolSize = getConfigProperty(bundleContext.getProperty("org.opencastproject.db.jdbc.pool.max.size"));
+    Integer minPoolSize = getConfigProperty(bundleContext.getProperty("org.opencastproject.db.jdbc.pool.min.size"));
+    Integer acquireIncrement = getConfigProperty(
+            bundleContext.getProperty("org.opencastproject.db.jdbc.pool.acquire.increment"));
+    Integer maxStatements = getConfigProperty(
+            bundleContext.getProperty("org.opencastproject.db.jdbc.pool.max.statements"));
+    Integer loginTimeout = getConfigProperty(
+            bundleContext.getProperty("org.opencastproject.db.jdbc.pool.login.timeout"));
+    Integer maxIdleTime = getConfigProperty(
+            bundleContext.getProperty("org.opencastproject.db.jdbc.pool.max.idle.time"));
+    Integer maxConnectionAge = getConfigProperty(
+            bundleContext.getProperty("org.opencastproject.db.jdbc.pool.max.connection.age"));
+
     pooledDataSource = new ComboPooledDataSource();
     pooledDataSource.setDriverClass(jdbcDriver);
     pooledDataSource.setJdbcUrl(jdbcUrl);
     pooledDataSource.setUser(jdbcUser);
     pooledDataSource.setPassword(jdbcPass);
+    if (minPoolSize != null)
+      pooledDataSource.setMinPoolSize(minPoolSize);
+    if (maxPoolSize != null)
+      pooledDataSource.setMaxPoolSize(maxPoolSize);
+    if (acquireIncrement != null)
+      pooledDataSource.setAcquireIncrement(acquireIncrement);
+    if (maxStatements != null)
+      pooledDataSource.setMaxStatements(maxStatements);
+    if (loginTimeout != null)
+      pooledDataSource.setLoginTimeout(loginTimeout);
+
+    // maxIdleTime should not be zero, otherwise the connection pool will hold on to stale connections
+    // that have been closed by the database.
+    if (maxIdleTime != null)
+      pooledDataSource.setMaxIdleTime(maxIdleTime);
+    else if (pooledDataSource.getMaxIdleTime() == 0) {
+        logger.debug("Setting database connection pool max.idle.time to default of {}", DEFAULT_MAX_IDLE_TIME);
+        pooledDataSource.setMaxIdleTime(DEFAULT_MAX_IDLE_TIME);
+    }
+
+    if (maxConnectionAge != null)
+      pooledDataSource.setMaxConnectionAge(maxConnectionAge);
 
     Connection connection = null;
     try {
       logger.info("Testing connectivity to database at {}", jdbcUrl);
       connection = pooledDataSource.getConnection();
-      datasourceRegistration = bundleContext.registerService(DataSource.class.getName(), pooledDataSource, null);
+      Hashtable<String, String> dsProps = new Hashtable<>();
+      dsProps.put("osgi.jndi.service.name", "jdbc/matterhorn");
+      datasourceRegistration = bundleContext.registerService(DataSource.class.getName(), pooledDataSource, dsProps);
     } catch (SQLException e) {
       logger.error("Connection attempt to {} failed", jdbcUrl);
       logger.error("Exception: ", e);
@@ -106,42 +120,17 @@ public class Activator implements BundleActivator {
         connection.close();
     }
 
-    // Register the persistence properties
-    Dictionary<String, Serializable> props = new Hashtable<String, Serializable>();
-    props.put("type", "persistence");
-    props.put("javax.persistence.nonJtaDataSource", pooledDataSource);
-    props.put("eclipselink.target-database", vendor);
-    props.put("eclipselink.logging.logger", "JavaLogger");
-    props.put("eclipselink.cache.shared.default", "false");
-    if ("true".equalsIgnoreCase(bundleContext.getProperty("org.opencastproject.db.ddl.generation"))) {
-      props.put("eclipselink.ddl-generation", "create-tables");
-      if ("true".equalsIgnoreCase(bundleContext.getProperty("org.opencastproject.db.ddl.script.generation"))) {
-        props.put("eclipselink.ddl-generation.output-mode", "both");
-      } else {
-        props.put("eclipselink.ddl-generation.output-mode", "database");
-      }
-    }
-    propertiesRegistration = bundleContext.registerService(Map.class.getName(), props, props);
-
-    // Listen for bundles with persistence units restarting
-    jpaClientBundleListener = new JpaClientBundleListener();
-    bundleContext.addBundleListener(jpaClientBundleListener);
-
     logger.info("Database connection pool established at {}", jdbcUrl);
+    logger.info("Database connection pool parameters: max.size={}, min.size={}, max.idle.time={}",
+      pooledDataSource.getMaxPoolSize(), pooledDataSource.getMinPoolSize(), pooledDataSource.getMaxIdleTime());
   }
 
-  /**
-   * {@inheritDoc}
-   *
-   * @see org.osgi.framework.BundleActivator#stop(org.osgi.framework.BundleContext)
-   */
   @Override
   public void stop(BundleContext context) throws Exception {
-    context.removeBundleListener(jpaClientBundleListener);
-    if (propertiesRegistration != null)
-      propertiesRegistration.unregister();
+    logger.info("Shutting down database");
     if (datasourceRegistration != null)
       datasourceRegistration.unregister();
+    logger.info("Shutting down connection pool");
     DataSources.destroy(pooledDataSource);
   }
 
@@ -149,33 +138,8 @@ public class Activator implements BundleActivator {
     return config == null ? defaultValue : config;
   }
 
-  /**
-   * Listens for bundles using JPA, and refreshes the persistence provider bundle when they are updated.
-   */
-  class JpaClientBundleListener implements BundleListener {
-    /**
-     * {@inheritDoc}
-     *
-     * @see org.osgi.framework.BundleListener#bundleChanged(org.osgi.framework.BundleEvent)
-     */
-    @Override
-    public void bundleChanged(BundleEvent event) {
-      if (event.getType() != BundleEvent.UPDATED)
-        return;
-      Bundle updatedBundle = event.getBundle();
-      if (updatedBundle.getEntry("/META-INF/persistence.xml") == null)
-        return;
-      ServiceReference jpaProviderRef = bundleContext.getServiceReference("javax.persistence.spi.PersistenceProvider");
-      if (jpaProviderRef != null) {
-        Bundle jpaBundle = jpaProviderRef.getBundle();
-        try {
-          jpaBundle.update();
-          logger.info("Updated the JPA provider bundle");
-        } catch (BundleException e) {
-          logger.info("Failed to update the JPA provider bundle: {}", e);
-        }
-      }
-    }
+  private Integer getConfigProperty(String config) {
+    return config == null ? null : Integer.parseInt(config);
   }
 
 }

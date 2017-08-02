@@ -1,18 +1,24 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
+
 
 package org.opencastproject.composer.impl.endpoint;
 
@@ -20,13 +26,18 @@ import org.opencastproject.composer.api.ComposerService;
 import org.opencastproject.composer.api.EncodingProfile;
 import org.opencastproject.composer.api.EncodingProfileImpl;
 import org.opencastproject.composer.api.EncodingProfileList;
+import org.opencastproject.composer.layout.Dimension;
+import org.opencastproject.composer.layout.Serializer;
 import org.opencastproject.job.api.JaxbJob;
 import org.opencastproject.job.api.Job;
+import org.opencastproject.job.api.JobImpl;
 import org.opencastproject.mediapackage.MediaPackageElementBuilder;
 import org.opencastproject.mediapackage.MediaPackageElementBuilderFactory;
+import org.opencastproject.mediapackage.MediaPackageElementParser;
 import org.opencastproject.mediapackage.MediaPackageElements;
 import org.opencastproject.mediapackage.Track;
 import org.opencastproject.util.NotFoundException;
+import org.opencastproject.util.data.Collections;
 
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -44,7 +55,7 @@ import javax.ws.rs.core.Response.Status;
  */
 public class ComposerRestServiceTest {
 
-  private JaxbJob job;
+  private JobImpl job;
   private EncodingProfileImpl profile;
   private EncodingProfileList profileList;
   private Track audioTrack;
@@ -64,7 +75,7 @@ public class ComposerRestServiceTest {
 
     profileId = "profile1";
 
-    job = new JaxbJob();
+    job = new JobImpl(1);
     job.setStatus(Job.Status.QUEUED);
     job.setJobType(ComposerService.JOB_TYPE);
     profile = new EncodingProfileImpl();
@@ -79,6 +90,10 @@ public class ComposerRestServiceTest {
     EasyMock.expect(composer.mux(videoTrack, audioTrack, profileId)).andReturn(job).anyTimes();
     EasyMock.expect(composer.listProfiles()).andReturn(list.toArray(new EncodingProfile[list.size()]));
     EasyMock.expect(composer.getProfile(profileId)).andReturn(profile);
+    EasyMock.expect(composer.concat(EasyMock.eq(profileId), EasyMock.eq(new Dimension(640, 480)),
+            (Track) EasyMock.notNull(), (Track) EasyMock.notNull())).andReturn(job);
+    EasyMock.expect(composer.concat(EasyMock.eq(profileId), EasyMock.eq(new Dimension(640, 480)),
+            EasyMock.gt(0.0f), (Track) EasyMock.notNull(), (Track) EasyMock.notNull())).andReturn(job);
     EasyMock.replay(composer);
 
     // Set up the rest endpoint
@@ -137,8 +152,19 @@ public class ComposerRestServiceTest {
     Assert.assertEquals(profileList, list);
   }
 
+  @Test
+  public void testConcat() throws Exception {
+    Dimension dimension = new Dimension(640, 480);
+    Track videoTrack = (Track) MediaPackageElementParser.getFromXml(generateVideoTrack());
+    String sourceTracks = MediaPackageElementParser.getArrayAsXml(Collections.list(videoTrack, videoTrack));
+    Response response = restService.concat(sourceTracks, profileId, Serializer.json(dimension).toJson(), "25");
+    Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+    Assert.assertNotNull("Concat rest endpoint should send a job in response", response.getEntity());
+  }
+
   protected String generateVideoTrack() {
-    return "<track id=\"video1\" type=\"presentation/source\">\n" + "  <mimetype>video/quicktime</mimetype>\n"
+    return "<track xmlns=\"http://mediapackage.opencastproject.org\" id=\"video1\" type=\"presentation/source\">\n"
+            + "  <mimetype>video/quicktime</mimetype>\n"
             + "  <url>serverUrl/workflow/samples/camera.mpg</url>\n"
             + "  <checksum type=\"md5\">43b7d843b02c4a429b2f547a4f230d31</checksum>\n"
             + "  <duration>14546</duration>\n" + "  <video>\n"
@@ -149,7 +175,8 @@ public class ComposerRestServiceTest {
   }
 
   protected String generateAudioTrack() {
-    return "<track id=\"audio1\" type=\"presentation/source\">\n" + "  <mimetype>audio/mp3</mimetype>\n"
+    return "<track xmlns=\"http://mediapackage.opencastproject.org\" id=\"audio1\" type=\"presentation/source\">\n"
+            + "  <mimetype>audio/mp3</mimetype>\n"
             + "  <url>serverUrl/workflow/samples/audio.mp3</url>\n"
             + "  <checksum type=\"md5\">950f9fa49caa8f1c5bbc36892f6fd062</checksum>\n"
             + "  <duration>10472</duration>\n" + "  <audio>\n" + "    <channels>2</channels>\n"

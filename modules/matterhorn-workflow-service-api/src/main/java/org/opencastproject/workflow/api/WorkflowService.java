@@ -1,18 +1,24 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
+
 package org.opencastproject.workflow.api;
 
 import org.opencastproject.mediapackage.MediaPackage;
@@ -35,12 +41,6 @@ public interface WorkflowService {
 
   /** Identifier for workflow jobs */
   String JOB_TYPE = "org.opencastproject.workflow";
-
-  /** Identifier for read permissions */
-  String READ_PERMISSION = "read";
-
-  /** Identifier for write permissions */
-  String WRITE_PERMISSION = "write";
 
   /**
    * Adds a workflow listener to be notified when workflows are updated.
@@ -80,8 +80,7 @@ public interface WorkflowService {
   void unregisterWorkflowDefinition(String workflowDefinitionId) throws NotFoundException, WorkflowDatabaseException;
 
   /**
-   * Returns the {@link WorkflowDefinition} identified by <code>name</code> or <code>null</code> if no such definition
-   * was found.
+   * Returns the {@link WorkflowDefinition} identified by <code>name</code>.
    *
    * @param id
    *          the workflow definition id
@@ -103,7 +102,7 @@ public interface WorkflowService {
    * @throws NotFoundException
    *           if there is no workflow instance with this identifier
    * @throws UnauthorizedException
-   *           if the current user does not have {@link #READ_PERMISSION} on the workflow instance's mediapackage.
+   *           if the current user does not have read permissions on the workflow instance's mediapackage.
    */
   WorkflowInstance getWorkflowById(long workflowId) throws WorkflowDatabaseException, NotFoundException,
           UnauthorizedException;
@@ -232,7 +231,7 @@ public interface WorkflowService {
    * @throws WorkflowException
    *           if there is a problem processing the workflow
    * @throws UnauthorizedException
-   *           if the current user does not have {@link #READ_PERMISSION} on the workflow instance's mediapackage.
+   *           if the current user does not have read permissions on the workflow instance's mediapackage.
    */
   WorkflowInstance stop(long workflowInstanceId) throws WorkflowException, NotFoundException, UnauthorizedException;
 
@@ -247,7 +246,7 @@ public interface WorkflowService {
    * @throws NotFoundException
    *           if no workflow instance with the given identifier could be found
    * @throws UnauthorizedException
-   *           if the current user does not have {@link #WRITE_PERMISSION} on the workflow instance
+   *           if the current user does not have write permissions on the workflow instance
    * @throws WorkflowStateException
    *           if the workflow instance is in a disallowed state
    */
@@ -265,7 +264,7 @@ public interface WorkflowService {
    * @throws WorkflowException
    *           if there is a problem processing the workflow
    * @throws UnauthorizedException
-   *           if the current user does not have {@link #READ_PERMISSION} on the workflow instance's mediapackage.
+   *           if the current user does not have read permissions on the workflow instance's mediapackage.
    */
   WorkflowInstance suspend(long workflowInstanceId) throws WorkflowException, NotFoundException, UnauthorizedException;
 
@@ -279,10 +278,13 @@ public interface WorkflowService {
    *           if no paused workflow with this identifier exists
    * @throws WorkflowException
    *           if there is a problem processing the workflow
+   * @throws IllegalStateException
+   *           if the workflow with this identifier is not in the paused state
    * @throws UnauthorizedException
-   *           if the current user does not have {@link #READ_PERMISSION} on the workflow instance's mediapackage.
+   *           if the current user does not have read permissions on the workflow instance's mediapackage.
    */
-  WorkflowInstance resume(long workflowInstanceId) throws NotFoundException, WorkflowException, UnauthorizedException;
+  WorkflowInstance resume(long workflowInstanceId) throws NotFoundException, WorkflowException, IllegalStateException,
+          UnauthorizedException;
 
   /**
    * Resumes a suspended workflow instance, applying new properties to the workflow.
@@ -299,7 +301,7 @@ public interface WorkflowService {
    * @throws IllegalStateException
    *           if the workflow with this identifier is not in the paused state
    * @throws UnauthorizedException
-   *           if the current user does not have {@link #READ_PERMISSION} on the workflow instance's mediapackage.
+   *           if the current user does not have read permissions on the workflow instance's mediapackage.
    */
   WorkflowInstance resume(long workflowInstanceId, Map<String, String> properties) throws NotFoundException,
           WorkflowException, IllegalStateException, UnauthorizedException;
@@ -312,7 +314,7 @@ public interface WorkflowService {
    * @throws WorkflowException
    *           if there is a problem processing the workflow
    * @throws UnauthorizedException
-   *           if the current user does not have {@link #READ_PERMISSION} on the workflow instance's mediapackage.
+   *           if the current user does not have read permissions on the workflow instance's mediapackage.
    */
   void update(WorkflowInstance workflowInstance) throws WorkflowException, UnauthorizedException;
 
@@ -327,6 +329,7 @@ public interface WorkflowService {
   List<WorkflowDefinition> listAvailableWorkflowDefinitions() throws WorkflowDatabaseException;
 
   /**
+   *
    * Starts a cleanup of workflow instances with a given lifetime and a specific state
    *
    * @param lifetime

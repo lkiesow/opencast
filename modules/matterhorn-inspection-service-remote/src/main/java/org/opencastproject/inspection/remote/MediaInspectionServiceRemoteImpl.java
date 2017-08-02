@@ -1,22 +1,29 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
+
 package org.opencastproject.inspection.remote;
 
 import org.opencastproject.inspection.api.MediaInspectionException;
 import org.opencastproject.inspection.api.MediaInspectionService;
+import org.opencastproject.inspection.api.util.Options;
 import org.opencastproject.job.api.Job;
 import org.opencastproject.job.api.JobParser;
 import org.opencastproject.mediapackage.MediaPackageElement;
@@ -36,6 +43,7 @@ import org.slf4j.LoggerFactory;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Proxies a remote media inspection service for use as a JVM-local service.
@@ -59,9 +67,21 @@ public class MediaInspectionServiceRemoteImpl extends RemoteBase implements Medi
    */
   @Override
   public Job inspect(URI uri) throws MediaInspectionException {
-    List<NameValuePair> queryStringParams = new ArrayList<NameValuePair>();
-    queryStringParams.add(new BasicNameValuePair("uri", uri.toString()));
-    String url = "/inspect?" + URLEncodedUtils.format(queryStringParams, "UTF-8");
+    return inspect(uri, Options.NO_OPTION);
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * @see org.opencastproject.inspection.api.MediaInspectionService#inspect(java.net.URI)
+   */
+  @Override
+  public Job inspect(URI uri, final Map<String, String> options) throws MediaInspectionException {
+    assert (options != null);
+    List<NameValuePair> params = new ArrayList<NameValuePair>();
+    params.add(new BasicNameValuePair("uri", uri.toString()));
+    params.add(new BasicNameValuePair("options", Options.toJson(options)));
+    String url = "/inspect?" + URLEncodedUtils.format(params, "UTF-8");
     logger.info("Inspecting media file at {} using a remote media inspection service", uri);
     HttpResponse response = null;
     try {
@@ -82,16 +102,24 @@ public class MediaInspectionServiceRemoteImpl extends RemoteBase implements Medi
 
   /**
    * {@inheritDoc}
-   *
-   * @see org.opencastproject.inspection.api.MediaInspectionService#enrich(org.opencastproject.mediapackage.AbstractMediaPackageElement,
-   *      boolean)
    */
   @Override
   public Job enrich(MediaPackageElement original, boolean override) throws MediaInspectionException {
+    return enrich(original, override, Options.NO_OPTION);
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public Job enrich(MediaPackageElement original, boolean override, final Map<String, String> options)
+          throws MediaInspectionException {
+    assert (options != null);
     List<NameValuePair> params = new ArrayList<NameValuePair>();
     try {
       params.add(new BasicNameValuePair("mediaPackageElement", MediaPackageElementParser.getAsXml(original)));
       params.add(new BasicNameValuePair("override", new Boolean(override).toString()));
+      params.add(new BasicNameValuePair("options", Options.toJson(options)));
     } catch (Exception e) {
       throw new MediaInspectionException(e);
     }

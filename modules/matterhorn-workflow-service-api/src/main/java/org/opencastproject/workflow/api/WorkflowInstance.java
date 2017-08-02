@@ -1,18 +1,24 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
+
 package org.opencastproject.workflow.api;
 
 import org.opencastproject.mediapackage.MediaPackage;
@@ -120,6 +126,11 @@ public interface WorkflowInstance extends Configurable {
   void setState(WorkflowState state);
 
   /**
+   * @return True if the workflow has not finished, been stopped or failed.
+   */
+  boolean isActive();
+
+  /**
    * The {@link MediaPackage} being worked on by this workflow instance.
    */
   MediaPackage getMediaPackage();
@@ -147,4 +158,16 @@ public interface WorkflowInstance extends Configurable {
    *          the workflow definition
    */
   void extend(WorkflowDefinition workflowDefinition);
+
+  /**
+   * Insert the operations found in the workflow definition after the operation <code>after</code>.
+   * This allows to include a different workflow at any point. This method is a generalization
+   * of {@link #extend(org.opencastproject.workflow.api.WorkflowDefinition)}.
+   *
+   * @param workflowDefinition
+   *          the workflow to insert
+   * @param after
+   *          insert the given workflow after this operation
+   */
+  void insert(WorkflowDefinition workflowDefinition, WorkflowOperationInstance after);
 }

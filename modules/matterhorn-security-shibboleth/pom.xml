@@ -6,7 +6,7 @@
   <parent>
     <groupId>org.opencastproject</groupId>
     <artifactId>base</artifactId>
-    <version>1.6.1</version>
+    <version>3.0-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <properties>
@@ -45,7 +45,7 @@
     </dependency>
     <dependency>
       <groupId>javax.servlet</groupId>
-      <artifactId>servlet-api</artifactId>
+      <artifactId>javax.servlet-api</artifactId>
     </dependency>
   </dependencies>
   <build>
@@ -57,19 +57,20 @@
         <configuration>
           <instructions>
             <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
-            <Build-Number>${build.number}</Build-Number>
-            <Mh-Db-Version>${mh.db.version}</Mh-Db-Version>
+            <Build-Number>${buildNumber}</Build-Number>
             <Fragment-Host>matterhorn-kernel</Fragment-Host>
             <Import-Package>
               javax.servlet.http,
               org.apache.commons.logging,
+              org.opencastproject.security.api,
               org.springframework.security.core.userdetails,
               org.springframework.security.provisioning,
               org.springframework.security.web.authentication.preauth,
-              org.springframework.util
+              org.springframework.util,
+              *
             </Import-Package>
             <Export-Package>
-              org.opencastproject.security.shibboleth;version="${project.version}"
+              org.opencastproject.security.shibboleth;version=${project.version}
             </Export-Package>
           </instructions>
         </configuration>

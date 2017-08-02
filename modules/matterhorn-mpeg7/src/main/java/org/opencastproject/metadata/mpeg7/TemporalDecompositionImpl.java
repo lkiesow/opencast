@@ -1,18 +1,24 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
+
 
 package org.opencastproject.metadata.mpeg7;
 
@@ -62,14 +68,14 @@ public class TemporalDecompositionImpl<T extends Segment> implements TemporalDec
   }
 
   /**
-   * @see org.opencastproject.mediapackage.mpeg7.TemporalDecomposition#setGap(boolean)
+   * @see org.opencastproject.metadata.mpeg7.TemporalDecomposition#setGap(boolean)
    */
   public void setGap(boolean hasGap) {
     this.hasGap = hasGap;
   }
 
   /**
-   * @see org.opencastproject.mediapackage.mpeg7.TemporalDecomposition#hasGap()
+   * @see org.opencastproject.metadata.mpeg7.TemporalDecomposition#hasGap()
    */
   public boolean hasGap() {
     return gap;
@@ -85,21 +91,21 @@ public class TemporalDecompositionImpl<T extends Segment> implements TemporalDec
   }
 
   /**
-   * @see org.opencastproject.mediapackage.mpeg7.TemporalDecomposition#hasSegments()
+   * @see org.opencastproject.metadata.mpeg7.TemporalDecomposition#hasSegments()
    */
   public boolean hasSegments() {
     return segments.size() > 0;
   }
 
   /**
-   * @see org.opencastproject.mediapackage.mpeg7.TemporalDecomposition#setOverlapping(boolean)
+   * @see org.opencastproject.metadata.mpeg7.TemporalDecomposition#setOverlapping(boolean)
    */
   public void setOverlapping(boolean isOverlapping) {
     this.isOverlapping = isOverlapping;
   }
 
   /**
-   * @see org.opencastproject.mediapackage.mpeg7.TemporalDecomposition#setCriteria(org.opencastproject.mediapackage.mpeg7.TemporalDecomposition.DecompositionCriteria)
+   * @see org.opencastproject.metadata.mpeg7.TemporalDecomposition#setCriteria(org.opencastproject.metadata.mpeg7.TemporalDecomposition.DecompositionCriteria)
    */
   public void setCriteria(DecompositionCriteria criteria) {
     if (criteria == null)
@@ -108,21 +114,21 @@ public class TemporalDecompositionImpl<T extends Segment> implements TemporalDec
   }
 
   /**
-   * @see org.opencastproject.mediapackage.mpeg7.TemporalDecomposition#isOverlapping()
+   * @see org.opencastproject.metadata.mpeg7.TemporalDecomposition#isOverlapping()
    */
   public boolean isOverlapping() {
     return overlap;
   }
 
   /**
-   * @see org.opencastproject.mediapackage.mpeg7.TemporalDecomposition#getCriteria()
+   * @see org.opencastproject.metadata.mpeg7.TemporalDecomposition#getCriteria()
    */
   public DecompositionCriteria getCriteria() {
     return DecompositionCriteria.Temporal;
   }
 
   /**
-   * @see org.opencastproject.mediapackage.mpeg7.TemporalDecomposition#getSegmentById(java.lang.String)
+   * @see org.opencastproject.metadata.mpeg7.TemporalDecomposition#getSegmentById(java.lang.String)
    */
   public T getSegmentById(String segmentId) {
     for (T segment : segments) {
@@ -133,7 +139,7 @@ public class TemporalDecompositionImpl<T extends Segment> implements TemporalDec
   }
 
   /**
-   * @see org.opencastproject.mediapackage.mpeg7.TemporalDecomposition#segments()
+   * @see org.opencastproject.metadata.mpeg7.TemporalDecomposition#segments()
    */
   public Iterator<T> segments() {
     return segments.iterator();

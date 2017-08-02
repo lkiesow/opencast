@@ -1,28 +1,26 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
+
 package org.opencastproject.silencedetection.impl;
 
-import java.util.Arrays;
-import java.util.Dictionary;
-import java.util.Enumeration;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Properties;
-import org.apache.commons.lang.StringUtils;
-import org.gstreamer.Gst;
 import org.opencastproject.job.api.AbstractJobProducer;
 import org.opencastproject.job.api.Job;
 import org.opencastproject.mediapackage.MediaPackageElementParser;
@@ -37,21 +35,30 @@ import org.opencastproject.silencedetection.api.MediaSegment;
 import org.opencastproject.silencedetection.api.MediaSegments;
 import org.opencastproject.silencedetection.api.SilenceDetectionFailedException;
 import org.opencastproject.silencedetection.api.SilenceDetectionService;
-import org.opencastproject.silencedetection.gstreamer.GstreamerSilenceDetector;
-import org.opencastproject.silencedetection.gstreamer.PipelineBuildException;
+import org.opencastproject.silencedetection.ffmpeg.FFmpegSilenceDetector;
 import org.opencastproject.smil.api.SmilException;
 import org.opencastproject.smil.api.SmilResponse;
 import org.opencastproject.smil.api.SmilService;
 import org.opencastproject.smil.entity.api.Smil;
+import org.opencastproject.util.LoadUtil;
 import org.opencastproject.workspace.api.Workspace;
+
+import org.apache.commons.lang3.StringUtils;
 import org.osgi.service.cm.ConfigurationException;
 import org.osgi.service.cm.ManagedService;
 import org.osgi.service.component.ComponentContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Arrays;
+import java.util.Dictionary;
+import java.util.Enumeration;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Properties;
+
 /**
- * Implementation of SilenceDetectionService using Gstreamer framework.
+ * Implementation of SilenceDetectionService using FFmpeg.
  */
 public class SilenceDetectionServiceImpl extends AbstractJobProducer implements SilenceDetectionService, ManagedService {
 
@@ -60,8 +67,13 @@ public class SilenceDetectionServiceImpl extends AbstractJobProducer implements 
    */
   private static final Logger logger = LoggerFactory.getLogger(SilenceDetectionServiceImpl.class);
 
-  private static enum Operation {
+  public static final String JOB_LOAD_KEY = "job.load.videoeditor.silencedetection";
 
+  private static final float DEFAULT_JOB_LOAD = 2.0f;
+
+  private float jobload = DEFAULT_JOB_LOAD;
+
+  private enum Operation {
     SILENCE_DETECTION
   }
   /**
@@ -126,7 +138,8 @@ public class SilenceDetectionServiceImpl extends AbstractJobProducer implements 
       return serviceRegistry.createJob(
               getJobType(),
               Operation.SILENCE_DETECTION.toString(),
-              arguments);
+              arguments,
+              jobload);
 
     } catch (ServiceRegistryException ex) {
       throw new SilenceDetectionFailedException("Unable to create job! " + ex.getMessage());
@@ -174,24 +187,19 @@ public class SilenceDetectionServiceImpl extends AbstractJobProducer implements 
 
   /**
    * Run silence detection on the source track and returns
-   * {@see org.opencastproject.silencedetection.api.MediaSegments}
+   * {@link org.opencastproject.silencedetection.api.MediaSegments}
    * XML as string. Source track should have an audio stream. All detected
-   * {@see org.opencastproject.silencedetection.api.MediaSegment}s
+   * {@link org.opencastproject.silencedetection.api.MediaSegment}s
    * (one or more) are non silent sequences.
    *
    * @param track track where to run silence detection
-   * @return {@see MediaSegments} Xml as String
+   * @return {@link MediaSegments} Xml as String
    * @throws SilenceDetectionFailedException if an error occures
    */
   protected MediaSegments runDetection(Track track) throws SilenceDetectionFailedException {
     try {
-      String filePath = workspace.get(track.getURI()).getAbsolutePath();
-      GstreamerSilenceDetector silenceDetector = new GstreamerSilenceDetector(properties, track.getIdentifier(), filePath);
-      silenceDetector.runDetection();
+      FFmpegSilenceDetector silenceDetector = new FFmpegSilenceDetector(properties, track, workspace);
       return silenceDetector.getMediaSegments();
-
-    } catch (PipelineBuildException ex) {
-      throw new SilenceDetectionFailedException("Unable to build detection Pipeline!");
     } catch (Exception ex) {
       throw new SilenceDetectionFailedException(ex.getMessage());
     }
@@ -239,10 +247,11 @@ public class SilenceDetectionServiceImpl extends AbstractJobProducer implements 
     return organizationDirectoryService;
   }
 
-  protected void activate(ComponentContext context) {
+  @Override
+  public void activate(ComponentContext context) {
     logger.debug("activating...");
-    Gst.setUseDefaultContext(true);
-    Gst.init();
+    super.activate(context);
+    FFmpegSilenceDetector.init(context.getBundleContext());
   }
 
   protected void deactivate(ComponentContext context) {
@@ -250,14 +259,21 @@ public class SilenceDetectionServiceImpl extends AbstractJobProducer implements 
   }
 
   @Override
-  public void updated(Dictionary properties) throws ConfigurationException {
+  public void updated(Dictionary<String, ?> properties) throws ConfigurationException {
     this.properties = new Properties();
-    Enumeration keys = properties.keys();
+    if (properties == null) {
+      logger.info("No configuration available, using defaults");
+      return;
+    }
+
+    Enumeration<String> keys = properties.keys();
     while (keys.hasMoreElements()) {
-      Object key = keys.nextElement();
+      String key = keys.nextElement();
       this.properties.put(key, properties.get(key));
     }
     logger.debug("Properties updated!");
+
+    jobload = LoadUtil.getConfiguredLoadValue(properties, JOB_LOAD_KEY, DEFAULT_JOB_LOAD, serviceRegistry);
   }
 
   public void setServiceRegistry(ServiceRegistry serviceRegistry) {

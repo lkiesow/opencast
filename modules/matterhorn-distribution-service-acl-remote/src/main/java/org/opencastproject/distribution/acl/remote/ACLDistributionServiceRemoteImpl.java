@@ -1,18 +1,24 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
+
 package org.opencastproject.distribution.acl.remote;
 
 import org.opencastproject.distribution.api.DistributionException;
@@ -22,6 +28,7 @@ import org.opencastproject.job.api.JobParser;
 import org.opencastproject.mediapackage.MediaPackage;
 import org.opencastproject.mediapackage.MediaPackageParser;
 import org.opencastproject.serviceregistry.api.RemoteBase;
+import org.opencastproject.util.OsgiUtil;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
@@ -42,12 +49,6 @@ public class ACLDistributionServiceRemoteImpl extends RemoteBase implements Dist
   /** The logger */
   private static final Logger logger = LoggerFactory.getLogger(ACLDistributionServiceRemoteImpl.class);
 
-  /** The service type prefix */
-  public static final String REMOTE_SERVICE_TYPE_PREFIX = "org.opencastproject.distribution.";
-
-  /** The property to look up and append to REMOTE_SERVICE_TYPE_PREFIX */
-  public static final String REMOTE_SERVICE_CHANNEL = "distribution.channel";
-
   /** The distribution channel identifier */
   protected String distributionChannel;
 
@@ -58,8 +59,12 @@ public class ACLDistributionServiceRemoteImpl extends RemoteBase implements Dist
 
   /** activates the component */
   protected void activate(ComponentContext cc) {
-    this.distributionChannel = (String) cc.getProperties().get(REMOTE_SERVICE_CHANNEL);
-    super.serviceType = REMOTE_SERVICE_TYPE_PREFIX + this.distributionChannel;
+    this.distributionChannel = OsgiUtil.getComponentContextProperty(cc, CONFIG_KEY_STORE_TYPE);
+    super.serviceType = JOB_TYPE_PREFIX + this.distributionChannel;
+  }
+
+  public String getDistributionType() {
+    return this.distributionChannel;
   }
 
   @Override

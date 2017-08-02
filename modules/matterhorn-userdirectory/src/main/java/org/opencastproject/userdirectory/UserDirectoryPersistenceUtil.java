@@ -1,22 +1,31 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
+
 package org.opencastproject.userdirectory;
 
-import org.opencastproject.kernel.security.persistence.JpaOrganization;
 import org.opencastproject.security.api.Role;
+import org.opencastproject.security.impl.jpa.JpaGroup;
+import org.opencastproject.security.impl.jpa.JpaOrganization;
+import org.opencastproject.security.impl.jpa.JpaRole;
+import org.opencastproject.security.impl.jpa.JpaUser;
 import org.opencastproject.util.NotFoundException;
 
 import java.util.HashSet;
@@ -54,7 +63,7 @@ public final class UserDirectoryPersistenceUtil {
       em = emf.createEntityManager();
       tx = em.getTransaction();
       tx.begin();
-      // Save or udpate roles
+      // Save or update roles
       for (Role role : roles) {
         JpaRole jpaRole = (JpaRole) role;
         saveOrganization((JpaOrganization) jpaRole.getOrganization(), emf);
@@ -131,9 +140,8 @@ public final class UserDirectoryPersistenceUtil {
       if (u == null) {
         em.persist(user);
       } else {
-        u.password = user.getPassword();
-        u.roles = user.roles;
-        user = em.merge(u);
+        user.setId(u.getId());
+        user = em.merge(user);
       }
       tx.commit();
       return user;
@@ -236,6 +244,8 @@ public final class UserDirectoryPersistenceUtil {
    *
    * @param userName
    *          the user name
+   * @param orgId
+   *          the user's organization
    * @param emf
    *          the entity manager factory
    * @return the group list
@@ -307,6 +317,55 @@ public final class UserDirectoryPersistenceUtil {
   }
 
   /**
+   * Returns the persisted user by the user id and organization id
+   *
+   * @param id
+   *          the user's unique id
+   * @param organizationId
+   *          the organization id
+   * @param emf
+   *          the entity manager factory
+   * @return the user or <code>null</code> if not found
+   */
+  public static JpaUser findUser(long id, String organizationId, EntityManagerFactory emf) {
+    EntityManager em = null;
+    try {
+      em = emf.createEntityManager();
+      Query q = em.createNamedQuery("User.findByIdAndOrg");
+      q.setParameter("id", id);
+      q.setParameter("org", organizationId);
+      return (JpaUser) q.getSingleResult();
+    } catch (NoResultException e) {
+      return null;
+    } finally {
+      if (em != null)
+        em.close();
+    }
+  }
+
+  /**
+   * Returns the total of users
+   *
+   * @param organizationId
+   *          the organization id
+   * @param emf
+   *          the entity manager factory
+   * @return the total number of users
+   */
+  public static long countUsers(String organizationId, EntityManagerFactory emf) {
+    EntityManager em = null;
+    try {
+      em = emf.createEntityManager();
+      Query q = em.createNamedQuery("User.countAll");
+      q.setParameter("org", organizationId);
+      return ((Number) q.getSingleResult()).longValue();
+    } finally {
+      if (em != null)
+        em.close();
+    }
+  }
+
+  /**
    * Returns a list of users by a search query if set or all users if search query is <code>null</code>
    *
    * @param orgId
@@ -340,8 +399,8 @@ public final class UserDirectoryPersistenceUtil {
   /**
    * Returns a list of users by a search query if set or all users if search query is <code>null</code>
    *
-   * @param query
-   *          the query to search
+   * @param orgId,
+   *          the organization id
    * @param limit
    *          the limit
    * @param offset
@@ -418,8 +477,36 @@ public final class UserDirectoryPersistenceUtil {
     }
   }
 
+  /**
+   * Returns the persisted group by the group role name and organization id
+   *
+   * @param role
+   *          the role name
+   * @param orgId
+   *          the organization id
+   * @param emf
+   *          the entity manager factory
+   * @return the group or <code>null</code> if not found
+   */
+  public static JpaGroup findGroupByRole(String role, String orgId, EntityManagerFactory emf) {
+    EntityManager em = null;
+    try {
+      em = emf.createEntityManager();
+      Query q = em.createNamedQuery("Group.findByRole");
+      q.setParameter("role", role);
+      q.setParameter("organization", orgId);
+      return (JpaGroup) q.getSingleResult();
+    } catch (NoResultException e) {
+      return null;
+    } finally {
+      if (em != null)
+        em.close();
+    }
+  }
+
+
   public static void removeGroup(String groupId, String orgId, EntityManagerFactory emf) throws NotFoundException,
-          Exception {
+  Exception {
     EntityManager em = null;
     EntityTransaction tx = null;
     try {
@@ -457,7 +544,7 @@ public final class UserDirectoryPersistenceUtil {
    * @throws Exception
    */
   public static void deleteUser(String username, String orgId, EntityManagerFactory emf) throws NotFoundException,
-          Exception {
+  Exception {
     EntityManager em = null;
     EntityTransaction tx = null;
     try {

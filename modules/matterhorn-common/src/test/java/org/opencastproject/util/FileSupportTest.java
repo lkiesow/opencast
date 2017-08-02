@@ -1,18 +1,24 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
+
 
 package org.opencastproject.util;
 
@@ -26,7 +32,9 @@ import static org.opencastproject.util.PathSupport.path;
 import org.apache.commons.io.FileUtils;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
@@ -41,11 +49,13 @@ public class FileSupportTest {
   private File fileSupportTestsDirectory;
   private File fileSupportTestsDestinationDirectory;
 
+  @Rule
+  public TemporaryFolder testFolder = new TemporaryFolder();
+
   @Before
   public void setUp() throws IOException {
-    fileSupportTestsDirectory = new File(System.getProperty("java.io.tmpdir"), "fileSupportTestsDirectory");
-    fileSupportTestsDestinationDirectory = new File(System.getProperty("java.io.tmpdir"),
-            "fileSupportTestsDestinationDirectory");
+    fileSupportTestsDirectory = testFolder.newFolder();
+    fileSupportTestsDestinationDirectory = testFolder.newFolder();
     fileToLink = new File(fileSupportTestsDirectory.getAbsolutePath(), "file-to-link");
     linkLocation = new File(fileSupportTestsDirectory.getAbsolutePath(), "link-location");
     // Create test directory
@@ -117,7 +127,7 @@ public class FileSupportTest {
 
   @Test
   public void testDeleteHierarchyIfEmpty() throws Exception {
-    final File a = File.createTempFile("test", ".tmp");
+    final File a = testFolder.newFile("test.tmp");
     a.deleteOnExit();
     final File tmpDir = a.getParentFile();
     assertFalse(deleteHierarchyIfEmpty(tmpDir, a));

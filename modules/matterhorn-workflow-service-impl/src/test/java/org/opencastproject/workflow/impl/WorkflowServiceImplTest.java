@@ -1,30 +1,43 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
+
 package org.opencastproject.workflow.impl;
 
+import static org.easymock.EasyMock.createNiceMock;
+import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.replay;
 import static org.junit.Assert.assertEquals;
 import static org.opencastproject.workflow.api.WorkflowOperationResult.Action.CONTINUE;
 import static org.opencastproject.workflow.impl.SecurityServiceStub.DEFAULT_ORG_ADMIN;
 
+import org.opencastproject.job.api.Job;
 import org.opencastproject.job.api.JobContext;
+import org.opencastproject.job.api.JobImpl;
 import org.opencastproject.mediapackage.DefaultMediaPackageSerializerImpl;
 import org.opencastproject.mediapackage.MediaPackage;
 import org.opencastproject.mediapackage.MediaPackageBuilder;
 import org.opencastproject.mediapackage.MediaPackageBuilderFactory;
+import org.opencastproject.mediapackage.MediaPackageException;
 import org.opencastproject.mediapackage.identifier.UUIDIdBuilderImpl;
+import org.opencastproject.message.broker.api.MessageSender;
 import org.opencastproject.metadata.api.MediaPackageMetadataService;
 import org.opencastproject.security.api.AccessControlList;
 import org.opencastproject.security.api.AclScope;
@@ -35,7 +48,11 @@ import org.opencastproject.security.api.OrganizationDirectoryService;
 import org.opencastproject.security.api.SecurityService;
 import org.opencastproject.security.api.UserDirectoryService;
 import org.opencastproject.serviceregistry.api.IncidentService;
+import org.opencastproject.serviceregistry.api.ServiceRegistry;
+import org.opencastproject.serviceregistry.api.ServiceRegistryException;
 import org.opencastproject.serviceregistry.api.ServiceRegistryInMemoryImpl;
+import org.opencastproject.serviceregistry.impl.jpa.ServiceRegistrationJpaImpl;
+import org.opencastproject.util.ConfigurationException;
 import org.opencastproject.util.NotFoundException;
 import org.opencastproject.util.data.Tuple;
 import org.opencastproject.workflow.api.AbstractWorkflowOperationHandler;
@@ -44,22 +61,22 @@ import org.opencastproject.workflow.api.WorkflowDefinition;
 import org.opencastproject.workflow.api.WorkflowDefinitionImpl;
 import org.opencastproject.workflow.api.WorkflowInstance;
 import org.opencastproject.workflow.api.WorkflowInstance.WorkflowState;
+import org.opencastproject.workflow.api.WorkflowInstanceImpl;
 import org.opencastproject.workflow.api.WorkflowOperationDefinitionImpl;
 import org.opencastproject.workflow.api.WorkflowOperationException;
 import org.opencastproject.workflow.api.WorkflowOperationHandler;
 import org.opencastproject.workflow.api.WorkflowOperationInstance;
 import org.opencastproject.workflow.api.WorkflowOperationInstance.OperationState;
+import org.opencastproject.workflow.api.WorkflowOperationInstanceImpl;
 import org.opencastproject.workflow.api.WorkflowOperationResult;
 import org.opencastproject.workflow.api.WorkflowOperationResult.Action;
 import org.opencastproject.workflow.api.WorkflowParser;
 import org.opencastproject.workflow.api.WorkflowQuery;
 import org.opencastproject.workflow.api.WorkflowSet;
 import org.opencastproject.workflow.api.WorkflowStateListener;
-import org.opencastproject.workflow.handler.ErrorResolutionWorkflowOperationHandler;
+import org.opencastproject.workflow.handler.workflow.ErrorResolutionWorkflowOperationHandler;
 import org.opencastproject.workflow.impl.WorkflowServiceImpl.HandlerRegistration;
 import org.opencastproject.workspace.api.Workspace;
-
-import junit.framework.Assert;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -74,11 +91,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+
+import junit.framework.Assert;
 
 public class WorkflowServiceImplTest {
 
@@ -135,6 +156,7 @@ public class WorkflowServiceImplTest {
 
     // instantiate a service implementation and its DAO, overriding the methods that depend on the osgi runtime
     service = new WorkflowServiceImpl() {
+      @Override
       public Set<HandlerRegistration> getRegisteredHandlers() {
         return handlerRegistrations;
       }
@@ -145,50 +167,53 @@ public class WorkflowServiceImplTest {
 
     // security service
     DefaultOrganization organization = new DefaultOrganization();
-    securityService = EasyMock.createNiceMock(SecurityService.class);
-    EasyMock.expect(securityService.getUser()).andReturn(SecurityServiceStub.DEFAULT_ORG_ADMIN).anyTimes();
-    EasyMock.expect(securityService.getOrganization()).andReturn(organization).anyTimes();
-    EasyMock.replay(securityService);
+    securityService = createNiceMock(SecurityService.class);
+    expect(securityService.getUser()).andReturn(SecurityServiceStub.DEFAULT_ORG_ADMIN).anyTimes();
+    expect(securityService.getOrganization()).andReturn(organization).anyTimes();
+    replay(securityService);
 
     service.setSecurityService(securityService);
 
     UserDirectoryService userDirectoryService = EasyMock.createMock(UserDirectoryService.class);
-    EasyMock.expect(userDirectoryService.loadUser((String) EasyMock.anyObject())).andReturn(DEFAULT_ORG_ADMIN)
+    expect(userDirectoryService.loadUser((String) EasyMock.anyObject())).andReturn(DEFAULT_ORG_ADMIN)
             .anyTimes();
-    EasyMock.replay(userDirectoryService);
+    replay(userDirectoryService);
     service.setUserDirectoryService(userDirectoryService);
 
-    AuthorizationService authzService = EasyMock.createNiceMock(AuthorizationService.class);
-    EasyMock.expect(authzService.getActiveAcl((MediaPackage) EasyMock.anyObject()))
+    AuthorizationService authzService = createNiceMock(AuthorizationService.class);
+    expect(authzService.getActiveAcl((MediaPackage) EasyMock.anyObject()))
             .andReturn(Tuple.tuple(acl, AclScope.Series)).anyTimes();
-    EasyMock.replay(authzService);
+    replay(authzService);
     service.setAuthorizationService(authzService);
 
     List<Organization> organizationList = new ArrayList<Organization>();
     organizationList.add(organization);
     OrganizationDirectoryService organizationDirectoryService = EasyMock.createMock(OrganizationDirectoryService.class);
-    EasyMock.expect(organizationDirectoryService.getOrganization((String) EasyMock.anyObject()))
+    expect(organizationDirectoryService.getOrganization((String) EasyMock.anyObject()))
             .andReturn(securityService.getOrganization()).anyTimes();
-    EasyMock.expect(organizationDirectoryService.getOrganizations()).andReturn(organizationList).anyTimes();
-    EasyMock.replay(organizationDirectoryService);
+    expect(organizationDirectoryService.getOrganizations()).andReturn(organizationList).anyTimes();
+    replay(organizationDirectoryService);
     service.setOrganizationDirectoryService(organizationDirectoryService);
 
-    MediaPackageMetadataService mds = EasyMock.createNiceMock(MediaPackageMetadataService.class);
-    EasyMock.replay(mds);
+    MediaPackageMetadataService mds = createNiceMock(MediaPackageMetadataService.class);
+    replay(mds);
     service.addMetadataService(mds);
 
-    workspace = EasyMock.createNiceMock(Workspace.class);
-    EasyMock.expect(workspace.getCollectionContents((String) EasyMock.anyObject())).andReturn(new URI[0]);
-    EasyMock.replay(workspace);
+    workspace = createNiceMock(Workspace.class);
+    expect(workspace.getCollectionContents((String) EasyMock.anyObject())).andReturn(new URI[0]);
+    replay(workspace);
 
-    IncidentService incidentService = EasyMock.createNiceMock(IncidentService.class);
-    EasyMock.replay(incidentService);
+    IncidentService incidentService = createNiceMock(IncidentService.class);
+    replay(incidentService);
 
     serviceRegistry = new ServiceRegistryInMemoryImpl(service, securityService, userDirectoryService,
             organizationDirectoryService, incidentService);
-
+    serviceRegistry.registerHost(REMOTE_HOST, REMOTE_HOST, Runtime.getRuntime().totalMemory(), Runtime.getRuntime().availableProcessors(), Runtime.getRuntime().availableProcessors());
     serviceRegistry.registerService(REMOTE_SERVICE, REMOTE_HOST, "/path", true);
     service.setWorkspace(workspace);
+
+    MessageSender messageSender = createNiceMock(MessageSender.class);
+    replay(messageSender);
 
     dao = new WorkflowServiceSolrIndex();
     dao.setServiceRegistry(serviceRegistry);
@@ -199,6 +224,7 @@ public class WorkflowServiceImplTest {
     dao.activate("System Admin");
     service.setDao(dao);
     service.setServiceRegistry(serviceRegistry);
+    service.setMessageSender(messageSender);
     service.activate(null);
 
     InputStream is = null;
@@ -695,9 +721,70 @@ public class WorkflowServiceImplTest {
     Assert.assertEquals(count, stateListener.countStateChanges(WorkflowState.SUCCEEDED));
   }
 
+  private WorkflowInstanceImpl setupWorkflowInstanceImpl(long id, String operation, WorkflowState state, Date startDate)
+          throws ConfigurationException, MediaPackageException, NotFoundException, ServiceRegistryException {
+
+    Job job = new JobImpl(id);
+    job = serviceRegistry.updateJob(job);
+
+    MediaPackage mediapackage = MediaPackageBuilderFactory.newInstance().newMediaPackageBuilder().createNew();
+    mediapackage.setDate(startDate);
+    mediapackage.setDuration(7200L);
+
+    WorkflowOperationInstanceImpl workflowOperation = new WorkflowOperationInstanceImpl(operation,
+            OperationState.PAUSED);
+    workflowOperation.setId(id);
+
+    List<WorkflowOperationInstance> workflowOperationInstanceList = new LinkedList<WorkflowOperationInstance>();
+    workflowOperationInstanceList.add(workflowOperation);
+
+    WorkflowInstanceImpl workflowInstanceImpl = new WorkflowInstanceImpl();
+    workflowInstanceImpl.setMediaPackage(mediapackage);
+    workflowInstanceImpl.setState(state);
+    workflowInstanceImpl.setId(id);
+    workflowInstanceImpl.setOperations(workflowOperationInstanceList);
+    return workflowInstanceImpl;
+  }
+
+  private void setupJob(long id, String operation, ServiceRegistry mockServiceRegistry)
+          throws ServiceRegistryException, NotFoundException {
+    ServiceRegistrationJpaImpl serviceRegistrationJpaImpl = EasyMock.createMock(ServiceRegistrationJpaImpl.class);
+    expect(serviceRegistrationJpaImpl.getHost()).andReturn("http://localhost:8080");
+    expect(serviceRegistrationJpaImpl.getServiceType()).andReturn(operation);
+    replay(serviceRegistrationJpaImpl);
+    List<String> arguments = new LinkedList<String>();
+    arguments.add(Long.toString(id));
+
+    Job job = createNiceMock(Job.class);
+    expect(job.getId()).andStubReturn(id);
+    expect(job.getCreator()).andStubReturn(securityService.getUser().getUsername());
+    expect(job.getOrganization()).andStubReturn(securityService.getOrganization().getId());
+    expect(job.getOperation()).andStubReturn("RESUME");
+    expect(job.getArguments()).andStubReturn(arguments);
+    expect(job.isDispatchable()).andStubReturn(false);
+    expect(job.getStatus()).andStubReturn(Job.Status.INSTANTIATED);
+    replay(job);
+    expect(mockServiceRegistry.getJob(id)).andReturn(job).anyTimes();
+    expect(mockServiceRegistry.updateJob(job)).andReturn(job);
+  }
+
+  private void setupExceptionJob(long id, Exception e, ServiceRegistry mockServiceRegistry)
+          throws ServiceRegistryException, NotFoundException {
+    expect(mockServiceRegistry.getJob(id)).andThrow(e).anyTimes();
+  }
+
+  private OrganizationDirectoryService setupMockOrganizationDirectoryService() {
+    List<Organization> organizations = new LinkedList<Organization>();
+    organizations.add(securityService.getOrganization());
+    OrganizationDirectoryService orgDirService = EasyMock.createMock(OrganizationDirectoryService.class);
+    expect(orgDirService.getOrganizations()).andReturn(organizations).anyTimes();
+    replay(orgDirService);
+    return orgDirService;
+  }
+
   /**
    * Test for {@link WorkflowServiceImpl#remove(long)}
-   * 
+   *
    * @throws Exception
    *           if anything fails
    */
@@ -722,7 +809,7 @@ public class WorkflowServiceImplTest {
 
   /**
    * Test for {@link WorkflowServiceImpl#cleanupWorkflowInstances(int, WorkflowState)}
-   * 
+   *
    * @throws Exception
    *           if anything fails
    */

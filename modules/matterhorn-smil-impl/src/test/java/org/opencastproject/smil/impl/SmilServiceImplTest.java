@@ -1,26 +1,32 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
+
 package org.opencastproject.smil.impl;
 
-import java.io.File;
-import java.net.URI;
-import java.net.URISyntaxException;
-import static org.junit.Assert.*;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import org.opencastproject.mediapackage.MediaPackageElementFlavor;
 import org.opencastproject.mediapackage.Track;
 import org.opencastproject.mediapackage.track.AudioStreamImpl;
@@ -38,8 +44,15 @@ import org.opencastproject.smil.entity.media.container.api.SmilMediaContainer;
 import org.opencastproject.smil.entity.media.element.SmilMediaAudioImpl;
 import org.opencastproject.smil.entity.media.element.SmilMediaVideoImpl;
 import org.opencastproject.smil.entity.media.element.api.SmilMediaElement;
+import org.opencastproject.smil.entity.media.param.api.SmilMediaParamGroup;
+
+import org.junit.BeforeClass;
+import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.net.URI;
+import java.util.List;
 
 /**
  * Test of {@link SmilServiceImpl} class.
@@ -51,17 +64,40 @@ public class SmilServiceImplTest {
    */
   private static final Logger logger = LoggerFactory.getLogger(SmilServiceImplTest.class);
   /**
-   * Test SMIL document Uri
+   * Test SMIL document
    */
-  private static URI testSmilUri;
+  private static final String TEST_SMIL = "<!DOCTYPE smil PUBLIC \"-//W3C//DTD SMIL 3.0 Language//EN\" \"http://www.w3.org/2008/SMIL30/SMIL30Language.dtd\">\n"
+          + "<smil xmlns=\"http://www.w3.org/ns/SMIL\" baseProfile=\"Language\" version=\"3.0\" xml:id=\"s-c4af7197-8496-46ae-a80b-bc15ead58c87\">\n"
+          + "  <head xml:id=\"h-37abdf0c-95e8-4d39-a574-a71c927e7381\">\n"
+          + "    <paramGroup xml:id=\"pg-19fc18d1-e94b-401a-91a7-08f8242642a8\">\n"
+          + "      <param value=\"track-1\" name=\"track-id\" valuetype=\"data\" xml:id=\"param-04677935-3868-404c-bf1e-0f0559d718b3\"/>\n"
+          + "      <param value=\"http://hostname/video.mp4\" name=\"track-src\" valuetype=\"data\" xml:id=\"param-08f9c91c-7593-4073-b0c5-82148468b03d\"/>\n"
+          + "      <param value=\"source/presentation\" name=\"track-flavor\" valuetype=\"data\" xml:id=\"param-fe788faa-96c1-4c10-b3bd-a2dc5f6c5516\"/>\n"
+          + "    </paramGroup>\n"
+          + "    <paramGroup xml:id=\"pg-4a65ad2b-5380-4722-8a41-a82597a490a2\">\n"
+          + "      <param value=\"track-2\" name=\"track-id\" valuetype=\"data\" xml:id=\"param-e4e55e4f-1432-4bf7-b7fa-3377b6337a2a\"/>\n"
+          + "      <param value=\"http://hostname/audio.mp3\" name=\"track-src\" valuetype=\"data\" xml:id=\"param-313a5bff-f93a-41e2-b191-8c173d5d965a\"/>\n"
+          + "      <param value=\"source/presenter\" name=\"track-flavor\" valuetype=\"data\" xml:id=\"param-073b2769-391c-42bd-a740-c30b75abbf12\"/>\n"
+          + "    </paramGroup>\n"
+          + "  </head>\n"
+          + "  <body xml:id=\"b-135a51f4-0849-48ee-89d1-c420825ff73d\">\n"
+          + "    <par xml:id=\"par-701ba9dc-d96e-404c-b286-6670f572e804\">\n"
+          + "      <video src=\"http://hostname/video.mp4\" paramGroup=\"pg-19fc18d1-e94b-401a-91a7-08f8242642a8\" clipEnd=\"1001000ms\" clipBegin=\"1000ms\" xml:id=\"v-321fd617-15ed-4a05-8c62-fd1332cb66d8\"/>\n"
+          + "      <audio src=\"http://hostname/audio.mp3\" paramGroup=\"pg-4a65ad2b-5380-4722-8a41-a82597a490a2\" clipEnd=\"1001000ms\" clipBegin=\"1000ms\" xml:id=\"a-65999c74-b713-4fc0-bab3-c45f4fc22280\"/>\n"
+          + "    </par>\n"
+          + "    <par xml:id=\"par-e9d14e26-cf32-45a1-8c4f-e986db9005b1\">\n"
+          + "      <audio src=\"http://hostname/audio.mp3\" paramGroup=\"pg-4a65ad2b-5380-4722-8a41-a82597a490a2\" clipEnd=\"16000ms\" clipBegin=\"15000ms\" xml:id=\"a-f661b039-3b77-4c64-ae1d-e5f3afeaf174\"/>\n"
+          + "      <video src=\"http://hostname/video.mp4\" paramGroup=\"pg-19fc18d1-e94b-401a-91a7-08f8242642a8\" clipEnd=\"16000ms\" clipBegin=\"15000ms\" xml:id=\"v-56880f2b-2d29-4717-aba6-491eea06a2c0\"/>\n"
+          + "    </par>\n"
+          + "  </body>\n"
+          + "</smil>";
   /**
    * SmilService to test with
    */
   private static SmilService smilService;
 
   @BeforeClass
-  public static void setUpClass() throws URISyntaxException {
-    testSmilUri = SmilServiceImplTest.class.getResource("/test.smil").toURI();
+  public static void setUpClass() {
     smilService = new SmilServiceImpl();
   }
 
@@ -265,11 +301,98 @@ public class SmilServiceImplTest {
   }
 
   /**
+   * passing a previously created paramGroupId
+   */
+  @Test
+  public void testAddClipWithParamGroupId() throws Exception {
+    // first, create SMIL with 1 par, 1 video
+    TrackImpl videoTrack = new TrackImpl();
+    videoTrack.setIdentifier("presenter-track-1");
+    videoTrack.setFlavor(new MediaPackageElementFlavor("source", "presenter"));
+    videoTrack.setURI(new URI("http://hostname/video.mp4"));
+    videoTrack.addStream(new VideoStreamImpl());
+    videoTrack.setDuration(1000000000000L);
+
+    SmilResponse smilResponse = smilService.createNewSmil();
+    smilResponse = smilService.addParallel(smilResponse.getSmil());
+    SmilMediaContainer par = (SmilMediaContainer) smilResponse.getEntity();
+    // add video track into parallel element
+    smilResponse = smilService.addClip(smilResponse.getSmil(), par.getId(), videoTrack, 1000L, 1000000L);
+
+    SmilMediaObject media = null;
+    for (SmilObject entity : smilResponse.getEntities()) {
+      if (entity instanceof SmilMediaObject) {
+        media = (SmilMediaObject) entity;
+        break;
+      }
+    }
+    assertNotNull(media);
+    assertEquals(media.getId(), ((SmilMediaContainer) smilResponse.getSmil().getBody().getMediaElements().get(0))
+            .getElements().get(0).getId());
+    assertTrue(media instanceof SmilMediaVideoImpl);
+    assertSame(((SmilMediaElement) media).getMediaType(), SmilMediaElement.MediaType.VIDEO);
+    // 1000 milliseconds = 1 second
+    assertEquals(1000L, ((SmilMediaElement) media).getClipBeginMS());
+    // duration is 1000000 milliseconds = 1000 soconds
+    // start + duration = 1s + 1000s = 1001s
+    assertEquals(1001000L, ((SmilMediaElement) media).getClipEndMS());
+
+    // get param group id
+    List<SmilMediaParamGroup> groups = smilResponse.getSmil().getHead().getParamGroups();
+    assertEquals(1, groups.size());
+    String paramGroupId = groups.get(0).getId();
+
+    // then, create a 2nd par with 1 video with the same param group id
+    TrackImpl videoTrack2 = new TrackImpl();
+    videoTrack2.setIdentifier("presenter-track-2");
+    videoTrack2.setFlavor(new MediaPackageElementFlavor("source2", "presenter"));
+    videoTrack2.setURI(new URI("http://hostname/video2.mp4"));
+    videoTrack2.addStream(new VideoStreamImpl());
+    videoTrack2.setDuration(2000000000000L);
+
+    smilResponse = smilService.addParallel(smilResponse.getSmil());
+    SmilMediaContainer par2 = null;
+    for (SmilObject entity : smilResponse.getEntities()) {
+      if (entity instanceof SmilMediaContainer && !entity.getId().equals(par.getId())) {
+        par2 = (SmilMediaContainer) entity;
+        break;
+      }
+    }
+    // add video track into parallel element
+    smilResponse = smilService
+            .addClip(smilResponse.getSmil(), par2.getId(), videoTrack2, 2000L, 2000000L, paramGroupId);
+
+    SmilMediaObject media2 = null;
+    for (SmilObject entity : smilResponse.getEntities()) {
+      if (entity instanceof SmilMediaObject && !entity.getId().equals(media.getId())) {
+        media2 = (SmilMediaObject) entity;
+        break;
+      }
+    }
+    assertNotNull(media2);
+    SmilMediaElement mediaElement2 = (SmilMediaElement) ((SmilMediaContainer) smilResponse.getSmil().getBody()
+            .getMediaElements().get(1)).getElements().get(0);
+    assertEquals(media2.getId(), mediaElement2.getId());
+    assertTrue(media2 instanceof SmilMediaVideoImpl);
+    assertSame(((SmilMediaElement) media2).getMediaType(), SmilMediaElement.MediaType.VIDEO);
+    // 1000 milliseconds = 1 second
+    assertEquals(2000L, ((SmilMediaElement) media2).getClipBeginMS());
+    // duration is 2000000 milliseconds = 2000 seconds
+    // start + duration = 2s + 2000s = 2002s
+    assertEquals(2002000L, ((SmilMediaElement) media2).getClipEndMS());
+    // make sure there's still 1 param group
+    groups = smilResponse.getSmil().getHead().getParamGroups();
+    assertEquals(1, groups.size());
+    // make sure that the media element has the previous param groupo id
+    assertEquals(paramGroupId, mediaElement2.getParamGroup());
+  }
+
+  /**
    * Test of removeSmilElement method, of class SmilServiceImpl.
    */
   @Test
   public void testRemoveSmilElement() throws Exception {
-    SmilResponse smilResponse = smilService.fromXml(new File(testSmilUri));
+    SmilResponse smilResponse = smilService.fromXml(TEST_SMIL);
     assertNotNull(smilResponse.getSmil());
     SmilMediaContainer par = (SmilMediaContainer) smilResponse.getSmil().getBody().getMediaElements().get(0);
     assertSame(2, par.getElements().size());
@@ -299,7 +422,7 @@ public class SmilServiceImplTest {
    */
   @Test
   public void testFromXml() throws Exception {
-    SmilResponse smilResponse = smilService.fromXml(new File(testSmilUri));
+    SmilResponse smilResponse = smilService.fromXml(TEST_SMIL);
     assertNotNull(smilResponse.getSmil());
     Smil smil = smilResponse.getSmil();
 

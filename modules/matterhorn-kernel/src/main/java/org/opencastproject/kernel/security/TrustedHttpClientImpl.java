@@ -1,23 +1,30 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
+
 package org.opencastproject.kernel.security;
 
 import static org.opencastproject.kernel.rest.CurrentJobFilter.CURRENT_JOB_HEADER;
 import static org.opencastproject.kernel.security.DelegatingAuthenticationEntryPoint.DIGEST_AUTH;
 import static org.opencastproject.kernel.security.DelegatingAuthenticationEntryPoint.REQUESTED_AUTH_HEADER;
+import static org.opencastproject.util.OsgiUtil.getOptContextProperty;
 
 import org.opencastproject.kernel.http.api.HttpClient;
 import org.opencastproject.kernel.http.impl.HttpClientFactory;
@@ -27,13 +34,19 @@ import org.opencastproject.security.api.SecurityService;
 import org.opencastproject.security.api.TrustedHttpClient;
 import org.opencastproject.security.api.TrustedHttpClientException;
 import org.opencastproject.security.api.User;
+import org.opencastproject.security.urlsigning.exception.UrlSigningException;
+import org.opencastproject.security.urlsigning.service.UrlSigningService;
 import org.opencastproject.security.util.HttpResponseWrapper;
 import org.opencastproject.security.util.StandAloneTrustedHttpClientImpl;
 import org.opencastproject.serviceregistry.api.ServiceRegistry;
+import org.opencastproject.urlsigning.utils.ResourceRequestUtil;
+import org.opencastproject.util.Log;
 import org.opencastproject.util.data.Either;
 import org.opencastproject.util.data.Function;
 
-import org.apache.commons.lang.StringUtils;
+import com.entwinemedia.fn.data.Opt;
+
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.Header;
 import org.apache.http.HeaderElement;
 import org.apache.http.HttpResponse;
@@ -41,6 +54,8 @@ import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.ResponseHandler;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpHead;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.impl.auth.DigestScheme;
@@ -77,6 +92,10 @@ public class TrustedHttpClientImpl implements TrustedHttpClient, HttpConnectionM
   /** The configuration property specifying the number of times to retry after the nonce timesouts on a request. */
   public static final String NONCE_TIMEOUT_RETRY_KEY = "org.opencastproject.security.digest.nonce.retries";
 
+  /** The configuration property specifying the duration a signed url will remain valid for. */
+  protected static final String INTERNAL_URL_SIGNING_DURATION_KEY =
+    "org.opencastproject.security.internal.url.signing.duration";
+
   /**
    * The configuration property specifying the minimum amount of time in seconds wait before retrying a request after a
    * nonce timeout.
@@ -87,7 +106,8 @@ public class TrustedHttpClientImpl implements TrustedHttpClient, HttpConnectionM
    * The configuration property specifying the maximum for a random amount of time in seconds above the base time to
    * wait.
    */
-  public static final String NONCE_TIMEOUT_RETRY_MAXIMUM_VARIABLE_TIME_KEY = "org.opencastproject.security.digest.nonce.variable.time";
+  public static final String NONCE_TIMEOUT_RETRY_MAXIMUM_VARIABLE_TIME_KEY =
+    "org.opencastproject.security.digest.nonce.variable.time";
 
   /** The default time until a connection attempt fails */
   public static final int DEFAULT_CONNECTION_TIMEOUT = 60 * 1000;
@@ -106,6 +126,12 @@ public class TrustedHttpClientImpl implements TrustedHttpClient, HttpConnectionM
 
   /** Default maximum amount of time in a random range between 0 and this value to add to the base time. */
   public static final int DEFAULT_RETRY_MAXIMUM_VARIABLE_TIME = 300;
+
+  /**
+   * The default time before a piece of signed content expires. 1 Minute. These are internal calls to another server, if
+   * we can't make the request in under a minute something has gone horribly wrong.
+   */
+  protected static final long DEFAULT_URL_SIGNING_EXPIRES_DURATION = 60;
 
   /** The configured username to send as part of the digest authenticated request */
   protected String user = null;
@@ -131,11 +157,17 @@ public class TrustedHttpClientImpl implements TrustedHttpClient, HttpConnectionM
   /** The maximum amount of time in seconds to wait in addition to the RETRY_BASE_DELAY. */
   private int retryMaximumVariableTime = 300;
 
+  /** The duration a signed url will remain valid for. */
+  private long signedUrlExpiresDuration = DEFAULT_URL_SIGNING_EXPIRES_DURATION;
+
   /** The service registry */
   private ServiceRegistry serviceRegistry = null;
 
   /** The security service */
   protected SecurityService securityService = null;
+
+  /** The url signing service */
+  protected UrlSigningService urlSigningService = null;
 
   public void activate(ComponentContext cc) {
     logger.debug("activate");
@@ -158,6 +190,19 @@ public class TrustedHttpClientImpl implements TrustedHttpClient, HttpConnectionM
     } catch (Exception e) {
       logger.warn("Unable to register {} as an mbean: {}", this, e);
     }
+
+    Opt<Long> expiration = getOptContextProperty(cc, INTERNAL_URL_SIGNING_DURATION_KEY).toOpt().map(
+            com.entwinemedia.fn.fns.Strings.toLongF);
+    if (expiration.isSome()) {
+      signedUrlExpiresDuration = expiration.get();
+      logger.debug("The property {} has been configured to expire signed URLs in {}.",
+              INTERNAL_URL_SIGNING_DURATION_KEY, Log.getHumanReadableTimeString(signedUrlExpiresDuration));
+    } else {
+      signedUrlExpiresDuration = DEFAULT_URL_SIGNING_EXPIRES_DURATION;
+      logger.debug(
+              "The property {} has not been configured, so the default is being used to expire signed URLs in {}.",
+              INTERNAL_URL_SIGNING_DURATION_KEY, Log.getHumanReadableTimeString(signedUrlExpiresDuration));
+    }
   }
 
   /**
@@ -178,6 +223,16 @@ public class TrustedHttpClientImpl implements TrustedHttpClient, HttpConnectionM
    */
   public void setSecurityService(SecurityService securityService) {
     this.securityService = securityService;
+  }
+
+  /**
+   * Sets the url signing service.
+   *
+   * @param urlSigningService
+   *        The signing service to sign urls with.
+   */
+  public void setUrlSigningService(UrlSigningService urlSigningService) {
+    this.urlSigningService = urlSigningService;
   }
 
   /**
@@ -229,10 +284,10 @@ public class TrustedHttpClientImpl implements TrustedHttpClient, HttpConnectionM
       result = Integer.parseInt(StringUtils.trimToNull(stringValue));
     } catch (Exception e) {
       if (cc != null && cc.getBundleContext() != null && cc.getBundleContext().getProperty(key) != null) {
-        logger.warn("Unable to get property with key " + key + " with value " + cc.getBundleContext().getProperty(key)
+        logger.info("Unable to get property with key " + key + " with value " + cc.getBundleContext().getProperty(key)
                             + " so using default of " + defaultValue + " because of " + e.getMessage());
       } else {
-        logger.warn("Unable to get property with key " + key + " so using default of " + defaultValue + " because of "
+        logger.info("Unable to get property with key " + key + " so using default of " + defaultValue + " because of "
                             + e.getMessage());
       }
       result = defaultValue;
@@ -269,6 +324,10 @@ public class TrustedHttpClientImpl implements TrustedHttpClient, HttpConnectionM
   @Override
   public <A> Function<Function<HttpResponse, A>, Either<Exception, A>> run(final HttpUriRequest httpUriRequest) {
     return StandAloneTrustedHttpClientImpl.run(this, httpUriRequest);
+  }
+
+  @Override public <A> RequestRunner<A> runner(HttpUriRequest req) {
+    return StandAloneTrustedHttpClientImpl.runner(this, req);
   }
 
   /**
@@ -311,7 +370,16 @@ public class TrustedHttpClientImpl implements TrustedHttpClient, HttpConnectionM
       httpClient.getCredentialsProvider().setCredentials(AuthScope.ANY, creds);
       // Run the request (the http client handles the multiple back-and-forth requests)
       try {
-        final HttpResponse response = new HttpResponseWrapper(httpClient.execute(httpUriRequest));
+        Opt<HttpUriRequest> optSignedHttpUriRequest = getSignedUrl(httpUriRequest);
+        HttpResponse response;
+        if (optSignedHttpUriRequest.isSome()) {
+          logger.debug("Adding url signing to request {} so that it is {}", httpUriRequest.getURI().toString(),
+                  optSignedHttpUriRequest.get().getURI().toString());
+          response = new HttpResponseWrapper(httpClient.execute(optSignedHttpUriRequest.get()));
+        } else {
+          logger.debug("Not adding url signing to request {}", httpUriRequest.getURI().toString());
+          response = new HttpResponseWrapper(httpClient.execute(httpUriRequest));
+        }
         responseMap.put(response, httpClient);
         return response;
       } catch (IOException e) {
@@ -341,6 +409,45 @@ public class TrustedHttpClientImpl implements TrustedHttpClient, HttpConnectionM
         httpClient.getConnectionManager().shutdown();
         throw new TrustedHttpClientException(e);
       }
+    }
+  }
+
+  /**
+   * If the request is a GET, sign the URL and return a new {@link HttpUriRequest} that is signed.
+   *
+   * @param httpUriRequest
+   *          The possible URI to sign.
+   * @return HttpUriRequest if the request is a GET and is configured to be signed.
+   * @throws TrustedHttpClientException
+   *           Thrown if there is a problem signing the URL.
+   */
+  protected Opt<HttpUriRequest> getSignedUrl(HttpUriRequest httpUriRequest) throws TrustedHttpClientException {
+    if (("GET".equalsIgnoreCase(httpUriRequest.getMethod()) || "HEAD".equalsIgnoreCase(httpUriRequest.getMethod()))
+            && ResourceRequestUtil.isNotSigned(httpUriRequest.getURI())
+            && urlSigningService.accepts(httpUriRequest.getURI().toString())) {
+      logger.trace("Signing request with method: {} and URI: {}", httpUriRequest.getMethod(), httpUriRequest.getURI()
+              .toString());
+      try {
+        String signedUrl = urlSigningService.sign(httpUriRequest.getURI().toString(), signedUrlExpiresDuration, null,
+                null);
+        HttpRequestBase signedRequest;
+        if ("GET".equalsIgnoreCase(httpUriRequest.getMethod())) {
+          signedRequest = new HttpGet(signedUrl);
+        } else {
+          signedRequest = new HttpHead(signedUrl);
+        }
+        signedRequest.setProtocolVersion(httpUriRequest.getProtocolVersion());
+        for (Header header : httpUriRequest.getAllHeaders()) {
+          signedRequest.addHeader(header);
+        }
+        return Opt.some((HttpUriRequest) signedRequest);
+      } catch (UrlSigningException e) {
+        throw new TrustedHttpClientException(e);
+      }
+    } else {
+      logger.trace("Not signing request with method: {} and URI: {}", httpUriRequest.getMethod(), httpUriRequest
+              .getURI().toString());
+      return Opt.none();
     }
   }
 

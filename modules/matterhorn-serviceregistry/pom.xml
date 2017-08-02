@@ -6,7 +6,7 @@
   <parent>
     <groupId>org.opencastproject</groupId>
     <artifactId>base</artifactId>
-    <version>1.6.1</version>
+    <version>3.0-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <properties>
@@ -21,8 +21,12 @@
     </dependency>
     <dependency>
       <groupId>org.opencastproject</groupId>
-      <artifactId>matterhorn-json</artifactId>
+      <artifactId>matterhorn-common-jpa-impl</artifactId>
       <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.googlecode.json-simple</groupId>
+      <artifactId>json-simple</artifactId>
     </dependency>
     <dependency>
       <groupId>org.opencastproject</groupId>
@@ -35,7 +39,7 @@
     </dependency>
     <dependency>
       <groupId>javax.servlet</groupId>
-      <artifactId>servlet-api</artifactId>
+      <artifactId>javax.servlet-api</artifactId>
     </dependency>
     <dependency>
       <groupId>org.osgi</groupId>
@@ -75,7 +79,7 @@
     <dependency>
       <groupId>org.eclipse.persistence</groupId>
       <artifactId>org.eclipse.persistence.core</artifactId>
-      <scope>test</scope>
+      <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>org.eclipse.persistence</groupId>
@@ -98,31 +102,30 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>c3p0</groupId>
+      <groupId>com.mchange</groupId>
       <artifactId>c3p0</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.easymock</groupId>
       <artifactId>easymock</artifactId>
-      <version>3.1</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
   <build>
     <plugins>
       <plugin>
+        <groupId>de.empulse.eclipselink</groupId>
+        <artifactId>staticweave-maven-plugin</artifactId>
+      </plugin>
+      <plugin>
         <groupId>org.apache.felix</groupId>
         <artifactId>maven-bundle-plugin</artifactId>
         <extensions>true</extensions>
         <configuration>
           <instructions>
-            <Bundle-SymbolicName> ${project.artifactId} </Bundle-SymbolicName>
-            <Import-Package>
-              org.opencastproject.job.api;version=${project.version},
-              org.opencastproject.serviceregistry.api;version=${project.version},
-              *;resolution:=optional
-            </Import-Package>
+            <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
+            <Build-Number>${buildNumber}</Build-Number>
             <Export-Package>
               org.opencastproject.serviceregistry.command;version=${project.version},
               org.opencastproject.serviceregistry.impl;version=${project.version},
@@ -136,10 +139,9 @@
               OSGI-INF/incident-service-endpoint.xml,
               OSGI-INF/nop-service.xml
             </Service-Component>
-            <JPA-PersistenceUnits>
-              org.opencastproject.serviceregistry,
-              org.opencastproject.incident
-            </JPA-PersistenceUnits>
+            <Meta-Persistence>
+              META-INF/persistence.xml
+            </Meta-Persistence>
           </instructions>
         </configuration>
       </plugin>

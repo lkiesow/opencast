@@ -1,27 +1,32 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
+
 package org.opencastproject.dataloader;
 
 import static org.opencastproject.security.api.DefaultOrganization.DEFAULT_ORGANIZATION_ID;
 
 import org.opencastproject.kernel.security.OrganizationDirectoryServiceImpl;
-import org.opencastproject.kernel.security.persistence.JpaOrganization;
 import org.opencastproject.metadata.dublincore.DublinCore;
 import org.opencastproject.metadata.dublincore.DublinCoreCatalog;
-import org.opencastproject.metadata.dublincore.DublinCoreCatalogImpl;
+import org.opencastproject.metadata.dublincore.DublinCores;
 import org.opencastproject.security.api.AccessControlEntry;
 import org.opencastproject.security.api.AccessControlList;
 import org.opencastproject.security.api.DefaultOrganization;
@@ -30,19 +35,21 @@ import org.opencastproject.security.api.JaxbRole;
 import org.opencastproject.security.api.JaxbUser;
 import org.opencastproject.security.api.Organization;
 import org.opencastproject.security.api.OrganizationDirectoryService;
+import org.opencastproject.security.api.Permissions;
 import org.opencastproject.security.api.SecurityConstants;
 import org.opencastproject.security.api.SecurityService;
 import org.opencastproject.security.api.UnauthorizedException;
+import org.opencastproject.security.impl.jpa.JpaGroup;
+import org.opencastproject.security.impl.jpa.JpaOrganization;
+import org.opencastproject.security.impl.jpa.JpaRole;
+import org.opencastproject.security.impl.jpa.JpaUser;
 import org.opencastproject.series.api.SeriesException;
 import org.opencastproject.series.api.SeriesService;
-import org.opencastproject.userdirectory.JpaGroup;
 import org.opencastproject.userdirectory.JpaGroupRoleProvider;
-import org.opencastproject.userdirectory.JpaRole;
-import org.opencastproject.userdirectory.JpaUser;
 import org.opencastproject.userdirectory.JpaUserAndRoleProvider;
 import org.opencastproject.util.NotFoundException;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.BooleanUtils;
 import org.osgi.service.component.ComponentContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -89,14 +96,17 @@ public class UserAndSeriesLoader {
   /** The departmental admin (not the super admin) role suffix */
   public static final String ADMIN_PREFIX = "ADMIN";
 
+  /** Configuration property to set if to load default users */
+  public static final String PROP_DEMO_LOAD_USER = "org.opencastproject.security.demo.loadusers";
+
   /** The read permission */
-  public static final String READ = "read";
+  public static final String READ = Permissions.Action.READ.toString();
 
   /** The write permission */
-  public static final String WRITE = "write";
+  public static final String WRITE = Permissions.Action.WRITE.toString();
 
   /** The contribute permission */
-  public static final String CONTRIBUTE = "contribute";
+  public static final String CONTRIBUTE = Permissions.Action.CONTRIBUTE.toString();
 
   /** The logger */
   protected static final Logger logger = LoggerFactory.getLogger(UserAndSeriesLoader.class);
@@ -120,11 +130,8 @@ public class UserAndSeriesLoader {
    */
   protected void activate(ComponentContext cc) {
 
-    String loadUsers = StringUtils.trimToNull(cc.getBundleContext().getProperty(
-            "org.opencastproject.security.demo.loadusers"));
-
     // Load the demo users, if necessary
-    if (Boolean.valueOf(loadUsers)) {
+    if (BooleanUtils.toBoolean(cc.getBundleContext().getProperty(PROP_DEMO_LOAD_USER))) {
       // Load 100 series and 1000 users, but don't block activation
       new Loader().start();
     }
@@ -137,7 +144,7 @@ public class UserAndSeriesLoader {
 
       for (int i = 1; i <= NUM_SERIES; i++) {
         String seriesId = SERIES_PREFIX + i;
-        DublinCoreCatalog dc = DublinCoreCatalogImpl.newInstance();
+        DublinCoreCatalog dc = DublinCores.mkOpencastEpisode().getCatalog();
         AccessControlList acl = new AccessControlList();
 
         // Add read permissions for viewing the series content in engage
@@ -162,7 +169,7 @@ public class UserAndSeriesLoader {
           Organization org = organizationDirectoryService.getOrganization(DEFAULT_ORGANIZATION_ID);
           try {
             JaxbOrganization jaxbOrganization = JaxbOrganization.fromOrganization(org);
-            securityService.setUser(new JaxbUser("userandseriesloader", jaxbOrganization, new JaxbRole(
+            securityService.setUser(new JaxbUser("userandseriesloader", "demo", jaxbOrganization, new JaxbRole(
                     SecurityConstants.GLOBAL_ADMIN_ROLE, jaxbOrganization)));
             securityService.setOrganization(org);
 
@@ -193,8 +200,7 @@ public class UserAndSeriesLoader {
 
       load(STUDENT_PREFIX, 20, new String[] { USER_ROLE }, DEFAULT_ORGANIZATION_ID);
 
-      load(INSTRUCTOR_PREFIX, 2, new String[] { USER_ROLE, INSTRUCTOR_ROLE },
-              DEFAULT_ORGANIZATION_ID);
+      load(INSTRUCTOR_PREFIX, 2, new String[] { USER_ROLE, INSTRUCTOR_ROLE }, DEFAULT_ORGANIZATION_ID);
 
       load(ADMIN_PREFIX, 1, new String[] { USER_ROLE, COURSE_ADMIN_ROLE }, DEFAULT_ORGANIZATION_ID);
 
@@ -202,14 +208,12 @@ public class UserAndSeriesLoader {
 
       logger.info("Finished loading sample series and users");
 
-      loadGroup("admin", DEFAULT_ORGANIZATION_ID, "Admins", "Admin group", new String[] {
-              COURSE_ADMIN_ROLE, INSTRUCTOR_ROLE, INSTRUCTOR_ROLE }, new String[] { "admin1", "admin2", "admin3",
-              "admin4" });
-      loadGroup("instructor", DEFAULT_ORGANIZATION_ID, "Instructors", "Instructors group",
-              new String[] { USER_ROLE, INSTRUCTOR_ROLE }, new String[] { "instructor1", "instructor2", "instructor3",
-                      "instructor4" });
-      loadGroup("student", DEFAULT_ORGANIZATION_ID, "Students", "Students group",
-              new String[] { USER_ROLE }, new String[] { "student1", "student2", "student3", "student4" });
+      loadGroup("admin", DEFAULT_ORGANIZATION_ID, "Admins", "Admin group", new String[] { COURSE_ADMIN_ROLE,
+              INSTRUCTOR_ROLE, INSTRUCTOR_ROLE }, new String[] { "admin1", "admin2", "admin3", "admin4" });
+      loadGroup("instructor", DEFAULT_ORGANIZATION_ID, "Instructors", "Instructors group", new String[] { USER_ROLE,
+              INSTRUCTOR_ROLE }, new String[] { "instructor1", "instructor2", "instructor3", "instructor4" });
+      loadGroup("student", DEFAULT_ORGANIZATION_ID, "Students", "Students group", new String[] { USER_ROLE },
+              new String[] { "student1", "student2", "student3", "student4" });
 
       logger.info("Finished loading sample groups");
     }
@@ -242,7 +246,8 @@ public class UserAndSeriesLoader {
           roleSet.add(new JpaRole(additionalRole, getOrganization(orgId)));
         }
         roleSet.add(new JpaRole(SERIES_PREFIX + (((i - 1) % NUM_SERIES) + 1) + "_" + rolePrefix, getOrganization(orgId)));
-        JpaUser user = new JpaUser(lowerCasePrefix + i, lowerCasePrefix + i, getOrganization(orgId), roleSet);
+        JpaUser user = new JpaUser(lowerCasePrefix + i, lowerCasePrefix + i, getOrganization(orgId),
+                jpaUserProvider.getName(), true, roleSet);
         try {
           jpaUserProvider.addUser(user);
           logger.debug("Added {}", user);
@@ -300,8 +305,13 @@ public class UserAndSeriesLoader {
     String ldapUserId = "231693";
 
     if (jpaUserProvider.loadUser(ldapUserId, organizationId) == null) {
-      jpaUserProvider.addUser(new JpaUser(ldapUserId, "ldap", getOrganization(organizationId), ldapUserRoles));
-      logger.debug("Added ldap user '{}' into organization '{}'", ldapUserId, organizationId);
+      try {
+        jpaUserProvider.addUser(new JpaUser(ldapUserId, "ldap", getOrganization(organizationId), jpaUserProvider
+                .getName(), true, ldapUserRoles));
+        logger.debug("Added ldap user '{}' into organization '{}'", ldapUserId, organizationId);
+      } catch (UnauthorizedException ex) {
+        logger.error("Unable to add an administrative user because you have not enough permissions.");
+      }
     }
   }
 

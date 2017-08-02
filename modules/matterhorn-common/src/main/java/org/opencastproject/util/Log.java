@@ -1,27 +1,34 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
+
 package org.opencastproject.util;
 
 import static java.lang.String.format;
 
-import org.opencastproject.fn.juc.Immutables;
-import org.opencastproject.fn.juc.Iterables;
-import org.opencastproject.fn.juc.Mutables;
+import org.opencastproject.fun.juc.Immutables;
+import org.opencastproject.fun.juc.Iterables;
+import org.opencastproject.fun.juc.Mutables;
 import org.opencastproject.util.data.Prelude;
 
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.spi.LocationAwareLogger;
@@ -33,12 +40,19 @@ import java.util.UUID;
 
 /**
  * A logger that maintains a "unit of work" context to facilitate the grouping of log statements.
- * <p/>
+ * <p>
  * Log methods that take message formats and arguments use the
  * {@link String#format(java.util.Locale, String, Object...)} string format syntax.
  */
 public final class Log {
+  /** The number of seconds in a minute. */
+  private static final int SECONDS_IN_MINUTES = 60;
+
+  /** The number of seconds in an hour. */
+  private static final int SECONDS_IN_HOURS = 3600;
+
   private static final String FQCN = Log.class.getName();
+
   private static final String JVM_SESSION = randomString();
 
   /** Hold the context stack. */
@@ -105,6 +119,37 @@ public final class Log {
     updateCurrent();
   }
 
+  /**
+   * Renders a string representation of seconds that is easier to read by showing hours, minutes and seconds.
+   *
+   * @param seconds
+   *          The number of seconds that you want to represent in hours, minutes and remainder seconds.
+   * @return A human readable string representation of seconds into hours, minutes and seconds.
+   */
+  public static String getHumanReadableTimeString(long seconds) {
+    String result = "";
+    long hours = seconds / SECONDS_IN_HOURS;
+    if (hours == 1) {
+      result += hours + " hour ";
+    } else if (hours > 1) {
+      result += hours + " hours ";
+    }
+    long minutes = (seconds % SECONDS_IN_HOURS) / SECONDS_IN_MINUTES;
+    if (minutes == 1) {
+      result += minutes + " minute ";
+    } else if (minutes > 1) {
+      result += minutes + " minutes ";
+    }
+    long remainderSeconds = (seconds % SECONDS_IN_HOURS) % SECONDS_IN_MINUTES;
+    if (remainderSeconds == 1) {
+      result += remainderSeconds + " second";
+    } else if (remainderSeconds > 1) {
+      result += remainderSeconds + " seconds";
+    }
+    result = StringUtils.trim(result);
+    return result;
+  }
+
   /** Return the current log context. */
   public List<String> getContext() {
     return Immutables.mk(ctx.get());
@@ -152,7 +197,7 @@ public final class Log {
 
   /** <code>t</code> maybe null */
   private void log(int level, Throwable t, String format, Object... args) {
-    final String msg = current.get() + format(format, args);
+    final String msg = current.get() + format(convertCurlyBraces(format), args);
     if (isLocationAware) {
       ((LocationAwareLogger) logger).log(null, FQCN, level, msg, null, t);
     } else {
@@ -170,5 +215,12 @@ public final class Log {
           Prelude.unexhaustiveMatch();
       }
     }
+  }
+
+  private static String convertCurlyBraces(String format) {
+    if (format == null)
+      return "(null message)";
+
+    return format.replaceAll("\\{\\}", "%s");
   }
 }

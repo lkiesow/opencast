@@ -1,44 +1,25 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
+
 package org.opencastproject.metadata.dublincore;
-
-import org.apache.commons.io.IOUtils;
-import org.opencastproject.mediapackage.Catalog;
-import org.opencastproject.mediapackage.MediaPackage;
-import org.opencastproject.mediapackage.MediaPackageElementFlavor;
-import org.opencastproject.mediapackage.MediaPackageElements;
-import org.opencastproject.metadata.api.MetadataValue;
-import org.opencastproject.metadata.api.StaticMetadata;
-import org.opencastproject.metadata.api.StaticMetadataService;
-import org.opencastproject.metadata.api.util.Interval;
-import org.opencastproject.util.data.Function;
-import org.opencastproject.util.data.NonEmptyList;
-import org.opencastproject.util.data.Option;
-import org.opencastproject.util.data.Predicate;
-import org.opencastproject.util.data.functions.Misc;
-import org.opencastproject.workspace.api.Workspace;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStream;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
 
 import static org.opencastproject.metadata.dublincore.DublinCore.PROPERTY_ACCESS_RIGHTS;
 import static org.opencastproject.metadata.dublincore.DublinCore.PROPERTY_AVAILABLE;
@@ -56,6 +37,7 @@ import static org.opencastproject.metadata.dublincore.DublinCore.PROPERTY_REPLAC
 import static org.opencastproject.metadata.dublincore.DublinCore.PROPERTY_RIGHTS_HOLDER;
 import static org.opencastproject.metadata.dublincore.DublinCore.PROPERTY_SPATIAL;
 import static org.opencastproject.metadata.dublincore.DublinCore.PROPERTY_SUBJECT;
+import static org.opencastproject.metadata.dublincore.DublinCore.PROPERTY_TEMPORAL;
 import static org.opencastproject.metadata.dublincore.DublinCore.PROPERTY_TITLE;
 import static org.opencastproject.metadata.dublincore.DublinCore.PROPERTY_TYPE;
 import static org.opencastproject.util.data.Collections.head;
@@ -63,6 +45,32 @@ import static org.opencastproject.util.data.Collections.list;
 import static org.opencastproject.util.data.Monadics.mlist;
 import static org.opencastproject.util.data.Option.option;
 import static org.opencastproject.util.data.Option.some;
+
+import org.opencastproject.mediapackage.Catalog;
+import org.opencastproject.mediapackage.MediaPackage;
+import org.opencastproject.mediapackage.MediaPackageElementFlavor;
+import org.opencastproject.mediapackage.MediaPackageElements;
+import org.opencastproject.metadata.api.MetadataValue;
+import org.opencastproject.metadata.api.StaticMetadata;
+import org.opencastproject.metadata.api.StaticMetadataService;
+import org.opencastproject.metadata.api.util.Interval;
+import org.opencastproject.util.data.Function;
+import org.opencastproject.util.data.NonEmptyList;
+import org.opencastproject.util.data.Option;
+import org.opencastproject.util.data.Predicate;
+import org.opencastproject.util.data.functions.Misc;
+import org.opencastproject.workspace.api.Workspace;
+
+import org.apache.commons.io.IOUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
 
 /**
  * This service provides {@link org.opencastproject.metadata.api.StaticMetadata} for a given mediapackage,
@@ -132,6 +140,15 @@ public class StaticMetadataServiceDublinCoreImpl implements StaticMetadataServic
         return date != null ? date : Misc.<Date>chuck(new RuntimeException(a + " does not conform to W3C-DTF encoding scheme."));
       }
     });
+    final Option temporalOpt = option(episode.getFirstVal(PROPERTY_TEMPORAL)).map(dc2temporalValueOption());
+    final Option<Date> start;
+    if (episode.getFirst(PROPERTY_TEMPORAL) != null) {
+      DCMIPeriod period = EncodingSchemeUtils
+                  .decodeMandatoryPeriod(episode.getFirst(PROPERTY_TEMPORAL));
+      start = option(period.getStart());
+    } else {
+      start = created;
+    }
     final Option<String> language = option(episode.getFirst(PROPERTY_LANGUAGE));
     final Option<Long> extent = head(episode.get(PROPERTY_EXTENT)).map(new Function<DublinCoreValue, Long>() {
       @Override
@@ -183,7 +200,43 @@ public class StaticMetadataServiceDublinCoreImpl implements StaticMetadataServic
 
       @Override
       public Option<Date> getCreated() {
-        return created;
+        // Compatibility patch with SOLR search service, where DC_CREATED stores the time the recording has been recorded
+        // in Admin UI and external API this is stored in DC_TEMPORAL as a DC Period. DC_CREATED is the date on which the
+        // event was created there.
+        // Admin UI and External UI do not use this Class, that only seems to be used by the old SOLR modules,
+        // so data will be kept correctly there, and only be "exported" to DC_CREATED for compatibility reasons here.
+        return start;
+      }
+
+      @Override
+      public Option<Date[]> getTemporalPeriod() {
+        if (temporalOpt.isSome()) {
+          if (temporalOpt.get() instanceof DCMIPeriod) {
+            DCMIPeriod p = (DCMIPeriod) temporalOpt.get();
+            return option(new Date[] { p.getStart(), p.getEnd() });
+          }
+        }
+        return Option.none();
+      }
+
+      @Override
+      public Option<Date> getTemporalInstant() {
+        if (temporalOpt.isSome()) {
+          if (temporalOpt.get() instanceof Date) {
+            return temporalOpt;
+          }
+        }
+        return Option.none();
+      }
+
+      @Override
+      public Option<Long> getTemporalDuration() {
+        if (temporalOpt.isSome()) {
+          if (temporalOpt.get() instanceof Long) {
+            return temporalOpt;
+          }
+        }
+        return Option.none();
       }
 
       @Override
@@ -280,6 +333,38 @@ public class StaticMetadataServiceDublinCoreImpl implements StaticMetadataServic
   }
 
   /**
+   * Return a function that creates a Option with the value of temporal from a DublinCoreValue.
+   */
+  private static Function<DublinCoreValue, Object> dc2temporalValueOption() {
+    return new Function<DublinCoreValue, Object>() {
+      @Override
+      public Object apply(DublinCoreValue dcv) {
+        Temporal temporal = EncodingSchemeUtils.decodeTemporal(dcv);
+        if (temporal != null) {
+          return temporal.fold(new Temporal.Match<Object>() {
+            @Override
+            public Object period(DCMIPeriod period) {
+              return period;
+            }
+
+            @Override
+            public Object instant(Date instant) {
+              return instant;
+            }
+
+            @Override
+            public Object duration(long duration) {
+              return duration;
+            }
+          });
+        }
+        return Misc.<Object>chuck(new RuntimeException(dcv
+                + " does not conform to ISO8601 encoding scheme for temporal."));
+      }
+    };
+  }
+
+  /**
    * Return a function that creates a MetadataValue[String] from a DublinCoreValue setting its name to <code>name</code>.
    */
   private static Function<DublinCoreValue, MetadataValue<String>> dc2mvString(final String name) {
@@ -305,7 +390,7 @@ public class StaticMetadataServiceDublinCoreImpl implements StaticMetadataServic
     try {
       File f = workspace.get(catalog.getURI());
       in = new FileInputStream(f);
-      return some((DublinCoreCatalog) new DublinCoreCatalogImpl(in));
+      return some((DublinCoreCatalog) DublinCores.read(in));
     } catch (Exception e) {
       logger.warn("Unable to load metadata from catalog '{}'", catalog);
       return Option.none();

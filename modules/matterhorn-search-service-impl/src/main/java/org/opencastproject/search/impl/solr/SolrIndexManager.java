@@ -1,23 +1,29 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
 
+
 package org.opencastproject.search.impl.solr;
 
-import static org.opencastproject.search.api.SearchService.READ_PERMISSION;
-import static org.opencastproject.search.api.SearchService.WRITE_PERMISSION;
+import static org.opencastproject.security.api.Permissions.Action.READ;
+import static org.opencastproject.security.api.Permissions.Action.WRITE;
 import static org.opencastproject.util.RequireUtil.notNull;
 import static org.opencastproject.util.data.Collections.flatMap;
 import static org.opencastproject.util.data.Collections.head;
@@ -391,8 +397,12 @@ public class SolrIndexManager {
     }
     // TODO: merge the segments from each mpeg7 if there is more than one mpeg7 catalog
     if (mpeg7Catalogs.length > 0) {
-      Mpeg7Catalog mpeg7Catalog = loadMpeg7Catalog(mpeg7Catalogs[0]);
-      addMpeg7Metadata(doc, mediaPackage, mpeg7Catalog);
+      try {
+        Mpeg7Catalog mpeg7Catalog = loadMpeg7Catalog(mpeg7Catalogs[0]);
+        addMpeg7Metadata(doc, mediaPackage, mpeg7Catalog);
+      } catch (IOException e) {
+        logger.error("Error loading mpeg7 catalog. Skipping catalog: {}", e.getMessage());
+      }
     } else {
       logger.debug("No segmentation catalog found");
     }
@@ -634,9 +644,9 @@ public class SolrIndexManager {
 
     // Define containers for common permissions
     List<String> reads = new ArrayList<String>();
-    permissions.put(READ_PERMISSION, reads);
+    permissions.put(READ.toString(), reads);
     List<String> writes = new ArrayList<String>();
-    permissions.put(WRITE_PERMISSION, writes);
+    permissions.put(WRITE.toString(), writes);
 
     String adminRole = securityService.getOrganization().getAdminRole();
 
@@ -669,7 +679,7 @@ public class SolrIndexManager {
 
     // Write the permissions to the solr document
     for (Map.Entry<String, List<String>> entry : permissions.entrySet()) {
-      Schema.setOcAcl(doc, new DField<String>(mkString(entry.getValue(), ","), entry.getKey()));
+      Schema.setOcAcl(doc, new DField<String>(mkString(entry.getValue(), " "), entry.getKey()));
     }
   }
 
@@ -961,6 +971,7 @@ public class SolrIndexManager {
     SortedSet<TextAnnotation> sortedAnnotations = null;
     if (!"".equals(Schema.getOcKeywords(doc))) {
       sortedAnnotations = new TreeSet<TextAnnotation>(new Comparator<TextAnnotation>() {
+        @Override
         public int compare(TextAnnotation a1, TextAnnotation a2) {
           if ((RELEVANCE_BOOST * a1.getRelevance() + a1.getConfidence()) > (RELEVANCE_BOOST * a2.getRelevance() + a2
                   .getConfidence()))

@@ -1,18 +1,24 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
+
 package org.opencastproject.capture.admin.impl;
 
 import org.opencastproject.capture.CaptureParameters;
@@ -34,6 +40,7 @@ import javax.persistence.Column;
 import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
 import javax.persistence.Id;
+import javax.persistence.IdClass;
 import javax.persistence.JoinColumn;
 import javax.persistence.Lob;
 import javax.persistence.NamedQueries;
@@ -45,7 +52,7 @@ import javax.persistence.Transient;
 /**
  * An in-memory construct to represent the state of a capture agent, and when it was last heard from.
  */
-@Entity
+@Entity @IdClass(AgentImplId.class)
 @Table(name = "mh_capture_agent_state")
 @NamedQueries({
   @NamedQuery(name = "Agent.get", query = "select a from AgentImpl a where a.name = :id and a.organization = :org"),
@@ -96,7 +103,7 @@ public class AgentImpl implements Agent {
 
   /**
    * The capabilities the agent has Capabilities are the devices this agent can record from, with a friendly name
-   * associated to determine their nature (e.g. PRESENTER --> dev/video0)
+   * associated to determine their nature (e.g. PRESENTER --&gt; dev/video0)
    */
   @Lob
   @Column(name = "configuration", nullable = true, length = 65535)
@@ -131,6 +138,7 @@ public class AgentImpl implements Agent {
   public AgentImpl(String agentName, String organization, String agentState, String agentUrl, Properties configuration) {
     name = agentName;
     this.setState(agentState);
+    this.setLastHeardFrom(System.currentTimeMillis());
     this.setUrl(agentUrl);
     this.setOrganization(organization);
     // Agents with no capabilities are allowed. These can/will be updated after the agent is built if necessary.
@@ -153,7 +161,6 @@ public class AgentImpl implements Agent {
    */
   public void setState(String newState) {
     state = newState;
-    setLastHeardFrom(System.currentTimeMillis());
   }
 
   /**
