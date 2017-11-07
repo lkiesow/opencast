@@ -41,14 +41,15 @@ import org.opencastproject.mediapackage.Attachment;
 import org.opencastproject.mediapackage.Catalog;
 import org.opencastproject.mediapackage.CatalogImpl;
 import org.opencastproject.mediapackage.MediaPackage;
+import org.opencastproject.mediapackage.MediaPackageBuilderFactory;
 import org.opencastproject.mediapackage.MediaPackageElement;
 import org.opencastproject.mediapackage.MediaPackageElementFlavor;
 import org.opencastproject.mediapackage.MediaPackageException;
+import org.opencastproject.mediapackage.attachment.AttachmentImpl;
 import org.opencastproject.mediapackage.identifier.HandleException;
 import org.opencastproject.mediapackage.identifier.Id;
 import org.opencastproject.mediapackage.identifier.IdImpl;
 import org.opencastproject.metadata.dublincore.DublinCore;
-import org.opencastproject.metadata.dublincore.DublinCoreCatalog;
 import org.opencastproject.metadata.dublincore.MetadataCollection;
 import org.opencastproject.metadata.dublincore.MetadataField;
 import org.opencastproject.scheduler.api.SchedulerException;
@@ -64,12 +65,18 @@ import org.opencastproject.security.api.UserDirectoryService;
 import org.opencastproject.security.impl.jpa.JpaOrganization;
 import org.opencastproject.security.impl.jpa.JpaUser;
 import org.opencastproject.util.ConfigurationException;
+import org.opencastproject.util.DateTimeSupport;
 import org.opencastproject.util.IoSupport;
 import org.opencastproject.util.NotFoundException;
+import org.opencastproject.util.PropertiesUtil;
+import org.opencastproject.util.data.Option;
 import org.opencastproject.util.data.Tuple;
+import org.opencastproject.util.data.VCell;
 import org.opencastproject.workflow.api.WorkflowDatabaseException;
 import org.opencastproject.workflow.api.WorkflowInstance;
 import org.opencastproject.workspace.api.Workspace;
+
+import com.entwinemedia.fn.data.Opt;
 
 import net.fortuna.ical4j.model.DateTime;
 import net.fortuna.ical4j.model.Period;
@@ -79,6 +86,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
+import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.junit.Assert;
@@ -94,6 +102,8 @@ import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.Dictionary;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -138,24 +148,37 @@ public class IndexServiceImplTest {
     return captureAgentStateService;
   }
 
-  private IngestService setupIngestService(MediaPackage mediapackage)
+  private IngestService setupIngestServiceWithMediaPackage()
+          throws IngestException, MediaPackageException, HandleException, IOException, NotFoundException {
+    MediaPackage mediapackage = EasyMock.createNiceMock(MediaPackage.class);
+    EasyMock.replay(mediapackage);
+    return setupIngestService(mediapackage, Capture.<InputStream> newInstance());
+  }
+
+  private IngestService setupIngestService(MediaPackage mediapackage, Capture<InputStream> captureInputStream)
           throws MediaPackageException, HandleException, IOException, IngestException, NotFoundException {
     // Setup ingest service.
     WorkflowInstance workflowInstance = EasyMock.createMock(WorkflowInstance.class);
     IngestService ingestService = EasyMock.createMock(IngestService.class);
-    EasyMock.expect(ingestService.createMediaPackage()).andReturn(mediapackage);
-    EasyMock.expect(ingestService.addCatalog(EasyMock.anyObject(InputStream.class), EasyMock.anyObject(String.class),
+    EasyMock.expect(ingestService.createMediaPackage()).andReturn(mediapackage).anyTimes();
+    EasyMock.expect(ingestService.addTrack(EasyMock.anyObject(InputStream.class), EasyMock.anyString(),
+            EasyMock.anyObject(MediaPackageElementFlavor.class), EasyMock.anyObject(MediaPackage.class))).andReturn(mediapackage)
+                    .anyTimes();
+    EasyMock.expect(ingestService.addCatalog(EasyMock.capture(captureInputStream), EasyMock.anyObject(String.class),
             EasyMock.anyObject(MediaPackageElementFlavor.class), EasyMock.anyObject(MediaPackage.class)))
-            .andReturn(mediapackage);
+            .andReturn(mediapackage).anyTimes();
+    EasyMock.expect(ingestService.addAttachment(EasyMock.capture(captureInputStream), EasyMock.anyObject(String.class),
+            EasyMock.anyObject(MediaPackageElementFlavor.class), EasyMock.anyObject(MediaPackage.class)))
+            .andReturn(mediapackage).anyTimes();
     EasyMock.expect(ingestService.ingest(EasyMock.anyObject(MediaPackage.class), EasyMock.anyObject(String.class),
-            EasyMock.<Map<String, String>> anyObject())).andReturn(workflowInstance);
+            EasyMock.<Map<String, String>> anyObject())).andReturn(workflowInstance).anyTimes();
     EasyMock.replay(ingestService);
     return ingestService;
   }
 
   private SecurityService setupSecurityService(String username, String org) {
     // Setup Security Service, Organization and User
-    Organization organization = EasyMock.createMock(Organization.class);
+    Organization organization = EasyMock.createNiceMock(Organization.class);
     EasyMock.expect(organization.getId()).andReturn(org).anyTimes();
     EasyMock.replay(organization);
 
@@ -171,10 +194,17 @@ public class IndexServiceImplTest {
     return securityService;
   }
 
-  private CommonEventCatalogUIAdapter setupCommonCatalogUIAdapter(Workspace workspace)
-          throws org.osgi.service.cm.ConfigurationException {
+  private Tuple<CommonEventCatalogUIAdapter, VCell<Option<MetadataCollection>>> setupCommonCatalogUIAdapter(
+          Workspace workspace) throws org.osgi.service.cm.ConfigurationException {
     // Create Common Event Catalog UI Adapter
-    CommonEventCatalogUIAdapter commonEventCatalogUIAdapter = new CommonEventCatalogUIAdapter();
+    final VCell<Option<MetadataCollection>> metadataCell = VCell.ocell();
+    CommonEventCatalogUIAdapter commonEventCatalogUIAdapter = new CommonEventCatalogUIAdapter() {
+      @Override
+      public Catalog storeFields(MediaPackage mediaPackage, MetadataCollection metadata) {
+        metadataCell.set(Option.some(metadata));
+        return super.storeFields(mediaPackage, metadata);
+      }
+    };
 
     Properties episodeCatalogProperties = new Properties();
     InputStream in = null;
@@ -187,9 +217,9 @@ public class IndexServiceImplTest {
       IoSupport.closeQuietly(in);
     }
 
-    commonEventCatalogUIAdapter.updated(episodeCatalogProperties);
+    commonEventCatalogUIAdapter.updated(PropertiesUtil.toDictionary(episodeCatalogProperties));
     commonEventCatalogUIAdapter.setWorkspace(workspace);
-    return commonEventCatalogUIAdapter;
+    return Tuple.tuple(commonEventCatalogUIAdapter, metadataCell);
   }
 
   /**
@@ -204,15 +234,8 @@ public class IndexServiceImplTest {
   public void testCreateEventInputNullMetadataExpectsIllegalArgumentException() throws IllegalArgumentException,
           IndexServiceException, ConfigurationException, MediaPackageException, HandleException, IOException,
           IngestException, ParseException, NotFoundException, SchedulerException, UnauthorizedException {
-    MediaPackage mediapackage = EasyMock.createMock(MediaPackage.class);
-    EasyMock.replay(mediapackage);
-
-    IngestService ingestService = EasyMock.createMock(IngestService.class);
-    EasyMock.expect(ingestService.createMediaPackage()).andReturn(mediapackage);
-    EasyMock.replay(ingestService);
-
     IndexServiceImpl indexServiceImpl = new IndexServiceImpl();
-    indexServiceImpl.setIngestService(ingestService);
+    indexServiceImpl.setIngestService(setupIngestServiceWithMediaPackage());
     indexServiceImpl.createEvent(null, null);
   }
 
@@ -223,15 +246,8 @@ public class IndexServiceImplTest {
           UnauthorizedException, org.json.simple.parser.ParseException {
     JSONObject metadataJson = (JSONObject) parser.parse("{}");
 
-    MediaPackage mediapackage = EasyMock.createMock(MediaPackage.class);
-    EasyMock.replay(mediapackage);
-
-    IngestService ingestService = EasyMock.createMock(IngestService.class);
-    EasyMock.expect(ingestService.createMediaPackage()).andReturn(mediapackage);
-    EasyMock.replay(ingestService);
-
     IndexServiceImpl indexServiceImpl = new IndexServiceImpl();
-    indexServiceImpl.setIngestService(ingestService);
+    indexServiceImpl.setIngestService(setupIngestServiceWithMediaPackage());
     indexServiceImpl.createEvent(metadataJson, null);
   }
 
@@ -244,15 +260,8 @@ public class IndexServiceImplTest {
     JSONObject metadataJson = (JSONObject) parser
             .parse(IOUtils.toString(IndexServiceImplTest.class.getResourceAsStream(testResourceLocation)));
 
-    MediaPackage mediapackage = EasyMock.createMock(MediaPackage.class);
-    EasyMock.replay(mediapackage);
-
-    IngestService ingestService = EasyMock.createMock(IngestService.class);
-    EasyMock.expect(ingestService.createMediaPackage()).andReturn(mediapackage);
-    EasyMock.replay(ingestService);
-
     IndexServiceImpl indexServiceImpl = new IndexServiceImpl();
-    indexServiceImpl.setIngestService(ingestService);
+    indexServiceImpl.setIngestService(setupIngestServiceWithMediaPackage());
     indexServiceImpl.createEvent(metadataJson, null);
   }
 
@@ -265,15 +274,8 @@ public class IndexServiceImplTest {
     JSONObject metadataJson = (JSONObject) parser
             .parse(IOUtils.toString(IndexServiceImplTest.class.getResourceAsStream(testResourceLocation)));
 
-    MediaPackage mediapackage = EasyMock.createMock(MediaPackage.class);
-    EasyMock.replay(mediapackage);
-
-    IngestService ingestService = EasyMock.createMock(IngestService.class);
-    EasyMock.expect(ingestService.createMediaPackage()).andReturn(mediapackage);
-    EasyMock.replay(ingestService);
-
     IndexServiceImpl indexServiceImpl = new IndexServiceImpl();
-    indexServiceImpl.setIngestService(ingestService);
+    indexServiceImpl.setIngestService(setupIngestServiceWithMediaPackage());
     indexServiceImpl.createEvent(metadataJson, null);
   }
 
@@ -286,15 +288,8 @@ public class IndexServiceImplTest {
     JSONObject metadataJson = (JSONObject) parser
             .parse(IOUtils.toString(IndexServiceImplTest.class.getResourceAsStream(testResourceLocation)));
 
-    MediaPackage mediapackage = EasyMock.createMock(MediaPackage.class);
-    EasyMock.replay(mediapackage);
-
-    IngestService ingestService = EasyMock.createMock(IngestService.class);
-    EasyMock.expect(ingestService.createMediaPackage()).andReturn(mediapackage);
-    EasyMock.replay(ingestService);
-
     IndexServiceImpl indexServiceImpl = new IndexServiceImpl();
-    indexServiceImpl.setIngestService(ingestService);
+    indexServiceImpl.setIngestService(setupIngestServiceWithMediaPackage());
     indexServiceImpl.createEvent(metadataJson, null);
   }
 
@@ -307,15 +302,8 @@ public class IndexServiceImplTest {
     JSONObject metadataJson = (JSONObject) parser
             .parse(IOUtils.toString(IndexServiceImplTest.class.getResourceAsStream(testResourceLocation)));
 
-    MediaPackage mediapackage = EasyMock.createMock(MediaPackage.class);
-    EasyMock.replay(mediapackage);
-
-    IngestService ingestService = EasyMock.createMock(IngestService.class);
-    EasyMock.expect(ingestService.createMediaPackage()).andReturn(mediapackage);
-    EasyMock.replay(ingestService);
-
     IndexServiceImpl indexServiceImpl = new IndexServiceImpl();
-    indexServiceImpl.setIngestService(ingestService);
+    indexServiceImpl.setIngestService(setupIngestServiceWithMediaPackage());
     indexServiceImpl.createEvent(metadataJson, null);
   }
 
@@ -343,7 +331,7 @@ public class IndexServiceImplTest {
             EasyMock.capture(filenameResult), EasyMock.capture(catalogResult))).andReturn(new URI("catalog.xml"));
     EasyMock.replay(workspace);
 
-    CommonEventCatalogUIAdapter commonEventCatalogUIAdapter = setupCommonCatalogUIAdapter(workspace);
+    CommonEventCatalogUIAdapter commonEventCatalogUIAdapter = setupCommonCatalogUIAdapter(workspace).getA();
 
     // Setup mediapackage.
     MediaPackage mediapackage = EasyMock.createMock(MediaPackage.class);
@@ -364,7 +352,7 @@ public class IndexServiceImplTest {
     EasyMock.expectLastCall();
     EasyMock.replay(mediapackage);
 
-    IngestService ingestService = setupIngestService(mediapackage);
+    IngestService ingestService = setupIngestService(mediapackage, Capture.<InputStream> newInstance());
 
     // Setup Authorization Service
     Tuple<MediaPackage, Attachment> returnValue = new Tuple<MediaPackage, Attachment>(mediapackage, null);
@@ -375,7 +363,7 @@ public class IndexServiceImplTest {
 
     // Run Test
     IndexServiceImpl indexServiceImpl = new IndexServiceImpl();
-    indexServiceImpl.setAuthorizationService(authorizationService);
+    indexServiceImpl.setAuthorizationService(setupAuthorizationService(mediapackage));
     indexServiceImpl.setIngestService(ingestService);
     indexServiceImpl.setCommonEventCatalogUIAdapter(commonEventCatalogUIAdapter);
     indexServiceImpl.addCatalogUIAdapter(commonEventCatalogUIAdapter);
@@ -420,7 +408,7 @@ public class IndexServiceImplTest {
     EasyMock.replay(workspace);
 
     // Create Common Event Catalog UI Adapter
-    CommonEventCatalogUIAdapter commonEventCatalogUIAdapter = setupCommonCatalogUIAdapter(workspace);
+    CommonEventCatalogUIAdapter commonEventCatalogUIAdapter = setupCommonCatalogUIAdapter(workspace).getA();
 
     // Setup mediapackage.
     MediaPackage mediapackage = EasyMock.createMock(MediaPackage.class);
@@ -441,7 +429,7 @@ public class IndexServiceImplTest {
     EasyMock.expectLastCall();
     EasyMock.replay(mediapackage);
 
-    IngestService ingestService = setupIngestService(mediapackage);
+    IngestService ingestService = setupIngestService(mediapackage, Capture.<InputStream> newInstance());
 
     // Setup Authorization Service
     Tuple<MediaPackage, Attachment> returnValue = new Tuple<MediaPackage, Attachment>(mediapackage, null);
@@ -452,7 +440,7 @@ public class IndexServiceImplTest {
 
     // Run Test
     IndexServiceImpl indexServiceImpl = new IndexServiceImpl();
-    indexServiceImpl.setAuthorizationService(authorizationService);
+    indexServiceImpl.setAuthorizationService(setupAuthorizationService(mediapackage));
     indexServiceImpl.setIngestService(ingestService);
     indexServiceImpl.setCommonEventCatalogUIAdapter(commonEventCatalogUIAdapter);
     indexServiceImpl.addCatalogUIAdapter(commonEventCatalogUIAdapter);
@@ -497,7 +485,7 @@ public class IndexServiceImplTest {
     EasyMock.replay(workspace);
 
     // Create Common Event Catalog UI Adapter
-    CommonEventCatalogUIAdapter commonEventCatalogUIAdapter = setupCommonCatalogUIAdapter(workspace);
+    CommonEventCatalogUIAdapter commonEventCatalogUIAdapter = setupCommonCatalogUIAdapter(workspace).getA();
 
     // Setup mediapackage.
     MediaPackage mediapackage = EasyMock.createMock(MediaPackage.class);
@@ -519,7 +507,7 @@ public class IndexServiceImplTest {
     EasyMock.expectLastCall();
     EasyMock.replay(mediapackage);
 
-    IngestService ingestService = setupIngestService(mediapackage);
+    IngestService ingestService = setupIngestService(mediapackage, Capture.<InputStream> newInstance());
 
     // Setup Authorization Service
     Tuple<MediaPackage, Attachment> returnValue = new Tuple<MediaPackage, Attachment>(mediapackage, null);
@@ -533,13 +521,16 @@ public class IndexServiceImplTest {
     Capture<Date> captureStart = EasyMock.newCapture();
     Capture<Date> captureEnd = EasyMock.newCapture();
     SchedulerService schedulerService = EasyMock.createNiceMock(SchedulerService.class);
-    EasyMock.expect(schedulerService.addEvent(EasyMock.anyObject(DublinCoreCatalog.class),
-            EasyMock.<Map<String, String>> anyObject())).andReturn(1L).once();
+    schedulerService.addEvent(EasyMock.capture(captureStart), EasyMock.capture(captureEnd), EasyMock.anyString(),
+            EasyMock.<Set<String>> anyObject(), EasyMock.anyObject(MediaPackage.class),
+            EasyMock.<Map<String, String>> anyObject(), EasyMock.<Map<String, String>> anyObject(),
+            EasyMock.<Opt<Boolean>> anyObject(), EasyMock.<Opt<String>> anyObject(), EasyMock.anyString());
+    EasyMock.expectLastCall().once();
     EasyMock.replay(schedulerService);
 
     // Run Test
     IndexServiceImpl indexServiceImpl = new IndexServiceImpl();
-    indexServiceImpl.setAuthorizationService(authorizationService);
+    indexServiceImpl.setAuthorizationService(setupAuthorizationService(mediapackage));
     indexServiceImpl.setIngestService(ingestService);
     indexServiceImpl.setCommonEventCatalogUIAdapter(commonEventCatalogUIAdapter);
     indexServiceImpl.addCatalogUIAdapter(commonEventCatalogUIAdapter);
@@ -560,6 +551,48 @@ public class IndexServiceImplTest {
     assertTrue("The mediapackage should have had its title updated", catalogResult.hasCaptured());
     assertEquals("The mediapackage title should have been updated.", expectedTitle, mediapackageTitleResult.getValue());
     assertTrue("The catalog should have been created", catalogResult.hasCaptured());
+    assertTrue(captureStart.hasCaptured());
+    assertTrue(captureEnd.hasCaptured());
+    Assert.assertEquals(new Date(DateTimeSupport.fromUTC("2008-03-16T14:00:00Z")), captureStart.getValue());
+    Assert.assertEquals(new Date(DateTimeSupport.fromUTC("2008-03-16T14:01:00Z")), captureEnd.getValue());
+  }
+
+  private AuthorizationService setupAuthorizationService(MediaPackage mediapackage) {
+    // Setup Authorization Service
+    Tuple<MediaPackage, Attachment> returnValue = new Tuple<>(mediapackage, null);
+    AuthorizationService authorizationService = EasyMock.createMock(AuthorizationService.class);
+    EasyMock.expect(authorizationService.setAcl(EasyMock.anyObject(MediaPackage.class),
+            EasyMock.anyObject(AclScope.class), EasyMock.anyObject(AccessControlList.class))).andReturn(returnValue)
+            .anyTimes();
+    EasyMock.replay(authorizationService);
+    return authorizationService;
+  }
+
+  @Test
+  public void testAddAssetsToMp() throws org.json.simple.parser.ParseException, IOException, ConfigurationException, MediaPackageException, HandleException, IngestException, NotFoundException {
+    MediaPackage mediapackage = MediaPackageBuilderFactory.newInstance().newMediaPackageBuilder().createNew();
+    JSONArray assetMetadata =  (JSONArray) new JSONParser().parse("[{\"id\":\"attachment_attachment_notes\", "
+      + "\"title\": \"class handout notes\","
+      + "\"flavorType\": \"attachment\","
+      + "\"flavorSubType\": \"notes\","
+      + "\"type\": \"attachment\"}]");
+
+    // a test asset input stream
+    List<String> assetList = new LinkedList<String>();
+    assetList.add("attachment_attachment_notes");
+    MediaPackageElementFlavor elemflavor = new MediaPackageElementFlavor("attachment_attachment_notes", "*");
+    MediaPackageElementFlavor newElemflavor = new MediaPackageElementFlavor("attachment", "notes");
+
+    // Set up the mock Ingest Service's attachment
+    Attachment attachment = new AttachmentImpl();
+    attachment.setFlavor(elemflavor);
+    mediapackage.add(attachment);
+
+    // Run Test
+    IndexServiceImpl indexServiceImpl = new IndexServiceImpl();
+    indexServiceImpl.setIngestService(setupIngestService(mediapackage, Capture.<InputStream> newInstance()));
+    mediapackage = indexServiceImpl.updateMpAssetFlavor(assetList, mediapackage, assetMetadata, true);
+    assertTrue("The mediapackage attachment has the updated flavor", mediapackage.getAttachments(newElemflavor).length == 1);
   }
 
   @Test
@@ -588,7 +621,7 @@ public class IndexServiceImplTest {
     EasyMock.replay(workspace);
 
     // Create Common Event Catalog UI Adapter
-    CommonEventCatalogUIAdapter commonEventCatalogUIAdapter = setupCommonCatalogUIAdapter(workspace);
+    CommonEventCatalogUIAdapter commonEventCatalogUIAdapter = setupCommonCatalogUIAdapter(workspace).getA();
 
     // Setup mediapackage.
     MediaPackage mediapackage = EasyMock.createMock(MediaPackage.class);
@@ -612,35 +645,23 @@ public class IndexServiceImplTest {
     EasyMock.expectLastCall();
     EasyMock.replay(mediapackage);
 
-    // Setup ingest service.
-    IngestService ingestService = EasyMock.createMock(IngestService.class);
-    EasyMock.expect(ingestService.createMediaPackage()).andReturn(mediapackage);
-    EasyMock.expect(ingestService.addCatalog(EasyMock.anyObject(InputStream.class), EasyMock.anyObject(String.class),
-            EasyMock.anyObject(MediaPackageElementFlavor.class), EasyMock.anyObject(MediaPackage.class)))
-            .andReturn(mediapackage).anyTimes();
-    EasyMock.replay(ingestService);
-
-    // Setup Authorization Service
-    Tuple<MediaPackage, Attachment> returnValue = new Tuple<MediaPackage, Attachment>(mediapackage, null);
-    AuthorizationService authorizationService = EasyMock.createMock(AuthorizationService.class);
-    EasyMock.expect(authorizationService.setAcl(EasyMock.anyObject(MediaPackage.class),
-            EasyMock.anyObject(AclScope.class), EasyMock.anyObject(AccessControlList.class))).andReturn(returnValue);
-    EasyMock.replay(authorizationService);
-
     CaptureAgentStateService captureAgentStateService = setupCaptureAgentStateService();
 
     // Setup scheduler service
     Capture<Date> captureStart = EasyMock.newCapture();
     Capture<Date> captureEnd = EasyMock.newCapture();
     SchedulerService schedulerService = EasyMock.createNiceMock(SchedulerService.class);
-    EasyMock.expect(schedulerService.addEvent(EasyMock.anyObject(DublinCoreCatalog.class),
-            EasyMock.<Map<String, String>> anyObject())).andReturn(2L).atLeastOnce();
+    schedulerService.addEvent(EasyMock.capture(captureStart), EasyMock.capture(captureEnd), EasyMock.anyString(),
+            EasyMock.<Set<String>> anyObject(), EasyMock.anyObject(MediaPackage.class),
+            EasyMock.<Map<String, String>> anyObject(), EasyMock.<Map<String, String>> anyObject(),
+            EasyMock.<Opt<Boolean>> anyObject(), EasyMock.<Opt<String>> anyObject(), EasyMock.anyString());
+    EasyMock.expectLastCall().atLeastOnce();
     EasyMock.replay(schedulerService);
 
     // Run Test
     IndexServiceImpl indexServiceImpl = new IndexServiceImpl();
-    indexServiceImpl.setAuthorizationService(authorizationService);
-    indexServiceImpl.setIngestService(ingestService);
+    indexServiceImpl.setAuthorizationService(setupAuthorizationService(mediapackage));
+    indexServiceImpl.setIngestService(setupIngestService(mediapackage, Capture.<InputStream> newInstance()));
     indexServiceImpl.setCommonEventCatalogUIAdapter(commonEventCatalogUIAdapter);
     indexServiceImpl.addCatalogUIAdapter(commonEventCatalogUIAdapter);
     indexServiceImpl.setSecurityService(securityService);
@@ -660,6 +681,13 @@ public class IndexServiceImplTest {
     assertTrue("The mediapackage should have had its title updated", catalogResult.hasCaptured());
     assertEquals("The mediapackage title should have been updated.", expectedTitle, mediapackageTitleResult.getValue());
     assertTrue("The catalog should have been created", catalogResult.hasCaptured());
+    assertTrue(captureStart.hasCaptured());
+    assertTrue(captureEnd.hasCaptured());
+    List<Date> endDates = captureEnd.getValues();
+    int i = 0;
+    for (Date start : captureStart.getValues()) {
+      Assert.assertEquals(new Date(start.getTime() + 60000), endDates.get(i++));
+    }
   }
 
   /**
@@ -684,7 +712,7 @@ public class IndexServiceImplTest {
     EasyMock.expect(query.getOffset()).andReturn(0);
     EasyMock.replay(query);
 
-    SearchResult<Event> result = new SearchResultImpl<Event>(query, 0, 0);
+    SearchResult<Event> result = new SearchResultImpl<>(query, 0, 0);
 
     AbstractSearchIndex abstractIndex = EasyMock.createMock(AbstractSearchIndex.class);
     EasyMock.expect(abstractIndex.getByQuery(EasyMock.anyObject(EventSearchQuery.class))).andReturn(result);
@@ -715,8 +743,8 @@ public class IndexServiceImplTest {
     Event event = new Event();
     event.setTitle("Other Title");
     event.setDescription(expectedDescription);
-    SearchResultItemImpl<Event> searchResultItem = new SearchResultItemImpl<Event>(1.0, event);
-    SearchResultImpl<Event> result = new SearchResultImpl<Event>(query, 0, 0);
+    SearchResultItemImpl<Event> searchResultItem = new SearchResultItemImpl<>(1.0, event);
+    SearchResultImpl<Event> result = new SearchResultImpl<>(query, 0, 0);
     result.addResultItem(searchResultItem);
 
     AbstractSearchIndex abstractIndex = EasyMock.createMock(AbstractSearchIndex.class);
@@ -826,6 +854,8 @@ public class IndexServiceImplTest {
     eventProperties.load(in);
     in.close();
 
+    Dictionary<String, String> properties = PropertiesUtil.toDictionary(eventProperties);
+
     SecurityService securityService = EasyMock.createMock(SecurityService.class);
     EasyMock.expect(securityService.getOrganization()).andStubReturn(organization);
     EasyMock.replay(securityService);
@@ -842,7 +872,7 @@ public class IndexServiceImplTest {
 
     IndexServiceImpl indexServiceImpl = new IndexServiceImpl();
     CommonEventCatalogUIAdapter commonEventCatalogUIAdapter = new CommonEventCatalogUIAdapter();
-    commonEventCatalogUIAdapter.updated(eventProperties);
+    commonEventCatalogUIAdapter.updated(properties);
     indexServiceImpl.setCommonEventCatalogUIAdapter(commonEventCatalogUIAdapter);
     indexServiceImpl.setUserDirectoryService(userDirectoryService);
     indexServiceImpl.setSecurityService(securityService);
@@ -880,7 +910,7 @@ public class IndexServiceImplTest {
     mixedUserList.add(nonUser3);
     mixedUserList.add(user3.getUsername());
     MetadataField<Iterable<String>> mixedPresenters = createCreatorMetadataField(mixedUserList);
-    ArrayList<String> userFullNames = new ArrayList<String>();
+    ArrayList<String> userFullNames = new ArrayList<>();
     userFullNames.add(user1.getName());
     userFullNames.add(user2.getName());
     userFullNames.add(user3.getUsername());

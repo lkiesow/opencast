@@ -911,7 +911,7 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
   private Fn<JpaJob, JpaJob> fnSetJobUri() {
     return new Fn<JpaJob, JpaJob>() {
       @Override
-      public JpaJob ap(JpaJob job) {
+      public JpaJob apply(JpaJob job) {
         return setJobUri(job);
       }
     };
@@ -1132,17 +1132,16 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
       tx.begin();
       HostRegistrationJpaImpl existingHostRegistration = fetchHostRegistration(em, host);
       if (existingHostRegistration == null) {
-        throw new ServiceRegistryException("Host '" + host
-                + "' is not currently registered, so it can not be unregistered");
-      } else {
-        existingHostRegistration.setOnline(false);
-        for (ServiceRegistration serviceRegistration : getServiceRegistrationsByHost(host)) {
-          unRegisterService(serviceRegistration.getServiceType(), serviceRegistration.getHost());
-        }
-        em.merge(existingHostRegistration);
+        throw new IllegalArgumentException("Host '" + host + "' is not registered, so it can not be unregistered");
       }
+      existingHostRegistration.setOnline(false);
+      for (ServiceRegistration serviceRegistration : getServiceRegistrationsByHost(host)) {
+        unRegisterService(serviceRegistration.getServiceType(), serviceRegistration.getHost());
+      }
+      em.merge(existingHostRegistration);
       logger.info("Unregistering {}", host);
       tx.commit();
+      logger.info("Host {} unregistered", host);
       hostsStatistics.updateHost(existingHostRegistration);
     } catch (Exception e) {
       if (tx != null && tx.isActive()) {
@@ -2779,7 +2778,7 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
 
   private final Fn<HostRegistration, String> toBaseUrl = new Fn<HostRegistration, String>() {
     @Override
-    public String ap(HostRegistration h) {
+    public String apply(HostRegistration h) {
       return h.getBaseUrl();
     }
   };
@@ -3140,7 +3139,7 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
 
     private final Fn2<HostRegistration, Long, Boolean> filterOutPriorityHosts = new Fn2<HostRegistration, Long, Boolean>() {
       @Override
-      public Boolean ap(HostRegistration host, Long jobId) {
+      public Boolean apply(HostRegistration host, Long jobId) {
         if (dispatchPriorityList.values().contains(host.getBaseUrl())
                 && !host.getBaseUrl().equals(dispatchPriorityList.get(jobId))) {
           return false;
@@ -3151,14 +3150,14 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
 
     private final Fn<ServiceRegistration, HostRegistration> toHostRegistration = new Fn<ServiceRegistration, HostRegistration>() {
       @Override
-      public HostRegistration ap(ServiceRegistration s) {
+      public HostRegistration apply(ServiceRegistration s) {
         return ((ServiceRegistrationJpaImpl) s).getHostRegistration();
       }
     };
 
     private final Fn<HostRegistration, Float> toMaxLoad = new Fn<HostRegistration, Float>() {
       @Override
-      public Float ap(HostRegistration h) {
+      public Float apply(HostRegistration h) {
         return h.getMaxLoad();
       }
     };

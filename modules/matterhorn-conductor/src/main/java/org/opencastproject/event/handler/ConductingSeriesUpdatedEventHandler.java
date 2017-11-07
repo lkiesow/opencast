@@ -45,13 +45,13 @@ import java.util.concurrent.FutureTask;
  */
 public class ConductingSeriesUpdatedEventHandler {
 
-  private static final Logger logger = LoggerFactory.getLogger(SeriesUpdatedEventHandler.class);
+  private static final Logger logger = LoggerFactory.getLogger(ConductingSeriesUpdatedEventHandler.class);
   private static final String QUEUE_ID = "SERIES.Conductor";
 
   private SecurityService securityService;
   private MessageReceiver messageReceiver;
 
-  private ArchivePermissionsUpdatedEventHandler archivePermissionsUpdatedEventHandler;
+  private AssetManagerPermissionsUpdatedEventHandler assetManagerPermissionsUpdatedEventHandler;
   private SeriesUpdatedEventHandler seriesUpdatedEventHandler;
   private WorkflowPermissionsUpdatedEventHandler workflowPermissionsUpdatedEventHandler;
   private OaiPmhUpdatedEventHandler oaiPmhUpdatedEventHandler;
@@ -92,7 +92,7 @@ public class ConductingSeriesUpdatedEventHandler {
 
     @Override
     public void run() {
-      logger.info("Starting to listen for series update Messages");
+      logger.info("Starting to listen for series update messages");
       long counter = 0;
       while (listening) {
         future = messageReceiver.receiveSerializable(QUEUE_ID, MessageSender.DestinationType.Queue);
@@ -116,7 +116,7 @@ public class ConductingSeriesUpdatedEventHandler {
                   || SeriesItem.Type.UpdateAcl.equals(seriesItem.getType())
                   || SeriesItem.Type.Delete.equals(seriesItem.getType())) {
             seriesUpdatedEventHandler.handleEvent(seriesItem);
-            archivePermissionsUpdatedEventHandler.handleEvent(seriesItem);
+            assetManagerPermissionsUpdatedEventHandler.handleEvent(seriesItem);
             workflowPermissionsUpdatedEventHandler.handleEvent(seriesItem);
             // the OAI-PMH handler is a dynamic dependency
             if (oaiPmhUpdatedEventHandler != null) {
@@ -137,14 +137,14 @@ public class ConductingSeriesUpdatedEventHandler {
           securityService.setUser(null);
         }
       }
-      logger.info("Stopping listening for series update Messages");
+      logger.info("Stopping listening for series update messages");
     }
 
   }
 
   /** OSGi DI callback. */
-  public void setArchivePermissionsUpdatedEventHandler(ArchivePermissionsUpdatedEventHandler h) {
-    this.archivePermissionsUpdatedEventHandler = h;
+  public void setAssetManagerPermissionsUpdatedEventHandler(AssetManagerPermissionsUpdatedEventHandler h) {
+    this.assetManagerPermissionsUpdatedEventHandler = h;
   }
 
   /** OSGi DI callback. */

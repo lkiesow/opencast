@@ -59,6 +59,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URI;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Dictionary;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -131,6 +132,18 @@ public class WaveformServiceImpl extends AbstractJobProducer implements Waveform
   /** The key to look for in the service configuration file to override the DEFAULT_WAVEFORM_COLOR */
   public static final String WAVEFORM_COLOR_CONFIG_KEY = "waveform.color";
 
+  /** The default filter to be optionally prepended to the showwavespic filter */
+  public static final String DEFAULT_WAVEFORM_FILTER_PRE = null;
+
+  /** The key to look for in the service configuration file to override the DEFAULT_WAVEFORM_FILTER_PRE */
+  public static final String WAVEFORM_FILTER_PRE_CONFIG_KEY = "waveform.filter.pre";
+
+  /** The default filter to be optionally appended to the showwavespic filter */
+  public static final String DEFAULT_WAVEFORM_FILTER_POST = null;
+
+  /** The key to look for in the service configuration file to override the DEFAULT_WAVEFORM_FILTER_POST */
+  public static final String WAVEFORM_FILTER_POST_CONFIG_KEY = "waveform.filter.post";
+
   /** Resulting collection in the working file repository */
   public static final String COLLECTION_ID = "waveform";
 
@@ -163,6 +176,12 @@ public class WaveformServiceImpl extends AbstractJobProducer implements Waveform
 
   /** The waveform colors per audio channel */
   private String[] waveformColor = DEFAULT_WAVEFORM_COLOR;
+
+  /** Filter to be prepended to the showwavespic filter */
+  private String waveformFilterPre = DEFAULT_WAVEFORM_FILTER_PRE;
+
+  /** Filter to be appended to the showwavespic filter */
+  private String waveformFilterPost = DEFAULT_WAVEFORM_FILTER_POST;
 
   /** Reference to the service registry */
   private ServiceRegistry serviceRegistry = null;
@@ -264,6 +283,20 @@ public class WaveformServiceImpl extends AbstractJobProducer implements Waveform
         waveformColor = StringUtils.split(colorValue, ", |:;");
       }
     }
+
+    val = properties.get(WAVEFORM_FILTER_PRE_CONFIG_KEY);
+    if (val != null) {
+      waveformFilterPre = StringUtils.trimToNull((String) val);
+    } else {
+      waveformFilterPre = null;
+    }
+
+    val = properties.get(WAVEFORM_FILTER_POST_CONFIG_KEY);
+    if (val != null) {
+      waveformFilterPost = StringUtils.trimToNull((String) val);
+    } else {
+      waveformFilterPost = null;
+    }
   }
 
   /**
@@ -275,7 +308,7 @@ public class WaveformServiceImpl extends AbstractJobProducer implements Waveform
   public Job createWaveformImage(Track sourceTrack) throws MediaPackageException, WaveformServiceException {
     try {
       return serviceRegistry.createJob(jobType, Operation.Waveform.toString(),
-              Arrays.asList(MediaPackageElementParser.getAsXml(sourceTrack)), waveformJobLoad);
+              Collections.singletonList(MediaPackageElementParser.getAsXml(sourceTrack)), waveformJobLoad);
     } catch (ServiceRegistryException ex) {
       throw new WaveformServiceException("Unable to create waveform job", ex);
     }
@@ -299,10 +332,8 @@ public class WaveformServiceImpl extends AbstractJobProducer implements Waveform
           Attachment waveformMpe = extractWaveform(track);
           return MediaPackageElementParser.getAsXml(waveformMpe);
         default:
-          throw new IllegalStateException("Don't know how to handle operation '" + operation + "'");
+          throw new ServiceRegistryException("This service can't handle operations of type '" + op + "'");
       }
-    } catch (IllegalArgumentException e) {
-      throw new ServiceRegistryException("This service can't handle operations of type '" + op + "'", e);
     } catch (IndexOutOfBoundsException e) {
       throw new ServiceRegistryException("This argument list for operation '" + op + "' does not meet expectations", e);
     } catch (MediaPackageException | WaveformServiceException e) {
@@ -323,7 +354,7 @@ public class WaveformServiceImpl extends AbstractJobProducer implements Waveform
     }
 
     // copy source file into workspace
-    File mediaFile = null;
+    File mediaFile;
     try {
       mediaFile = workspace.get(track.getURI());
     } catch (NotFoundException e) {
@@ -334,16 +365,17 @@ public class WaveformServiceImpl extends AbstractJobProducer implements Waveform
           "Error reading the media file in the workspace", e);
     }
 
-    String waveformFilePath = FilenameUtils.removeExtension(mediaFile.getAbsolutePath()).concat("_waveform.png");
+    String waveformFilePath = FilenameUtils.removeExtension(mediaFile.getAbsolutePath())
+            .concat('-' + track.getIdentifier()).concat("-waveform.png");
 
     // create ffmpeg command
     String[] command = new String[] {
       binary,
       "-nostats",
-      "-i", mediaFile.getAbsolutePath().replaceAll(" ", "\\ "),
+      "-i", mediaFile.getAbsolutePath(),
       "-lavfi", createWaveformFilter(track),
       "-an", "-vn", "-sn", "-y",
-      waveformFilePath.replaceAll(" ", "\\ ")
+      waveformFilePath
     };
     logger.debug("Start waveform ffmpeg process: {}", StringUtils.join(command, " "));
     logger.info("Create waveform image file for track '{}' at {}", track.getIdentifier(), waveformFilePath);
@@ -386,12 +418,12 @@ public class WaveformServiceImpl extends AbstractJobProducer implements Waveform
 
     // put waveform image into workspace
     FileInputStream waveformFileInputStream = null;
-    URI waveformFileUri = null;
+    URI waveformFileUri;
     try {
       waveformFileInputStream = new FileInputStream(waveformFilePath);
       waveformFileUri = workspace.putInCollection(COLLECTION_ID,
               FilenameUtils.getName(waveformFilePath), waveformFileInputStream);
-      logger.info("Copied the created waveform to the workspace {}", waveformFileUri.toString());
+      logger.info("Copied the created waveform to the workspace {}", waveformFileUri);
     } catch (FileNotFoundException ex) {
       throw new WaveformServiceException(String.format("Waveform image file '%s' not found", waveformFilePath), ex);
     } catch (IOException ex) {
@@ -421,7 +453,12 @@ public class WaveformServiceImpl extends AbstractJobProducer implements Waveform
    * @return ffmpeg filter parameter
    */
   private String createWaveformFilter(Track track) {
-    StringBuilder filterBuilder = new StringBuilder("showwavespic=");
+    StringBuilder filterBuilder = new StringBuilder("");
+    if (waveformFilterPre != null) {
+      filterBuilder.append(waveformFilterPre);
+      filterBuilder.append(",");
+    }
+    filterBuilder.append("showwavespic=");
     filterBuilder.append("split_channels=");
     filterBuilder.append(waveformSplitChannels ? 1 : 0);
     filterBuilder.append(":s=");
@@ -432,6 +469,10 @@ public class WaveformServiceImpl extends AbstractJobProducer implements Waveform
     filterBuilder.append(waveformScale);
     filterBuilder.append(":colors=");
     filterBuilder.append(StringUtils.join(Arrays.asList(waveformColor), "|"));
+    if (waveformFilterPost != null) {
+      filterBuilder.append(",");
+      filterBuilder.append(waveformFilterPost);
+    }
     return filterBuilder.toString();
   }
 

@@ -39,6 +39,7 @@
                 </div>
             </div>
         </div>
+        <div data-admin-ng-notifications="" type="warning" show="submitButton" context="video-editor-event-access"></div>
         <div class="tab-menu">
             <nav class="view-controller">
                 <a ng-class="{active: tab === 'playback'}"
@@ -216,6 +217,7 @@
 
             </div>
 
+            <div data-admin-ng-notifications="" type="warning" show="submitButton" context="video-editor-event-access"></div>
             <div class="video-editor-actions-toolbar">
                 <div class="video-nav-controls">
                     <a class="return-button" ng-click="navigateTo('/events/events')" translate>VIDEO_TOOL.BUTTONS.CLOSE</a>
@@ -230,8 +232,11 @@
                             ng-model="video.workflow"
                             ng-options="workflow.id as workflow.name for workflow in video.workflows" />
 
-                        <a ng-click="submit()" ng-class="{disabled: submitButton}" class="save-and-close-button">
-                            {{ video.workflow ? 'VIDEO_TOOL.BUTTONS.PROCESS' : 'VIDEO_TOOL.BUTTONS.SAVE' | translate }}
+                        <a ng-click="submit()"
+                           ng-class="{disabled: submitButton}"
+                           class="save-and-close-button"
+                           translate="{{ video.workflow ? 'VIDEO_TOOL.BUTTONS.PROCESS' : 'VIDEO_TOOL.BUTTONS.SAVE' }}">
+                          <!-- Save and Continue -->
                         </a>
                     </div>
                 </div>

@@ -24,14 +24,16 @@
 angular.module('adminNg.controllers')
 .controller('EventCtrl', [
     '$scope', 'Notifications', 'EventTransactionResource', 'EventMetadataResource', 'EventAssetsResource',
-    'EventCatalogsResource', 'CommentResource', 'EventWorkflowsResource',
+    'EventCatalogsResource', 'CommentResource', 'EventWorkflowsResource', 'EventWorkflowActionResource',
     'ResourcesListResource', 'UserRolesResource', 'EventAccessResource', 'EventGeneralResource',
-    'OptoutsResource', 'EventParticipationResource', 'NewEventProcessingResource',
+    'OptoutsResource', 'EventParticipationResource', 'EventSchedulingResource', 'NewEventProcessingResource',
     'OptoutSingleResource', 'CaptureAgentsResource', 'ConflictCheckResource', 'Language', 'JsHelper', '$sce', '$timeout', 'EventHelperService',
+    'UploadAssetOptions', 'EventUploadAssetResource', 'Table',
     function ($scope, Notifications, EventTransactionResource, EventMetadataResource, EventAssetsResource, EventCatalogsResource, CommentResource,
-        EventWorkflowsResource, ResourcesListResource, UserRolesResource, EventAccessResource, EventGeneralResource,
-        OptoutsResource, EventParticipationResource, NewEventProcessingResource,
-        OptoutSingleResource, CaptureAgentsResource, ConflictCheckResource, Language, JsHelper, $sce, $timeout, EventHelperService) {
+        EventWorkflowsResource, EventWorkflowActionResource, ResourcesListResource, UserRolesResource, EventAccessResource, EventGeneralResource,
+        OptoutsResource, EventParticipationResource, EventSchedulingResource, NewEventProcessingResource,
+        OptoutSingleResource, CaptureAgentsResource, ConflictCheckResource, Language, JsHelper, $sce, $timeout, EventHelperService, UploadAssetOptions,
+        EventUploadAssetResource, Table) {
 
         var roleSlice = 100;
         var roleOffset = 0;
@@ -190,11 +192,13 @@ angular.module('adminNg.controllers')
                       if (!angular.isUndefined(me.transactionNotification)) {
                           Notifications.remove(me.transactionNotification, NOTIFICATION_CONTEXT);
                       }
-                      me.transactionNotification = Notifications.add('warning', 'ACTIVE_TRANSACTION', NOTIFICATION_CONTEXT, 3000);
+                      me.transactionNotification = Notifications.add('warning', 'ACTIVE_TRANSACTION', NOTIFICATION_CONTEXT);
+                      $scope.$emit('ACTIVE_TRANSACTION');
                     } else {
                       if (!angular.isUndefined(me.transactionNotification)) {
                           Notifications.remove(me.transactionNotification, NOTIFICATION_CONTEXT);
                       }
+                      $scope.$emit('NO_ACTIVE_TRANSACTION');
                     }
                 });
 
@@ -211,8 +215,8 @@ angular.module('adminNg.controllers')
                             roles[key] = key;
                         }
                     }, this);
-		            return roles;
-		        });
+                    return roles;
+                });
               }, this);
             },
             fetchChildResources = function (id) {
@@ -272,6 +276,67 @@ angular.module('adminNg.controllers')
                     }
                 });
 
+                //<===============================
+                // Enable asset upload (catalogs and attachments) to existing events
+
+                // Retrieve option configuration for asset upload
+                UploadAssetOptions.getOptionsPromise().then(function(data){
+                    if (data) {
+                        $scope.assetUploadWorkflowDefId = data.workflow;
+                        $scope.uploadAssetOptions = [];
+                        // Filter out asset options of type "track".
+                        // Not allowing tracks to be added to existing mediapackages
+                        // for this iteration of the upload option feature.
+                        // TODO: consider enabling track uploads to existing mps.
+                        angular.forEach(data.options, function(option) {
+                          if (option.type !== 'track') {
+                             $scope.uploadAssetOptions.push(option);
+                          }
+                        });
+                        // if no asset options, undefine the option variable
+                        $scope.uploadAssetOptions = $scope.uploadAssetOptions.length > 0 ? $scope.uploadAssetOptions : undefined;
+                        $scope.newAssets = {};
+                    }
+                });
+                $scope.saveAssetsKeyUp = function (event) {
+                    if (event.keyCode === 13 || event.keyCode === 32) {
+                        $scope.saveAssets();
+                    }
+                };
+
+                // Save and start upload asset request and workflow
+                $scope.saveAssets = function() {
+                    // The transaction becomes read-only if a workflow is running for this event.
+                    // Ref endpoint hasActiveTransaction(@PathParam("eventId") String eventId)
+                    if ($scope.transactions.read_only) {
+                        me.transactionNotification = Notifications.add('warning', 'ACTIVE_TRANSACTION', NOTIFICATION_CONTEXT, 3000);
+                        return;
+                    }
+                    // Verify there are assets to upload
+                    if (angular.equals($scope.newAssets, {})) {
+                        return;
+                    }
+                    var userdata = { metadata: {}};
+
+                    // save metadata map (contains flavor mapping used by the server)
+                    userdata.metadata["assets"] = ($scope.uploadAssetOptions);
+
+                    // save file assets (passed in a separate request field from its metadata map)
+                    userdata["upload-asset"] = $scope.newAssets;
+
+                    // save workflow definition id (defined in the asset upload configuration provided-list)
+                    userdata["workflow"] = $scope.assetUploadWorkflowDefId;
+
+                    EventUploadAssetResource.save({id: $scope.resourceId }, userdata, function (data) {
+                        me.transactionNotification = Notifications.add('success', 'EVENTS_CREATED', NOTIFICATION_CONTEXT, 6000);
+                        $scope.openTab('assets');
+                        }, function () {
+                        me.transactionNotification = Notifications.add('error', 'EVENTS_NOT_CREATED', NOTIFICATION_CONTEXT, 6000);
+                        $scope.openTab('assets');
+                    });
+                };
+                // <==========================
+
                 $scope.acls = ResourcesListResource.get({ resource: 'ACL' });
                 $scope.actions = {};
                 $scope.hasActions = false;
@@ -305,6 +370,31 @@ angular.module('adminNg.controllers')
                             setWorkflowConfig();
                         });
                     }
+                });
+
+                $scope.source = EventSchedulingResource.get({ id: id }, function (source) {
+                    source.presenters = angular.isArray(source.presenters) ? source.presenters.join(', ') : '';
+                    $scope.scheduling.hasProperties = true;
+                    CaptureAgentsResource.query({inputs: true}).$promise.then(function (data) {
+                        $scope.captureAgents = data.rows;
+                        angular.forEach(data.rows, function (agent) {
+                            var inputs;
+                            if (agent.id === $scope.source.agentId) {
+                                source.device = agent;
+                                // Retrieve agent inputs configuration
+                                var dev = ((source.metadata || {}).agentConfiguration || {})['capture.device.names'];
+                                if (angular.isDefined(dev)) {
+                                    inputs = dev.split(',');
+                                    source.device.inputMethods = {};
+                                    angular.forEach(inputs, function (input) {
+                                        source.device.inputMethods[input] = true;
+                                    });
+                                }
+                            }
+                        });
+                    });
+                }, function () {
+                   $scope.scheduling.hasProperties = false;
                 });
 
                 $scope.access = EventAccessResource.get({ id: id }, function (data) {
@@ -422,15 +512,20 @@ angular.module('adminNg.controllers')
                     }
 
                     $scope.source.agentId = $scope.source.device.id;
-                    $scope.source.agentConfiguration['capture.device.names'] = '';
+                    $scope.source.metadata.agentConfiguration['capture.device.names'] = '';
 
                     angular.forEach($scope.source.device.inputMethods, function (value, key) {
                         if (value) {
-                            if ($scope.source.agentConfiguration['capture.device.names'] !== '') {
-                                $scope.source.agentConfiguration['capture.device.names'] += ',';
+                            if ($scope.source.metadata.agentConfiguration['capture.device.names'] !== '') {
+                                $scope.source.metadata.agentConfiguration['capture.device.names'] += ',';
                             }
-                            $scope.source.agentConfiguration['capture.device.names'] += key;
+                            $scope.source.metadata.agentConfiguration['capture.device.names'] += key;
                         }
+                    });
+
+                    EventSchedulingResource.save({
+                        id: $scope.resourceId,
+                        entries: $scope.source
                     });
                 }, me.conflictsDetected);
             }
@@ -715,12 +810,12 @@ angular.module('adminNg.controllers')
         };
 
         $scope.comment = function () {
-        	$scope.myComment.saving = true;
+            $scope.myComment.saving = true;
             CommentResource.save({ resource: 'event', resourceId: $scope.resourceId, type: 'comment' },
                 { text: $scope.myComment.text, reason: $scope.myComment.reason },
                 function () {
-                	$scope.myComment.saving = false;
-                	$scope.myComment.text = '';
+                    $scope.myComment.saving = false;
+                    $scope.myComment.text = '';
 
                     $scope.comments = CommentResource.query({
                         resource: 'event',
@@ -728,18 +823,18 @@ angular.module('adminNg.controllers')
                         type: 'comments'
                     });
                 }, function () {
-                	$scope.myComment.saving = false;
+                    $scope.myComment.saving = false;
                 }
             );
         };
 
         $scope.reply = function () {
-        	$scope.myComment.saving = true;
+            $scope.myComment.saving = true;
             CommentResource.save({ resource: 'event', resourceId: $scope.resourceId, id: $scope.replyToId, type: 'comment', reply: 'reply' },
                 { text: $scope.myComment.text, resolved: $scope.myComment.resolved },
                 function () {
-                	$scope.myComment.saving = false;
-                	$scope.myComment.text = '';
+                    $scope.myComment.saving = false;
+                    $scope.myComment.text = '';
 
                     $scope.comments = CommentResource.query({
                         resource: 'event',
@@ -747,7 +842,7 @@ angular.module('adminNg.controllers')
                         type: 'comments'
                     });
                 }, function () {
-                	$scope.myComment.saving = false;
+                    $scope.myComment.saving = false;
                 }
 
             );
@@ -755,11 +850,11 @@ angular.module('adminNg.controllers')
         };
 
         this.accessSaved = function () {
-          Notifications.add('info', 'SAVED_ACL_RULES', NOTIFICATION_CONTEXT, 5000);
+          Notifications.add('info', 'SAVED_ACL_RULES', NOTIFICATION_CONTEXT);
         };
 
         this.accessNotSaved = function () {
-          Notifications.add('error', 'ACL_NOT_SAVED', NOTIFICATION_CONTEXT, 30000);
+          Notifications.add('error', 'ACL_NOT_SAVED', NOTIFICATION_CONTEXT);
 
           $scope.access = EventAccessResource.get({ id: $scope.resourceId }, function (data) {
               if (angular.isDefined(data.episode_access)) {
@@ -891,6 +986,16 @@ angular.module('adminNg.controllers')
             $scope.modal_close();
         };
         checkForActiveTransactions();
+        
+        $scope.workflowAction = function (wfId, action) {
+        	EventWorkflowActionResource.save({id: $scope.resourceId, wfId: wfId, action: action}, function () {
+                Notifications.add('success', 'EVENTS_PROCESSING_ACTION_' + action);
+                $scope.modal_close();
+            }, function () {
+                Notifications.add('error', 'EVENTS_PROCESSING_ACTION_' + action);
+                $scope.modal_close();
+            });
+        };
 
         $scope.setCaptureAgents = function(locationIndex) {
             var agentCollection = {};
@@ -911,7 +1016,7 @@ angular.module('adminNg.controllers')
                         .collection = agentCollection;
                     $scope.setSourceFields($scope.episodeCatalog);
                 });
-        
+
         }
     }
 ]);

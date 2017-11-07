@@ -21,11 +21,11 @@
 
 package org.opencastproject.adminui.endpoint;
 
+import static com.entwinemedia.fn.Stream.$;
+import static com.entwinemedia.fn.data.json.Jsons.arr;
 import static com.entwinemedia.fn.data.json.Jsons.f;
-import static com.entwinemedia.fn.data.json.Jsons.j;
-import static com.entwinemedia.fn.data.json.Jsons.jsonArrayFromList;
+import static com.entwinemedia.fn.data.json.Jsons.obj;
 import static com.entwinemedia.fn.data.json.Jsons.v;
-import static com.entwinemedia.fn.data.json.Jsons.vN;
 import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
 import static javax.servlet.http.HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
 import static javax.servlet.http.HttpServletResponse.SC_NOT_FOUND;
@@ -39,6 +39,7 @@ import static org.apache.commons.lang3.StringUtils.trimToNull;
 import static org.opencastproject.index.service.util.RestUtils.notFound;
 import static org.opencastproject.index.service.util.RestUtils.okJson;
 import static org.opencastproject.index.service.util.RestUtils.okJsonList;
+import static org.opencastproject.util.DateTimeSupport.toUTC;
 import static org.opencastproject.util.RestUtil.R.badRequest;
 import static org.opencastproject.util.RestUtil.R.conflict;
 import static org.opencastproject.util.RestUtil.R.notFound;
@@ -89,7 +90,6 @@ import org.opencastproject.security.api.UnauthorizedException;
 import org.opencastproject.series.api.SeriesException;
 import org.opencastproject.series.api.SeriesService;
 import org.opencastproject.systems.MatterhornConstants;
-import org.opencastproject.util.DateTimeSupport;
 import org.opencastproject.util.NotFoundException;
 import org.opencastproject.util.RestUtil;
 import org.opencastproject.util.UrlSupport;
@@ -104,8 +104,10 @@ import org.opencastproject.workflow.api.ConfiguredWorkflowRef;
 import org.opencastproject.workflow.api.WorkflowInstance;
 
 import com.entwinemedia.fn.data.Opt;
-import com.entwinemedia.fn.data.json.JField;
+import com.entwinemedia.fn.data.json.Field;
 import com.entwinemedia.fn.data.json.JValue;
+import com.entwinemedia.fn.data.json.Jsons;
+import com.entwinemedia.fn.data.json.Jsons.Functions;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
@@ -284,7 +286,7 @@ public class SeriesEndpoint {
 
     Series series = optSeries.get();
 
-    return okJson(j(f("opt_out", v(series.isOptedOut()))));
+    return okJson(obj(f("opt_out", v(series.isOptedOut()))));
   }
 
   @PUT
@@ -693,19 +695,19 @@ public class SeriesEndpoint {
 
       List<JValue> series = new ArrayList<>();
       for (SearchResultItem<Series> item : result.getItems()) {
-        List<JField> fields = new ArrayList<>();
+        List<Field> fields = new ArrayList<>();
         Series s = item.getSource();
         String sId = s.getIdentifier();
         fields.add(f("id", v(sId)));
         fields.add(f("optedOut", v(s.isOptedOut())));
-        fields.add(f("title", vN(s.getTitle())));
-        fields.add(f("organizers", jsonArrayFromList(s.getOrganizers())));
-        fields.add(f("contributors", jsonArrayFromList(s.getContributors())));
+        fields.add(f("title", v(s.getTitle(), Jsons.BLANK)));
+        fields.add(f("organizers", arr($(s.getOrganizers()).map(Functions.stringToJValue))));
+        fields.add(f("contributors", arr($(s.getContributors()).map(Functions.stringToJValue))));
         if (s.getCreator() != null) {
           fields.add(f("createdBy", v(s.getCreator())));
         }
         if (s.getCreatedDateTime() != null) {
-          fields.add(f("creation_date", vN(DateTimeSupport.toUTC(s.getCreatedDateTime().getTime()))));
+          fields.add(f("creation_date", v(toUTC(s.getCreatedDateTime().getTime()), Jsons.BLANK)));
         }
         if (s.getLanguage() != null) {
           fields.add(f("language", v(s.getLanguage())));
@@ -719,7 +721,7 @@ public class SeriesEndpoint {
         if (StringUtils.isNotBlank(s.getManagedAcl())) {
           fields.add(f("managedAcl", v(s.getManagedAcl())));
         }
-        series.add(j(fields));
+        series.add(obj(fields));
       }
       logger.debug("Request done");
 
@@ -868,7 +870,7 @@ public class SeriesEndpoint {
    * @return A {@link Response} with the theme id and name as json contents
    */
   private Response getSimpleThemeJsonResponse(Theme theme) {
-    return okJson(j(f(Long.toString(theme.getIdentifier()), v(theme.getName()))));
+    return okJson(obj(f(Long.toString(theme.getIdentifier()), v(theme.getName()))));
   }
 
   @GET
@@ -892,7 +894,7 @@ public class SeriesEndpoint {
 
     // If no theme is set return empty JSON
     if (themeId == null)
-      return okJson(j());
+      return okJson(obj());
 
     try {
       Opt<Theme> themeOpt = getTheme(themeId);

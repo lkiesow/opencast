@@ -22,7 +22,9 @@
         <a ng-click="openTab('assets')" data-modal-tab="assets" ng-class="{ active: tab == 'assets' }" translate="EVENTS.EVENTS.DETAILS.TABS.ASSETS" with-role="ROLE_UI_EVENTS_DETAILS_ASSETS_VIEW">
             <!-- Assets -->
         </a>
-<!--        <a ng-click="openTab('scheduling')" data-modal-tab="scheduling" ng-class="{ active: tab == 'scheduling' }" translate="EVENTS.EVENTS.DETAILS.TABS.SCHEDULING" with-role="ROLE_UI_EVENTS_DETAILS_SCHEDULING_VIEW">Scheduling</a> -->
+        <a ng-click="openTab('scheduling')" data-modal-tab="scheduling" ng-class="{ active: tab == 'scheduling' }" translate="EVENTS.EVENTS.DETAILS.TABS.SCHEDULING" with-role="ROLE_UI_EVENTS_DETAILS_SCHEDULING_VIEW" ng-if="scheduling.hasProperties">
+            <!-- Scheduling -->
+        </a>
         <a ng-click="openTab('workflows')" data-modal-tab="workflows" ng-class="{ active: tab == 'workflows' }" translate="EVENTS.EVENTS.DETAILS.TABS.WORKFLOWS" with-role="ROLE_UI_EVENTS_DETAILS_WORKFLOWS_VIEW">
             <!-- Workflows -->
         </a>
@@ -122,7 +124,10 @@
                                 <tr>
                                     <th translate="EVENTS.EVENTS.DETAILS.ASSETS.TYPE"><!-- Type --></th>
                                     <th translate="EVENTS.EVENTS.DETAILS.ASSETS.SIZE"><!-- Size --></th>
-                                    <th class="medium"></th>
+                                    <th class="medium">
+                                      <a translate="EVENTS.EVENTS.NEW.UPLOAD_ASSET.ADD" class="details-link" ng-show="(uploadAssetOptions && !transactions.read_only)" ng-click="openSubTab('newAssetUpload', 'EventAttachmentsResource', 'newassetupload', false, true)">
+                                      </a>
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -185,7 +190,7 @@
                 <!-- Scheduling configuration -->
                 <div class="obj tbl-details" ng-if="scheduling.hasProperties">
                     <header>
-                        <span translate="EVENTS.EVENTS.DETAILS.HEADER">
+                        <span translate="EVENTS.EVENTS.DETAILS.SCHEDULING.CAPTION">
                             <!-- Scheduling configuration -->
                         </span>
                     </header>
@@ -288,15 +293,15 @@
 
                 </div>
 
-                <!-- Participation status -->
+                <!-- Participation status: Uncomment once participation management comes in
                 <div class="obj">
                     <header translate="EVENTS.EVENTS.DETAILS.SCHEDULING.CAPTION">
-                        <!-- Participation Status -->
+                        Participation Status
                     </header>
                     <div class="obj-container padded">
                         <p>
                             <span translate="EVENTS.EVENTS.DETAILS.SCHEDULING.REVIEW_STATUS.CAPTION">
-                                <!-- Review status -->
+                                Review status
                             </span>
                             : {{ participation.review_status }}
                         </p>
@@ -304,19 +309,19 @@
                             <div class="row">
                                 <input type="radio" name="execute-toggle" id="executeNow-toggle" ng-disabled="participation.read_only || transactions.read_only" ng-model="participation.opt_out" ng-change="updateOptout(false)" value="false" >
                                 <label translate="EVENTS.EVENTS.DETAILS.SCHEDULING.OPTEDOUT.READY" for="executeNow-toggle">
-                                    <!-- Ready for recording -->
+                                    Ready for recording
                                 </label>
                             </div>
                             <div class="row">
                                 <input type="radio" name="execute-toggle" id="executeLater-toggle" ng-disabled="participation.read_only || transactions.read_only" ng-model="participation.opt_out" ng-change="updateOptout(true)" value="true" >
                                 <label translate="EVENTS.EVENTS.DETAILS.SCHEDULING.OPTEDOUT.OPTEDOUT" for="executeLater-toggle">
-                                    <!-- Opted out -->
+                                    Opted out
                                 </label>
                             </div>
                         </div>
                     </div>
                 </div>
-
+                -->
             </div>
         </div>
     </div>
@@ -337,8 +342,9 @@
                                             <th translate="EVENTS.EVENTS.DETAILS.WORKFLOWS.TYPE"><!-- Type --></th>
                                             <th translate="EVENTS.EVENTS.DETAILS.WORKFLOWS.STATE"><!-- State --></th>
                                             <th translate="EVENTS.EVENTS.DETAILS.WORKFLOWS.SUBMITTED">
-                                                <!-- Submitted -->
+                                            <!-- Submitted -->
                                             </th>
+                                            <th translate="EVENTS.EVENTS.DETAILS.WORKFLOWS.ACTIONS" ng-if="$root.userIs('ROLE_UI_EVENTS_DETAILS_WORKFLOWS_EDIT')" class="fit"><!-- Actions --></th>
                                             <th class="medium"></th>
                                         </tr>
                                     </thead>
@@ -348,6 +354,12 @@
                                             <td>{{ item.workflow }}</td>
                                             <td>{{ item.status }}</td>
                                             <td>{{ item.submitted | localizeDate : 'dateTime' : 'medium' }}</td>
+                                            <td ng-if="$root.userIs('ROLE_UI_EVENTS_DETAILS_WORKFLOWS_EDIT')" >
+                                                <a ng-show="item.status == 'PAUSED'" ng-click="workflowAction(item.id, 'NONE')" class="fa fa-hand-stop-o fa-fw" style="color:red"><!-- Abort -->
+                                                </a>           
+                                                <a ng-show="item.status == 'PAUSED'" ng-click="workflowAction(item.id, 'RETRY')" class="fa fa-refresh fa-fw"><!-- Retry -->
+                                                </a>
+                                            </td>
                                             <td>
                                                 <a class="details-link" ng-click="openSubTab('workflow-details', 'EventWorkflowDetailsResource', item.id)" translate="EVENTS.EVENTS.DETAILS.MEDIA.DETAILS">
                                                     <!-- Details -->
@@ -804,6 +816,29 @@
                </div>
            </div>
         </div>
+    </div>
+    <div class="modal-content" data-modal-tab-content="newAssetUpload" data-parent="assets" data-level="2" data-label="EVENTS.EVENTS.NEW.UPLOAD_ASSET.ADD">
+      <div class="modal-body">
+        <div data-admin-ng-notifications="" context="events-access"></div>
+        <div class="full-col">
+          <div class="obj tbl-container operations-tbl">
+            <header translate="EVENTS.EVENTS.NEW.UPLOAD_ASSET.ADD"><!-- Attachments --></header>
+            <div class="obj-container">
+              <!-- Note: attributes passed to the upload Directive cannot be cammel cased or contain dashes -->
+              <div admin-ng-upload-asset assetoptions="uploadAssetOptions" filebindcontainer="newAssets" >
+                <!-- init "assetoptions" for content transcluded by the asset upload directive -->
+              </div>
+              <footer>
+                <a ng-click="saveAssets()" ng-keyup="saveAssetsKeyUp($event)"
+                  data-modal-tab="next" class="submit" tabindex="100"
+                  ng-class="active">
+                  {{ "EVENTS.EVENTS.NEW.UPLOAD_ASSET.ADD" | translate}}
+                </a>
+              </footer>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="modal-content" data-modal-tab-content="attachments" data-parent="assets" data-level="2" data-label="EVENTS.EVENTS.DETAILS.ASSETS.ATTACHMENTS.TITLE">

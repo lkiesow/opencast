@@ -311,7 +311,7 @@ public class EventCommentDatabaseServiceImpl extends AbstractIndexProducer imple
                   return (v1 ^ v2) ? ((v1 ^ false) ? 1 : -1) : 0;
                 }
               }).value();
-      return new ArrayList<EventComment>(comments);
+      return new ArrayList<>(comments);
     } catch (Exception e) {
       logger.error("Could not retreive comments for event {}: {}", eventId, ExceptionUtils.getStackTrace(e));
       throw new EventCommentDatabaseException(e);
@@ -360,14 +360,14 @@ public class EventCommentDatabaseServiceImpl extends AbstractIndexProducer imple
 
   private static final Fn<EventComment, Boolean> filterOpenComments = new Fn<EventComment, Boolean>() {
     @Override
-    public Boolean ap(EventComment comment) {
+    public Boolean apply(EventComment comment) {
       return !comment.isResolvedStatus();
     }
   };
 
   private static final Fn<EventComment, Boolean> filterNeedsCuttingComment = new Fn<EventComment, Boolean>() {
     @Override
-    public Boolean ap(EventComment comment) {
+    public Boolean apply(EventComment comment) {
       return EventComment.REASON_NEEDS_CUTTING.equals(comment.getReason()) && !comment.isResolvedStatus();
     }
   };
@@ -427,6 +427,21 @@ public class EventCommentDatabaseServiceImpl extends AbstractIndexProducer imple
   @Override
   public String getClassName() {
     return EventCommentDatabaseServiceImpl.class.getName();
+  }
+
+  @Override
+  public MessageSender getMessageSender() {
+    return messageSender;
+  }
+
+  @Override
+  public SecurityService getSecurityService() {
+    return securityService;
+  }
+
+  @Override
+  public String getSystemUserName() {
+    return SecurityUtil.getSystemUserName(cc);
   }
 
 }
