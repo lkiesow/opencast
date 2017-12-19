@@ -24,7 +24,6 @@ import static com.entwinemedia.fn.Equality.eq;
 import static com.entwinemedia.fn.Prelude.chuck;
 import static com.entwinemedia.fn.data.Opt.none;
 import static java.lang.String.format;
-import static org.opencastproject.util.OsgiUtil.getContextProperty;
 
 import org.opencastproject.mediapackage.MediaPackage;
 import org.opencastproject.mediapackage.MediaPackageBuilderFactory;
@@ -61,6 +60,7 @@ import com.entwinemedia.fn.Equality;
 import com.entwinemedia.fn.data.Opt;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -99,7 +99,7 @@ public class SchedulerMigrationService {
 
   private static final MediaPackageBuilderFactory mpbf = MediaPackageBuilderFactory.newInstance();
 
-  public static final String CFG_ORGANIZATION = "organization";
+  public static final String CFG_ORGANIZATION = "org.opencastproject.migration.organization";
 
   /** The security service */
   private SecurityService securityService;
@@ -153,14 +153,19 @@ public class SchedulerMigrationService {
     logger.info("Start migrating scheduled events");
 
     // read config
-    final String orgId = getContextProperty(cc, CFG_ORGANIZATION);
+    final String orgId = StringUtils.trimToNull((String) cc.getBundleContext().getProperty(CFG_ORGANIZATION));
+
+    if (StringUtils.isBlank(orgId)) {
+      logger.debug("No organization set for migration. Aborting.");
+      return;
+    }
 
     // create security context
     final Organization org;
     try {
       org = organizationDirectoryService.getOrganization(orgId);
     } catch (NotFoundException e) {
-      throw new ConfigurationException(CFG_ORGANIZATION, "not found", e);
+      throw new ConfigurationException(CFG_ORGANIZATION, String.format("Could not find organization '%s'", orgId), e);
     }
     SecurityUtil.runAs(securityService, org, SecurityUtil.createSystemUser(cc, org), new Effect0() {
       @Override
@@ -194,7 +199,7 @@ public class SchedulerMigrationService {
       logger.info("Scheduler transaction | start");
       tx = schedulerService.createTransaction("opencast");
       stm = connection.createStatement();
-      result = stm.executeQuery("SELECT * FROM mh_scheduled_event");
+      result = stm.executeQuery("SELECT id, access_control, blacklisted, capture_agent_metadata, dublin_core, mediapackage_id, opt_out, review_date, review_status FROM mh_scheduled_event");
       List<Event> events = transform(result);
       for (Event event : events) {
         // Outdated events have to be removed just before schedule time.
@@ -277,14 +282,14 @@ public class SchedulerMigrationService {
     try {
       List<Event> events = new ArrayList<>();
       while (resultSet.next()) {
-        DublinCoreCatalog dc = readDublinCoreSilent(resultSet.getString(4));
+        DublinCoreCatalog dc = readDublinCoreSilent(resultSet.getString(5));
         dc.setIdentifier(UUID.randomUUID().toString());
         dc.setFlavor(MediaPackageElements.EPISODE);
-        Properties properties = parseProperties(resultSet.getString(3));
-        AccessControlList acl = resultSet.getString(5) != null
-                ? AccessControlParser.parseAclSilent(resultSet.getString(5)) : null;
-        events.add(new Event(resultSet.getLong(1), resultSet.getString(2), dc, properties, acl, resultSet.getBoolean(6),
-                ReviewStatus.valueOf(resultSet.getString(8)), resultSet.getDate(9)));
+        Properties properties = parseProperties(resultSet.getString(4));
+        AccessControlList acl = resultSet.getString(2) != null
+                ? AccessControlParser.parseAclSilent(resultSet.getString(2)) : null;
+        events.add(new Event(resultSet.getLong(1), resultSet.getString(6), dc, properties, acl, resultSet.getBoolean(7),
+                ReviewStatus.valueOf(resultSet.getString(9)), resultSet.getDate(8)));
       }
       return events;
     } catch (Exception e) {

@@ -1166,7 +1166,7 @@ public class Event implements IndexObject {
       return;
     }
 
-    if (StringUtils.isNotBlank(getSchedulingStatus()) && (this.archiveVersion == null || this.archiveVersion <= 0)) {
+    if (StringUtils.isNotBlank(getSchedulingStatus())) {
       eventStatus = "EVENTS.EVENTS.STATUS.SCHEDULED";
       return;
     }

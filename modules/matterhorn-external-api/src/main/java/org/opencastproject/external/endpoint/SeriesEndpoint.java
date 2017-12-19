@@ -83,7 +83,6 @@ import com.entwinemedia.fn.Fn;
 import com.entwinemedia.fn.data.Opt;
 import com.entwinemedia.fn.data.json.Field;
 import com.entwinemedia.fn.data.json.JValue;
-import com.entwinemedia.fn.data.json.Jsons;
 import com.entwinemedia.fn.data.json.Jsons.Functions;
 
 import org.apache.commons.lang3.StringUtils;
@@ -285,8 +284,9 @@ public class SeriesEndpoint {
           } else {
             subjects = arr(splitSubjectIntoArray(s.getSubject()));
           }
-          return obj(f("identifier", v(s.getIdentifier())), f("title", v(s.getTitle())), f("creator", v(s.getCreator())),
-                  f("created", v(toUTC(s.getCreatedDateTime().getTime()))), f("subjects", subjects),
+          Date createdDate = s.getCreatedDateTime();
+          return obj(f("identifier", v(s.getIdentifier())), f("title", v(s.getTitle())), f("creator", v(s.getCreator(), BLANK)),
+                  f("created", v(createdDate != null ? toUTC(createdDate.getTime()) : null, BLANK)), f("subjects", subjects),
                   f("contributors", arr($(s.getContributors()).map(Functions.stringToJValue))),
                   f("organizers", arr($(s.getOrganizers()).map(Functions.stringToJValue))),
                   f("publishers", arr($(s.getPublishers()).map(Functions.stringToJValue))));
@@ -314,10 +314,11 @@ public class SeriesEndpoint {
       } else {
         subjects = arr(splitSubjectIntoArray(s.getSubject()));
       }
+      Date createdDate = s.getCreatedDateTime();
       return ApiResponses.Json.ok(VERSION_1_0_0, obj(
           f("identifier", v(s.getIdentifier())), f("title", v(s.getTitle())),
-          f("description", v(s.getDescription())), f("creator", v(s.getCreator())), f("subjects", subjects),
-          f("organization", v(s.getOrganization())), f("created", v(toUTC(s.getCreatedDateTime().getTime()))),
+          f("description", v(s.getDescription(), BLANK)), f("creator", v(s.getCreator(), BLANK)), f("subjects", subjects),
+          f("organization", v(s.getOrganization())), f("created", v(createdDate != null ? toUTC(createdDate.getTime()) : null, BLANK)),
           f("contributors", arr($(s.getContributors()).map(Functions.stringToJValue))),
           f("organizers", arr($(s.getOrganizers()).map(Functions.stringToJValue))),
           f("publishers", arr($(s.getPublishers()).map(Functions.stringToJValue))),
@@ -533,7 +534,7 @@ public class SeriesEndpoint {
       updatedFields = RequestUtils.getKeyValueMap(metadataJSON);
     } catch (ParseException e) {
       logger.debug("Unable to update series '{}' with metadata type '{}' and content '{}' because: {}",
-              new Object[] { id, type, metadataJSON, ExceptionUtils.getStackTrace(e) });
+              id, type, metadataJSON, ExceptionUtils.getStackTrace(e));
       return RestUtil.R.badRequest(String.format("Unable to parse metadata fields as json from '%s' because '%s'",
               metadataJSON, ExceptionUtils.getStackTrace(e)));
     } catch (IllegalArgumentException e) {
@@ -680,7 +681,7 @@ public class SeriesEndpoint {
       return ApiResponses.Json.ok(VERSION_1_0_0, obj($(properties.entrySet()).map(new Fn<Entry<String, String>, Field>() {
                 @Override
                 public Field apply(Entry<String, String> a) {
-                  return f(a.getKey(), v(a.getValue(), Jsons.BLANK));
+                  return f(a.getKey(), v(a.getValue(), BLANK));
                 }
               }).toList()));
     } else {
@@ -723,11 +724,11 @@ public class SeriesEndpoint {
       return okJson(metadataList.toJSON());
     } catch (IllegalArgumentException e) {
       logger.debug("Unable to update series '{}' with metadata '{}' because: {}",
-              new Object[] { seriesID, metadataJSON, ExceptionUtils.getStackTrace(e) });
+              seriesID, metadataJSON, ExceptionUtils.getStackTrace(e));
       return RestUtil.R.badRequest(e.getMessage());
     } catch (IndexServiceException e) {
       logger.error("Unable to update series '{}' with metadata '{}' because: {}",
-              new Object[] { seriesID, metadataJSON, ExceptionUtils.getStackTrace(e) });
+              seriesID, metadataJSON, ExceptionUtils.getStackTrace(e));
       return RestUtil.R.serverError();
     }
   }
@@ -790,7 +791,7 @@ public class SeriesEndpoint {
                                        obj(f("identifier", v(seriesId, BLANK))));
     } catch (IndexServiceException e) {
       logger.error("Unable to create series with metadata '{}', acl '{}', theme '{}' because: ",
-              new Object[] { metadataParam, aclParam, themeIdParam, ExceptionUtils.getStackTrace(e) });
+              metadataParam, aclParam, themeIdParam, ExceptionUtils.getStackTrace(e));
       throw new WebApplicationException(e, Status.INTERNAL_SERVER_ERROR);
     }
   }
