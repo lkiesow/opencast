@@ -45,8 +45,13 @@ import org.opencastproject.metadata.dublincore.DublinCores;
 import org.opencastproject.rest.AbstractJobProducerEndpoint;
 import org.opencastproject.scheduler.api.SchedulerConflictException;
 import org.opencastproject.scheduler.api.SchedulerException;
+import org.opencastproject.security.api.DefaultOrganization;
+import org.opencastproject.security.api.Organization;
+import org.opencastproject.security.api.SecurityService;
 import org.opencastproject.security.api.TrustedHttpClient;
 import org.opencastproject.security.api.UnauthorizedException;
+import org.opencastproject.security.api.User;
+import org.opencastproject.security.util.SecurityUtil;
 import org.opencastproject.serviceregistry.api.ServiceRegistry;
 import org.opencastproject.util.NotFoundException;
 import org.opencastproject.util.data.Function0.X;
@@ -132,6 +137,8 @@ public class IngestRestService extends AbstractJobProducerEndpoint {
   /** The http request parameter used to provide the workflow definition id */
   protected static final String WORKFLOW_DEFINITION_ID_PARAM = "workflowDefinitionId";
 
+  private ComponentContext cc;
+
   /** The default workflow definition */
   private String defaultWorkflowDefinitionId = null;
 
@@ -150,6 +157,10 @@ public class IngestRestService extends AbstractJobProducerEndpoint {
 
   private MediaPackageBuilderFactory factory = null;
   private IngestService ingestService = null;
+
+  /** The security service */
+  protected SecurityService securityService = null;
+
   private ServiceRegistry serviceRegistry = null;
   private DublinCoreCatalogService dublinCoreService;
   // The number of ingests this service can handle concurrently.
@@ -198,6 +209,7 @@ public class IngestRestService extends AbstractJobProducerEndpoint {
    */
   public void activate(ComponentContext cc) {
     if (cc != null) {
+      this.cc = cc;
       defaultWorkflowDefinitionId = trimToNull(cc.getBundleContext().getProperty(DEFAULT_WORKFLOW_DEFINITION));
       if (defaultWorkflowDefinitionId == null) {
         defaultWorkflowDefinitionId = "ng-schedule-and-upload";
@@ -991,13 +1003,26 @@ public class IngestRestService extends AbstractJobProducerEndpoint {
         workflowDefinitionId = defaultWorkflowDefinitionId;
       }
 
-      WorkflowInstance workflow;
-      if (workflowInstanceIdAsLong != null) {
-        workflow = ingestService.addZippedMediaPackage(in, workflowDefinitionId, workflowConfig,
-                workflowInstanceIdAsLong);
-      } else {
-        workflow = ingestService.addZippedMediaPackage(in, workflowDefinitionId, workflowConfig);
+      // Ingest runs as admin digest user (we expect this to be the ca user)
+
+      WorkflowInstance workflow = null;
+
+      final User prevUser = securityService.getUser();
+      Organization organization = new DefaultOrganization();
+      User digestUser = SecurityUtil.createSystemUser(cc, organization);
+      securityService.setUser(digestUser);
+
+      try {
+        if (workflowInstanceIdAsLong != null) {
+          workflow = ingestService.addZippedMediaPackage(in, workflowDefinitionId, workflowConfig,
+                  workflowInstanceIdAsLong);
+        } else {
+          workflow = ingestService.addZippedMediaPackage(in, workflowDefinitionId, workflowConfig);
+        }
+      } finally {
+        securityService.setUser(prevUser);
       }
+
       return Response.ok(WorkflowParser.toXml(workflow)).build();
     } catch (NotFoundException e) {
       logger.info(e.getMessage());
@@ -1291,6 +1316,16 @@ public class IngestRestService extends AbstractJobProducerEndpoint {
    */
   void setDublinCoreService(DublinCoreCatalogService dcService) {
     this.dublinCoreService = dcService;
+  }
+
+  /**
+   * Callback for setting the security service.
+   *
+   * @param securityService
+   *          the securityService to set
+   */
+  public void setSecurityService(SecurityService securityService) {
+    this.securityService = securityService;
   }
 
   /**
