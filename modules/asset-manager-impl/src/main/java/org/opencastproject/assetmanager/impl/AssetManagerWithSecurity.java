@@ -42,9 +42,7 @@ import org.opencastproject.assetmanager.api.query.Target;
 import org.opencastproject.mediapackage.MediaPackage;
 import org.opencastproject.security.api.AccessControlEntry;
 import org.opencastproject.security.api.AccessControlList;
-import org.opencastproject.security.api.AccessControlUtil;
 import org.opencastproject.security.api.AuthorizationService;
-import org.opencastproject.security.api.Organization;
 import org.opencastproject.security.api.Role;
 import org.opencastproject.security.api.SecurityService;
 import org.opencastproject.security.api.UnauthorizedException;
@@ -75,15 +73,9 @@ public class AssetManagerWithSecurity extends AssetManagerDecorator {
 
   @Override public Snapshot takeSnapshot(String owner, MediaPackage mp) {
     final AccessControlList acl = authSvc.getActiveAcl(mp).getA();
-    final User user = secSvc.getUser();
-    final Organization org = secSvc.getOrganization();
-    if (AccessControlUtil.isAuthorized(acl, user, org, WRITE_ACTION)) {
-      final Snapshot snapshot = super.takeSnapshot(owner, mp);
-      storeAclAsProperties(snapshot, acl);
-      return snapshot;
-    } else {
-      return chuck(new UnauthorizedException("Not allowed to take snapshot of media package " + mp.getIdentifier().toString()));
-    }
+    final Snapshot snapshot = super.takeSnapshot(owner, mp);
+    storeAclAsProperties(snapshot, acl);
+    return snapshot;
   }
 
   @Override public void setAvailability(Version version, String mpId, Availability availability) {

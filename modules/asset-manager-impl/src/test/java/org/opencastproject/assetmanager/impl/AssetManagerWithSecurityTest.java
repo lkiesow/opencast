@@ -34,7 +34,6 @@ import org.opencastproject.assetmanager.api.Snapshot;
 import org.opencastproject.assetmanager.api.Value;
 import org.opencastproject.assetmanager.impl.util.TestOrganization;
 import org.opencastproject.assetmanager.impl.util.TestUser;
-import org.opencastproject.mediapackage.MediaPackage;
 import org.opencastproject.security.api.AccessControlEntry;
 import org.opencastproject.security.api.AccessControlList;
 import org.opencastproject.security.api.AclScope;
@@ -45,7 +44,6 @@ import org.opencastproject.security.api.SecurityConstants;
 import org.opencastproject.security.api.SecurityService;
 import org.opencastproject.security.api.UnauthorizedException;
 import org.opencastproject.security.api.User;
-import org.opencastproject.util.data.Tuple;
 
 import com.entwinemedia.fn.P1;
 import com.entwinemedia.fn.P1Lazy;
@@ -55,7 +53,6 @@ import com.entwinemedia.fn.Unit;
 import com.entwinemedia.fn.data.Opt;
 
 import org.easymock.EasyMock;
-import org.easymock.IAnswer;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -91,25 +88,13 @@ public class AssetManagerWithSecurityTest extends AssetManagerTestBase<AssetMana
    */
   public AssetManagerWithSecurity mkTestEnvironment() throws Exception {
     final AuthorizationService authSvc = EasyMock.createNiceMock(AuthorizationService.class);
-    EasyMock.expect(authSvc.getActiveAcl(EasyMock.<MediaPackage>anyObject())).andAnswer(new IAnswer<Tuple<AccessControlList, AclScope>>() {
-      @Override
-      public Tuple<AccessControlList, AclScope> answer() throws Throwable {
-        return tuple(currentMediaPackageAcl, AclScope.Episode);
-      }
-    }).anyTimes();
+    EasyMock.expect(authSvc.getActiveAcl(EasyMock.anyObject())).andAnswer(
+            () -> tuple(currentMediaPackageAcl, AclScope.Episode)).anyTimes();
     EasyMock.replay(authSvc);
     //
     secSvc = EasyMock.createNiceMock(SecurityService.class);
-    EasyMock.expect(secSvc.getUser()).andAnswer(new IAnswer<User>() {
-      @Override public User answer() throws Throwable {
-        return currentUser;
-      }
-    }).anyTimes();
-    EasyMock.expect(secSvc.getOrganization()).andAnswer(new IAnswer<Organization>() {
-      @Override public Organization answer() throws Throwable {
-        return currentUser.getOrganization();
-      }
-    }).anyTimes();
+    EasyMock.expect(secSvc.getUser()).andAnswer(() -> currentUser).anyTimes();
+    EasyMock.expect(secSvc.getOrganization()).andAnswer(() -> currentUser.getOrganization()).anyTimes();
     EasyMock.replay(secSvc);
     //
     return new AssetManagerWithSecurity(mkAbstractAssetManager(), authSvc, secSvc);
@@ -168,13 +153,13 @@ public class AssetManagerWithSecurityTest extends AssetManagerTestBase<AssetMana
     final Organization org = TestOrganization.mkDefault();
     return $a($a(acl(ace(ROLE_TEACHER, WRITE_ACTION)),
                  TestUser.mk(org, ROLE_USER),
-                 false),
+                 true),
               $a(acl(ace(ROLE_TEACHER, WRITE_ACTION)),
                  TestUser.mk(org, ROLE_USER, ROLE_TEACHER),
                  true),
               $a(acl(ace(ROLE_TEACHER, WRITE_ACTION)),
                  TestUser.mk(org),
-                 false),
+                 true),
               $a(acl(),
                  TestUser.mk(org, SecurityConstants.GLOBAL_ADMIN_ROLE),
                  true));
