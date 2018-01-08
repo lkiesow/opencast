@@ -44,7 +44,6 @@ import org.opencastproject.security.api.UserDirectoryService;
 import org.opencastproject.serviceregistry.api.IncidentService;
 import org.opencastproject.serviceregistry.api.ServiceRegistry;
 import org.opencastproject.serviceregistry.api.ServiceRegistryInMemoryImpl;
-import org.opencastproject.util.FileSupport;
 import org.opencastproject.util.IoSupport;
 import org.opencastproject.util.MimeType;
 import org.opencastproject.util.StreamHelper;
@@ -89,7 +88,6 @@ public class ComplexCmdsEncoderEngineTest {
   private File sourceAudioVideo = null;
   private File sourceMuxed = null;
   private Job job = null;
-  private File workingDirectory = null;
   private Workspace workspace = null;
 
   /** encoding profiles to use */
@@ -100,6 +98,9 @@ public class ComplexCmdsEncoderEngineTest {
   private EncoderEngine engine = null;
   /** The service registry for job dispatching */
   private ServiceRegistry serviceRegistry = null;
+
+  /** File pointer to the testing dir */
+  private static File workingDirectory = new File("target");
 
   /** FFmpeg binary location and engine */
   private static final String FFMPEG_BINARY = "ffmpeg";
@@ -147,37 +148,35 @@ public class ComplexCmdsEncoderEngineTest {
     }
   }
 
+  private static File getFile(final String path) throws Exception {
+    return new File(ComplexCmdsEncoderEngineTest.class.getResource(path).toURI());
+  }
+
   @Before
   public void setUp() throws Exception {
     if (!ffmpegInstalledGreaterVersion2)
       return;
     BasicConfigurator.configure();
-    workingDirectory = FileSupport.getTempDirectory("multiEncodeTest");
-    FileUtils.forceMkdir(workingDirectory);
     engine = new EncoderEngine(FFMPEG_BINARY);
 
     // Copy an existing media file to a temp file
-    File f = new File("src/test/resources/muxed_15.avi");
-    sourceMuxed = new File(workingDirectory, "muxed.avi");
+    File f = getFile("/muxed_15.avi");
+    sourceMuxed = File.createTempFile(FilenameUtils.getBaseName(f.getName()), ".avi", workingDirectory);
     FileUtils.copyFile(f, sourceMuxed);
-    f = null;
 
-    f = new File("src/test/resources/av.mov");
-    sourceAudioVideo = new File(workingDirectory, "av.mov");
-    FileUtils.copyFile(f, sourceAudioVideo);
-    f = null;
 
-    f = new File("src/test/resources/video.mp4");
-    sourceVideoOnly = new File(workingDirectory, "video.mp4");
+    f = getFile("/video.mp4");
+    sourceVideoOnly = File.createTempFile(FilenameUtils.getBaseName(f.getName()), "mp4", workingDirectory);
     FileUtils.copyFile(f, sourceVideoOnly);
-    f = null;
 
     // Create another audio only file f = getFile("/audio.mp3"); sourceAudioOnly =
-    f = new File("src/test/resources/audio.mp3");
-    sourceAudioOnly = new File(workingDirectory, "audio.mp3");
+    f = getFile("/audio.mp3");
+    sourceAudioOnly = File.createTempFile(FilenameUtils.getBaseName(f.getName()), "mp3", workingDirectory);
     FileUtils.copyFile(f, sourceAudioOnly);
-    f = null;
 
+    f = getFile("/audiovideo.mov");
+    sourceAudioVideo = File.createTempFile(FilenameUtils.getBaseName(f.getName()), ".mov", workingDirectory);
+    FileUtils.copyFile(f, sourceAudioVideo);
 
     multiProfiles.add(multiProfile);
     // create the needed mocks
@@ -236,7 +235,7 @@ public class ComplexCmdsEncoderEngineTest {
                     }).anyTimes();
 
     profileScanner = new EncodingProfileScanner();
-    File encodingProfile = new File("src/test/resources/encodingprofiles.properties");
+    File encodingProfile = getFile("/encodingprofiles.properties");
     Assert.assertNotNull("Encoding profile must exist", encodingProfile);
     profileScanner.install(encodingProfile);
 
@@ -401,7 +400,7 @@ public class ComplexCmdsEncoderEngineTest {
       return;
     assertTrue(sourceAudioVideo.isFile());
     // Set up workspace
-    String[] profiles = { "h264-low.http", "flash.rtmp", "webm-preview.http" };
+    String[] profiles = { "h264-low.http", "flash.rtmp", "h264-medium.http" };
     // Workspace workspace = EasyMock.createNiceMock(Workspace.class);
     Map<String, String> params = new HashMap<String, String>();
     String outDir = sourceAudioVideo.getAbsoluteFile().getParent();
@@ -416,7 +415,7 @@ public class ComplexCmdsEncoderEngineTest {
             + "<video><device type=\"UFG03\" version=\"30112007\" vendor=\"Unigraf\" />"
             + "<encoder type=\"H.264\" version=\"7.4\" vendor=\"Apple Inc\" /><resolution>640x480</resolution>"
             + "<scanType type=\"progressive\" /><bitrate>540520</bitrate><frameRate>2</frameRate></video>"
-            + "       <mimetype>video/avi</mimetype>" + "       <url>av.mov</url>" + "       </track>";
+            + "       <mimetype>video/avi</mimetype>" + "       <url>audiovideo.mov</url>" + "       </track>";
     Track sourceTrackVideo = (Track) MediaPackageElementParser.getFromXml(sourceTrackXml);
     try {
       List<Track> tracks = composerService.multiEncode(job, sourceTrackVideo, Arrays.asList(profiles), params);
@@ -520,8 +519,8 @@ public class ComplexCmdsEncoderEngineTest {
   public void testConcatEdit() throws Exception {
     if (!ffmpegInstalled)
       return;
-    URL sourceUrl = getClass().getResource("/av.mov");
-    File sourceFile1 = new File(workingDirectory, "av.mov");
+    URL sourceUrl = getClass().getResource("/audiovideo.mov");
+    File sourceFile1 = new File(workingDirectory, "audiovideo.mov");
     FileUtils.copyURLToFile(sourceUrl, sourceFile1);
     URL sourceUrl1 = sourceUrl;
     File sourceFile2 = sourceFile1;
@@ -565,8 +564,8 @@ public class ComplexCmdsEncoderEngineTest {
     if (!ffmpegInstalled)
       return;
     logger.info("testConcatEdit2segment");
-    URL sourceUrl = getClass().getResource("/av.mov");
-    File sourceFile1 = new File(workingDirectory, "av.mov");
+    URL sourceUrl = getClass().getResource("/audiovideo.mov");
+    File sourceFile1 = new File(workingDirectory, "audiovideo.mov");
     FileUtils.copyURLToFile(sourceUrl, sourceFile1);
     URL sourceUrl1 = sourceUrl; // getClass().getResource("/slidechanges.mov");
     File sourceFile2 = sourceFile1; // new File(workingDirectory, "slidechanges.mov");
@@ -610,8 +609,8 @@ public class ComplexCmdsEncoderEngineTest {
   public void testConcatEditReorderSegments() throws Exception {
     if (!ffmpegInstalled)
       return;
-    URL sourceUrl = getClass().getResource("/av.mov");
-    File sourceFile1 = new File(workingDirectory, "av.mov");
+    URL sourceUrl = getClass().getResource("/audiovideo.mov");
+    File sourceFile1 = new File(workingDirectory, "audiovideo.mov");
     FileUtils.copyURLToFile(sourceUrl, sourceFile1);
     EncodingProfile[] eprofiles = { profileScanner.getProfile("h264-low.http"),
             profileScanner.getProfile("h264-medium.http") };

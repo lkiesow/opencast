@@ -163,7 +163,7 @@ public class ProcessSmilTest {
     FileUtils.copyFile(f, sourceAudioVideo1);
     f = null;
 
-    f = new File("src/test/resources/av.mov");
+    f = new File("src/test/resources/audiovideo.mov");
     sourceAudioVideo2 = new File(workingDirectory, "av2.mov");
     FileUtils.copyFile(f, sourceAudioVideo2);
     f = null;
@@ -711,9 +711,7 @@ public class ProcessSmilTest {
     EasyMock.expect(smilService.fromXml((String) EasyMock.anyObject())).andReturn(response).anyTimes();
     EasyMock.replay(smilService);
     composerService.setSmilService(smilService);
-    @SuppressWarnings("unused")
-    List<Track> outputs;
-    outputs = composerService.processSmil(job, smil, paramGroupId1, "", encodingProfiles);
+    composerService.processSmil(job, smil, paramGroupId1, "", encodingProfiles);
   }
 
 
