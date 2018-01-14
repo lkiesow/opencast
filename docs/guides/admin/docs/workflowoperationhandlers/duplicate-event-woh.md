@@ -1,7 +1,7 @@
 Duplicate Event Workflow Operation
 ===============================
 
-```Id: dublicate-event```
+```Id: duplicate-event```
 
 Description
 -----------
