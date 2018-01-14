@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <scr:component xmlns:scr="http://www.osgi.org/xmlns/scr/v1.1.0"
- name="org.opencastproject.workflow.handler.workflow.CreateEventWorkflowOperationHandler" immediate="true">
-  <implementation class="org.opencastproject.workflow.handler.workflow.CreateEventWorkflowOperationHandler" />
-  <property name="service.description" value="Create Event Workflow Handler" />
-  <property name="workflow.operation" value="create-event" />
+ name="org.opencastproject.workflow.handler.workflow.DuplicateEventWorkflowOperationHandler" immediate="true">
+  <implementation class="org.opencastproject.workflow.handler.workflow.DuplicateEventWorkflowOperationHandler" />
+  <property name="service.description" value="Duplicate Event Workflow Handler" />
+  <property name="workflow.operation" value="duplicate-event" />
   <service>
     <provide interface="org.opencastproject.workflow.api.WorkflowOperationHandler" />
   </service>

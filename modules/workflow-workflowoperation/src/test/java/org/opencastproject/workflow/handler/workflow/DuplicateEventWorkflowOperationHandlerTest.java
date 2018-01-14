@@ -31,13 +31,14 @@ import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.replay;
 import static org.easymock.EasyMock.reset;
 
-import static org.opencastproject.workflow.handler.workflow.CreateEventWorkflowOperationHandler.COPY_COUNT_PROPERTY_NAME;
-import static org.opencastproject.workflow.handler.workflow.CreateEventWorkflowOperationHandler.COPY_NUMBER_PREFIX_PROPERTY;
-import static org.opencastproject.workflow.handler.workflow.CreateEventWorkflowOperationHandler.NUMBER_PROPERTY;
-import static org.opencastproject.workflow.handler.workflow.CreateEventWorkflowOperationHandler.PROPERTY_NAMESPACES_PROPERTY;
-import static org.opencastproject.workflow.handler.workflow.CreateEventWorkflowOperationHandler.SOURCE_FLAVORS_PROPERTY;
-import static org.opencastproject.workflow.handler.workflow.CreateEventWorkflowOperationHandler.SOURCE_TAGS_PROPERTY;
-import static org.opencastproject.workflow.handler.workflow.CreateEventWorkflowOperationHandler.TARGET_TAGS_PROPERTY;
+import static org.opencastproject.workflow.handler.workflow.DuplicateEventWorkflowOperationHandler.COPY_COUNT_PROPERTY_NAME;
+import static org.opencastproject.workflow.handler.workflow.DuplicateEventWorkflowOperationHandler.COPY_NUMBER_PREFIX_PROPERTY;
+import static org.opencastproject.workflow.handler.workflow.DuplicateEventWorkflowOperationHandler.MAX_NUMBER_PROPERTY;
+import static org.opencastproject.workflow.handler.workflow.DuplicateEventWorkflowOperationHandler.NUMBER_PROPERTY;
+import static org.opencastproject.workflow.handler.workflow.DuplicateEventWorkflowOperationHandler.PROPERTY_NAMESPACES_PROPERTY;
+import static org.opencastproject.workflow.handler.workflow.DuplicateEventWorkflowOperationHandler.SOURCE_FLAVORS_PROPERTY;
+import static org.opencastproject.workflow.handler.workflow.DuplicateEventWorkflowOperationHandler.SOURCE_TAGS_PROPERTY;
+import static org.opencastproject.workflow.handler.workflow.DuplicateEventWorkflowOperationHandler.TARGET_TAGS_PROPERTY;
 
 import org.opencastproject.assetmanager.api.AssetManager;
 import org.opencastproject.assetmanager.api.Property;
@@ -91,9 +92,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class CreateEventWorkflowOperationHandlerTest {
+public class DuplicateEventWorkflowOperationHandlerTest {
 
-  private CreateEventWorkflowOperationHandler operationHandler;
+  private DuplicateEventWorkflowOperationHandler operationHandler;
 
   // local resources
   private MediaPackage mp;
@@ -117,12 +118,12 @@ public class CreateEventWorkflowOperationHandlerTest {
 
   @Before
   public void setUp() throws Exception {
-    operationHandler = new CreateEventWorkflowOperationHandler();
+    operationHandler = new DuplicateEventWorkflowOperationHandler();
 
     MediaPackageBuilder builder = MediaPackageBuilderFactory.newInstance().newMediaPackageBuilder();
 
     // test resources
-    URI uriMP = getClass().getResource("/create-event_mediapackage.xml").toURI();
+    URI uriMP = getClass().getResource("/duplicate-event_mediapackage.xml").toURI();
     mp = builder.loadFromXml(uriMP.toURL().openStream());
 
     workspace = createNiceMock(Workspace.class);
@@ -151,6 +152,7 @@ public class CreateEventWorkflowOperationHandlerTest {
     configurations.put(SOURCE_TAGS_PROPERTY, "archive");
     configurations.put(TARGET_TAGS_PROPERTY, "");
     configurations.put(NUMBER_PROPERTY, "" + numCopies);
+    configurations.put(MAX_NUMBER_PROPERTY, "" + 10);
     configurations.put(PROPERTY_NAMESPACES_PROPERTY, "org.opencastproject.assetmanager.security,org.opencastproject.scheduler");
     configurations.put(COPY_NUMBER_PREFIX_PROPERTY, "copy");
 
@@ -176,6 +178,7 @@ public class CreateEventWorkflowOperationHandlerTest {
     configurations.put(SOURCE_TAGS_PROPERTY, "archive");
     configurations.put(TARGET_TAGS_PROPERTY, "tag1,tag2");
     configurations.put(NUMBER_PROPERTY, "" + 1);
+    configurations.put(MAX_NUMBER_PROPERTY, "" + 10);
     configurations.put(PROPERTY_NAMESPACES_PROPERTY, "org.opencastproject.assetmanager.security,org.opencastproject.scheduler");
     configurations.put(COPY_NUMBER_PREFIX_PROPERTY, "copy");
 
@@ -196,6 +199,7 @@ public class CreateEventWorkflowOperationHandlerTest {
     configurations.put(SOURCE_TAGS_PROPERTY, "part1");
     configurations.put(TARGET_TAGS_PROPERTY, "-part1,+tag3");
     configurations.put(NUMBER_PROPERTY, "" + 1);
+    configurations.put(MAX_NUMBER_PROPERTY, "" + 10);
     configurations.put(PROPERTY_NAMESPACES_PROPERTY, "org.opencastproject.assetmanager.security,org.opencastproject.scheduler");
     configurations.put(COPY_NUMBER_PREFIX_PROPERTY, "copy");
 
@@ -257,7 +261,7 @@ public class CreateEventWorkflowOperationHandlerTest {
 
     final ARecord record = createNiceMock(ARecord.class);
     for (long i = 0; i < numberOfCopies; i++) {
-      final Property prop = Property.mk(PropertyId.mk(mp.getIdentifier().toString(), CreateEventWorkflowOperationHandler.class.getName(), COPY_COUNT_PROPERTY_NAME), Value.LONG.mk(i));
+      final Property prop = Property.mk(PropertyId.mk(mp.getIdentifier().toString(), DuplicateEventWorkflowOperationHandler.class.getName(), COPY_COUNT_PROPERTY_NAME), Value.LONG.mk(i));
       expect(record.getProperties()).andReturn(Stream.mk(prop)).times(4);
     }
     replay(record);
@@ -273,7 +277,7 @@ public class CreateEventWorkflowOperationHandlerTest {
     replay(qSelect);
     final AQueryBuilder qBuilder = createNiceMock(AQueryBuilder.class);
     expect(qBuilder.select(anyObject())).andReturn(qSelect).anyTimes();
-    expect(qBuilder.property(anyObject(), eq(CreateEventWorkflowOperationHandler.class.getName()), eq(COPY_COUNT_PROPERTY_NAME))).andReturn(copyCountProp).anyTimes();
+    expect(qBuilder.property(anyObject(), eq(DuplicateEventWorkflowOperationHandler.class.getName()), eq(COPY_COUNT_PROPERTY_NAME))).andReturn(copyCountProp).anyTimes();
     replay(qBuilder);
     expect(assetManager.createQuery()).andReturn(qBuilder).anyTimes();
     expect(assetManager.takeSnapshot(eq(AssetManager.DEFAULT_OWNER), capture(clonedMediaPackages))).andReturn(createNiceMock(Snapshot.class)).times(numberOfCopies);
@@ -292,6 +296,28 @@ public class CreateEventWorkflowOperationHandlerTest {
     replay(distributionJob);
     expect(distributionService.distribute(eq(InternalPublicationChannel.CHANNEL_ID), anyObject(), anyString())).andReturn(distributionJob).anyTimes();
     replay(distributionService);
+  }
+
+  @Test(expected = WorkflowOperationException.class)
+  public void testCreateMoreThanMaximum() throws Exception {
+
+    final int numCopies = 2;
+    final int maxCopies = 1;
+
+    mockDependencies(numCopies);
+
+    // operation configuration
+    Map<String, String> configurations = new HashMap<String, String>();
+    configurations.put(SOURCE_FLAVORS_PROPERTY, "*/*");
+    configurations.put(SOURCE_TAGS_PROPERTY, "archive");
+    configurations.put(TARGET_TAGS_PROPERTY, "");
+    configurations.put(NUMBER_PROPERTY, "" + numCopies);
+    configurations.put(MAX_NUMBER_PROPERTY, "" + maxCopies);
+    configurations.put(PROPERTY_NAMESPACES_PROPERTY, "org.opencastproject.assetmanager.security,org.opencastproject.scheduler");
+    configurations.put(COPY_NUMBER_PREFIX_PROPERTY, "copy");
+
+    // run the operation handler
+    WorkflowOperationResult result = getWorkflowOperationResult(mp, configurations);
   }
 
 }
