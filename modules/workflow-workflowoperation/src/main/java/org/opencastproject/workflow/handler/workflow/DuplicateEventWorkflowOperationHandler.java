@@ -79,11 +79,11 @@ import java.util.UUID;
 
 
 /**
- * This WOH creates new events from an input event.
+ * This WOH duplicates an input event.
  */
-public class CreateEventWorkflowOperationHandler extends AbstractWorkflowOperationHandler {
+public class DuplicateEventWorkflowOperationHandler extends AbstractWorkflowOperationHandler {
 
-  private static final Logger logger = LoggerFactory.getLogger(CreateEventWorkflowOperationHandler.class);
+  private static final Logger logger = LoggerFactory.getLogger(DuplicateEventWorkflowOperationHandler.class);
   private static final String PLUS = "+";
   private static final String MINUS = "-";
 
@@ -101,6 +101,9 @@ public class CreateEventWorkflowOperationHandler extends AbstractWorkflowOperati
 
   /** Name of the configuration option that provides the number of events to create */
   public static final String NUMBER_PROPERTY = "number-of-events";
+
+  /** Name of the configuration option that provides the maximum number of events to create */
+  public static final String MAX_NUMBER_PROPERTY = "max-number-of-events";
 
   /** The namespaces of the asset manager properties to copy. */
   public static final String PROPERTY_NAMESPACES_PROPERTY = "property-namespaces";
@@ -136,6 +139,8 @@ public class CreateEventWorkflowOperationHandler extends AbstractWorkflowOperati
                             + "If there is no prefix, all preexisting tags are removed and replaced by the target-tags");
     CONFIG_OPTIONS.put(NUMBER_PROPERTY,
             "How many events to create. Must be a positive integer number.");
+    CONFIG_OPTIONS.put(MAX_NUMBER_PROPERTY,
+            "How many events to create at most. Must be a positive integer number.");
     CONFIG_OPTIONS.put(PROPERTY_NAMESPACES_PROPERTY,
             "Copy all asset manager properties of these (comma separated) namespaces.");
     CONFIG_OPTIONS.put(COPY_NUMBER_PREFIX_PROPERTY,
@@ -209,7 +214,12 @@ public class CreateEventWorkflowOperationHandler extends AbstractWorkflowOperati
     final String configuredSourceTags = StringUtils.trimToEmpty(currentOperation.getConfiguration(SOURCE_TAGS_PROPERTY));
     final String configuredTargetTags = StringUtils.trimToEmpty(currentOperation.getConfiguration(TARGET_TAGS_PROPERTY));
     final int numberOfEvents = Integer.parseInt(currentOperation.getConfiguration(NUMBER_PROPERTY));
+    final int maxNumberOfEvents = Integer.parseInt(currentOperation.getConfiguration(MAX_NUMBER_PROPERTY));
     final String configuredPropertyNamespaces = StringUtils.trimToEmpty(currentOperation.getConfiguration(PROPERTY_NAMESPACES_PROPERTY));
+
+    if (numberOfEvents > maxNumberOfEvents) {
+      throw new WorkflowOperationException("Number of events to create exceeds the maximum of " + maxNumberOfEvents + ". Aborting.");
+    }
 
     logger.info("Creating {} new media packages from media package with id {}.", numberOfEvents, mediaPackage.getIdentifier());
 
@@ -448,7 +458,7 @@ public class CreateEventWorkflowOperationHandler extends AbstractWorkflowOperati
 
   private static class Props extends PropertySchema {
     Props(AQueryBuilder q) {
-      super(q, CreateEventWorkflowOperationHandler.class.getName());
+      super(q, DuplicateEventWorkflowOperationHandler.class.getName());
     }
     public PropertyField<Long> copyCount() {
       return longProp(COPY_COUNT_PROPERTY_NAME);

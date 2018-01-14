@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <definition xmlns="http://workflow.opencastproject.org">
 
-  <id>ng-create-event</id>
-  <title>Create New Events</title>
+  <id>duplicate-event</id>
+  <title>Duplicate Event</title>
   <tags>
-    <tag>archive-ng</tag>
+    <tag>archive</tag>
   </tags>
   <description/>
   <configuration_panel>
@@ -17,11 +17,24 @@
             type="number"
             class="configField"
             onkeypress="return event.charCode > 47"
+            oninput="checkValueInBounds()"
             min="1"
-            value="1" />
+            value="1"
+            max="10000"
+            />
           <label for="numberOfEvents">Number of Events</label>
         </fieldset>
       </div>
+
+      <script type="text/javascript">
+        function checkValueInBounds() {
+          var value = $('#numberOfEvents').val();
+          var max = $('#numberOfEvents').attr('max');
+          var min = $('#numberOfEvents').attr('min');
+          if (parseInt(value) < parseInt(min)) $('#numberOfEvents').val(min);
+          if (parseInt(value) > parseInt(max)) $('#numberOfEvents').val(max);
+        }
+      </script>
     ]]>
   </configuration_panel>
 
@@ -34,19 +47,21 @@
       description="Applying default configuration values">
       <configurations>
         <configuration key="numberOfEvents">1</configuration>
+        <configuration key="maxNumberOfEvents">10000</configuration>
       </configurations>
     </operation>
 
     <!-- Create the new events -->
     <operation
-      id="create-event"
+      id="duplicate-event"
       fail-on-error="true"
-      exception-handler-workflow="ng-partial-error"
-      description="Create new events">
+      exception-handler-workflow="partial-error"
+      description="Duplicate Event">
       <configurations>
         <configuration key="source-tags">archive</configuration>
         <configuration key="source-flavors">*/*</configuration>
         <configuration key="number-of-events">${numberOfEvents}</configuration>
+        <configuration key="max-number-of-events">${maxNumberOfEvents}</configuration>
         <configuration key="target-tags"></configuration>
         <configuration key="property-namespaces">org.opencastproject.assetmanager.security,org.opencastproject.scheduler</configuration>
         <configuration key="copy-number-prefix">copy</configuration>
