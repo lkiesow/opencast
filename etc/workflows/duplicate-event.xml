@@ -20,7 +20,7 @@
             oninput="checkValueInBounds()"
             min="1"
             value="1"
-            max="10000"
+            max="25"
             />
           <label for="numberOfEvents">Number of Events</label>
         </fieldset>
@@ -40,17 +40,6 @@
 
   <operations>
 
-    <!-- Apply the default workflow configuration -->
-
-    <operation
-      id="defaults"
-      description="Applying default configuration values">
-      <configurations>
-        <configuration key="numberOfEvents">1</configuration>
-        <configuration key="maxNumberOfEvents">10000</configuration>
-      </configurations>
-    </operation>
-
     <!-- Create the new events -->
     <operation
       id="duplicate-event"
@@ -58,13 +47,20 @@
       exception-handler-workflow="partial-error"
       description="Duplicate Event">
       <configurations>
-        <configuration key="source-tags">archive</configuration>
         <configuration key="source-flavors">*/*</configuration>
         <configuration key="number-of-events">${numberOfEvents}</configuration>
-        <configuration key="max-number-of-events">${maxNumberOfEvents}</configuration>
         <configuration key="target-tags"></configuration>
         <configuration key="property-namespaces">org.opencastproject.assetmanager.security,org.opencastproject.scheduler</configuration>
         <configuration key="copy-number-prefix">copy</configuration>
+      </configurations>
+    </operation>
+
+    <!-- Cleanup the working file repository -->
+    <operation
+        id="include"
+        description="Remove temporary processing artifacts">
+      <configurations>
+        <configuration key="workflow-id">partial-cleanup</configuration>
       </configurations>
     </operation>
 

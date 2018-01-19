@@ -21,18 +21,15 @@
 
 package org.opencastproject.workflow.handler.workflow;
 
-import static org.opencastproject.workflow.handler.distribution.InternalPublicationChannel.CHANNEL_ID;
+import static org.apache.commons.lang3.StringUtils.split;
+import static org.apache.commons.lang3.StringUtils.trimToEmpty;
 
 import org.opencastproject.assetmanager.api.AssetManager;
 import org.opencastproject.assetmanager.api.Property;
 import org.opencastproject.assetmanager.api.PropertyId;
-import org.opencastproject.assetmanager.api.Value;
 import org.opencastproject.assetmanager.api.query.AQueryBuilder;
 import org.opencastproject.assetmanager.api.query.AResult;
-import org.opencastproject.assetmanager.api.query.PropertyField;
-import org.opencastproject.assetmanager.api.query.PropertySchema;
 import org.opencastproject.distribution.api.DistributionService;
-import org.opencastproject.ingest.api.IngestService;
 import org.opencastproject.job.api.Job;
 import org.opencastproject.job.api.JobContext;
 import org.opencastproject.mediapackage.MediaPackage;
@@ -54,18 +51,17 @@ import org.opencastproject.workflow.api.WorkflowOperationException;
 import org.opencastproject.workflow.api.WorkflowOperationInstance;
 import org.opencastproject.workflow.api.WorkflowOperationResult;
 import org.opencastproject.workflow.api.WorkflowOperationResult.Action;
+import org.opencastproject.workflow.handler.distribution.InternalPublicationChannel;
 import org.opencastproject.workspace.api.Workspace;
-
-import com.entwinemedia.fn.data.Opt;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.util.ArrayList;
@@ -73,8 +69,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
-import java.util.SortedMap;
-import java.util.TreeMap;
 import java.util.UUID;
 
 
@@ -86,9 +80,6 @@ public class DuplicateEventWorkflowOperationHandler extends AbstractWorkflowOper
   private static final Logger logger = LoggerFactory.getLogger(DuplicateEventWorkflowOperationHandler.class);
   private static final String PLUS = "+";
   private static final String MINUS = "-";
-
-  /** The configuration options for this handler */
-  private static final SortedMap<String, String> CONFIG_OPTIONS;
 
   /** Name of the configuration option that provides the source flavors we are looking for */
   public static final String SOURCE_FLAVORS_PROPERTY = "source-flavors";
@@ -105,14 +96,14 @@ public class DuplicateEventWorkflowOperationHandler extends AbstractWorkflowOper
   /** Name of the configuration option that provides the maximum number of events to create */
   public static final String MAX_NUMBER_PROPERTY = "max-number-of-events";
 
+  /** The default maximum number of events to create. Can be overridden. */
+  public static final int MAX_NUMBER_DEFAULT = 25;
+
   /** The namespaces of the asset manager properties to copy. */
   public static final String PROPERTY_NAMESPACES_PROPERTY = "property-namespaces";
 
   /** The prefix to use for the number which is appended to the original title of the event. */
   public static final String COPY_NUMBER_PREFIX_PROPERTY = "copy-number-prefix";
-
-  /** The name of the asset manager property to store the current count of copies. */
-  public static final String COPY_COUNT_PROPERTY_NAME = "copyCount";
 
   /** AssetManager to use for creating new media packages. */
   private AssetManager assetManager;
@@ -123,30 +114,6 @@ public class DuplicateEventWorkflowOperationHandler extends AbstractWorkflowOper
   /** The distribution service */
   protected DistributionService distributionService;
 
-  /** The ingest service */
-  private IngestService ingestService;
-
-  static {
-    CONFIG_OPTIONS = new TreeMap<String, String>();
-    CONFIG_OPTIONS.put(SOURCE_FLAVORS_PROPERTY,
-            "Copy any mediapackage elements with one of these (comma separated) flavors.");
-    CONFIG_OPTIONS.put(SOURCE_TAGS_PROPERTY,
-            "Copy any mediapackage elements with one of these (comma separated) tags.");
-    CONFIG_OPTIONS
-            .put(TARGET_TAGS_PROPERTY,
-                    "Apply these (comma separated) tags to any mediapackage elements. If a target-tag starts with a '-', "
-                            + "tag will removed from preexisting tags, if starts with a '+', tag will added to preexisting tags. "
-                            + "If there is no prefix, all preexisting tags are removed and replaced by the target-tags");
-    CONFIG_OPTIONS.put(NUMBER_PROPERTY,
-            "How many events to create. Must be a positive integer number.");
-    CONFIG_OPTIONS.put(MAX_NUMBER_PROPERTY,
-            "How many events to create at most. Must be a positive integer number.");
-    CONFIG_OPTIONS.put(PROPERTY_NAMESPACES_PROPERTY,
-            "Copy all asset manager properties of these (comma separated) namespaces.");
-    CONFIG_OPTIONS.put(COPY_NUMBER_PREFIX_PROPERTY,
-            "Use this prefix for the number appended to the title(s) of the new event(s).");
-  }
-
   /**
    * Callback for the OSGi declarative services configuration.
    *
@@ -155,16 +122,6 @@ public class DuplicateEventWorkflowOperationHandler extends AbstractWorkflowOper
    */
   public void setAssetManager(AssetManager assetManager) {
     this.assetManager = assetManager;
-  }
-
-  /**
-   * Callback for the OSGi declarative services configuration.
-   *
-   * @param ingestService
-   *          the service to set
-   */
-  public void setIngestService(IngestService ingestService) {
-    this.ingestService = ingestService;
   }
 
   /**
@@ -190,53 +147,48 @@ public class DuplicateEventWorkflowOperationHandler extends AbstractWorkflowOper
   /**
    * {@inheritDoc}
    *
-   * @see org.opencastproject.workflow.api.WorkflowOperationHandler#getConfigurationOptions()
-   */
-  @Override
-  public SortedMap<String, String> getConfigurationOptions() {
-    return CONFIG_OPTIONS;
-  }
-
-  /**
-   * {@inheritDoc}
-   *
    * @see org.opencastproject.workflow.api.WorkflowOperationHandler#start(WorkflowInstance,
    *      JobContext)
    */
   @Override
   public WorkflowOperationResult start(final WorkflowInstance workflowInstance, final JobContext context)
-          throws WorkflowOperationException {
+      throws WorkflowOperationException {
 
     final MediaPackage mediaPackage = workflowInstance.getMediaPackage();
-    final WorkflowOperationInstance currentOperation = workflowInstance.getCurrentOperation();
+    final WorkflowOperationInstance operation = workflowInstance.getCurrentOperation();
+    final String configuredSourceFlavors = trimToEmpty(operation.getConfiguration(SOURCE_FLAVORS_PROPERTY));
+    final String configuredSourceTags = trimToEmpty(operation.getConfiguration(SOURCE_TAGS_PROPERTY));
+    final String configuredTargetTags = trimToEmpty(operation.getConfiguration(TARGET_TAGS_PROPERTY));
+    final int numberOfEvents = Integer.parseInt(operation.getConfiguration(NUMBER_PROPERTY));
+    final String configuredPropertyNamespaces = trimToEmpty(operation.getConfiguration(PROPERTY_NAMESPACES_PROPERTY));
+    int maxNumberOfEvents = MAX_NUMBER_DEFAULT;
 
-    final String configuredSourceFlavors = StringUtils.trimToEmpty(currentOperation.getConfiguration(SOURCE_FLAVORS_PROPERTY));
-    final String configuredSourceTags = StringUtils.trimToEmpty(currentOperation.getConfiguration(SOURCE_TAGS_PROPERTY));
-    final String configuredTargetTags = StringUtils.trimToEmpty(currentOperation.getConfiguration(TARGET_TAGS_PROPERTY));
-    final int numberOfEvents = Integer.parseInt(currentOperation.getConfiguration(NUMBER_PROPERTY));
-    final int maxNumberOfEvents = Integer.parseInt(currentOperation.getConfiguration(MAX_NUMBER_PROPERTY));
-    final String configuredPropertyNamespaces = StringUtils.trimToEmpty(currentOperation.getConfiguration(PROPERTY_NAMESPACES_PROPERTY));
-
-    if (numberOfEvents > maxNumberOfEvents) {
-      throw new WorkflowOperationException("Number of events to create exceeds the maximum of " + maxNumberOfEvents + ". Aborting.");
+    if (operation.getConfiguration(MAX_NUMBER_PROPERTY) != null) {
+      maxNumberOfEvents = Integer.parseInt(operation.getConfiguration(MAX_NUMBER_PROPERTY));
     }
 
-    logger.info("Creating {} new media packages from media package with id {}.", numberOfEvents, mediaPackage.getIdentifier());
+    if (numberOfEvents > maxNumberOfEvents) {
+      throw new WorkflowOperationException("Number of events to create exceeds the maximum of "
+          + maxNumberOfEvents + ". Aborting.");
+    }
 
-    final String[] sourceTags = StringUtils.split(configuredSourceTags, ",");
-    final String[] targetTags = StringUtils.split(configuredTargetTags, ",");
-    final String[] sourceFlavors = StringUtils.split(configuredSourceFlavors, ",");
-    final String[] propertyNamespaces = StringUtils.split(configuredPropertyNamespaces, ",");
-    final String copyNumberPrefix = StringUtils.trimToEmpty(currentOperation.getConfiguration(COPY_NUMBER_PREFIX_PROPERTY));
+    logger.info("Creating {} new media packages from media package with id {}.", numberOfEvents,
+        mediaPackage.getIdentifier());
+
+    final String[] sourceTags = split(configuredSourceTags, ",");
+    final String[] targetTags = split(configuredTargetTags, ",");
+    final String[] sourceFlavors = split(configuredSourceFlavors, ",");
+    final String[] propertyNamespaces = split(configuredPropertyNamespaces, ",");
+    final String copyNumberPrefix = trimToEmpty(operation.getConfiguration(COPY_NUMBER_PREFIX_PROPERTY));
 
     final SimpleElementSelector elementSelector = new SimpleElementSelector();
     for (String flavor : sourceFlavors) {
       elementSelector.addFlavor(MediaPackageElementFlavor.parseFlavor(flavor));
     }
 
-    final List<String> removeTags = new ArrayList<String>();
-    final List<String> addTags = new ArrayList<String>();
-    final List<String> overrideTags = new ArrayList<String>();
+    final List<String> removeTags = new ArrayList<>();
+    final List<String> addTags = new ArrayList<>();
+    final List<String> overrideTags = new ArrayList<>();
 
     for (String tag : targetTags) {
       if (tag.startsWith(MINUS)) {
@@ -253,11 +205,11 @@ public class DuplicateEventWorkflowOperationHandler extends AbstractWorkflowOper
     }
 
     // Filter elements to copy based on input tags and input flavors
-    final Collection<MediaPackageElement> elements = elementSelector.select(mediaPackage, true);
+    final Collection<MediaPackageElement> elements = elementSelector.select(mediaPackage, false);
     final Collection<Publication> internalPublications = new HashSet<>();
 
-    for (MediaPackageElement e: mediaPackage.getElements()) {
-      if (e instanceof Publication && CHANNEL_ID.equals(((Publication) e).getChannel())) {
+    for (MediaPackageElement e : mediaPackage.getElements()) {
+      if (e instanceof Publication && InternalPublicationChannel.CHANNEL_ID.equals(((Publication) e).getChannel())) {
         internalPublications.add((Publication) e);
       }
       if (MediaPackageElements.EPISODE.equals(e.getFlavor())) {
@@ -266,28 +218,18 @@ public class DuplicateEventWorkflowOperationHandler extends AbstractWorkflowOper
       }
     }
 
-    final MediaPackageElement[] episodeDcs = mediaPackage.getElementsByFlavor(MediaPackageElements.EPISODE);
-    Opt<MediaPackageElement> originalDublinCore = Opt.none();
-    if (episodeDcs.length == 1) {
-      originalDublinCore = Opt.some(episodeDcs[0]);
-    } else {
-      logger.warn("Media package {} has {} episode dublin cores while it is expected to have exactly 1.",
-              mediaPackage.getIdentifier(),
-              episodeDcs.length);
+    final MediaPackageElement[] originalEpisodeDc = mediaPackage.getElementsByFlavor(MediaPackageElements.EPISODE);
+    if (originalEpisodeDc.length != 1) {
+      throw new WorkflowOperationException("Media package " + mediaPackage.getIdentifier() + " has "
+          + originalEpisodeDc.length + " episode dublin cores while it is expected to have exactly 1. Aborting.");
     }
 
     for (int i = 0; i < numberOfEvents; i++) {
-
-      final long copyNumber = getCopyCount(mediaPackage) + 1;
-
       // Clone the media package (without its elements)
-      MediaPackage newMp = copyMediaPackage(mediaPackage, copyNumber, copyNumberPrefix);
+      MediaPackage newMp = copyMediaPackage(mediaPackage, i + 1, copyNumberPrefix);
 
-      // Clone episode dublin core
-      if (originalDublinCore.isSome()) {
-        // Create and add new episode dublin core with changed title
-        newMp = copyDublinCore(mediaPackage, originalDublinCore.get(), newMp, removeTags, addTags, overrideTags);
-      }
+      // Create and add new episode dublin core with changed title
+      newMp = copyDublinCore(mediaPackage, originalEpisodeDc[0], newMp, removeTags, addTags, overrideTags);
 
       // Clone regular elements
       for (final MediaPackageElement e : elements) {
@@ -297,7 +239,7 @@ public class DuplicateEventWorkflowOperationHandler extends AbstractWorkflowOper
       }
 
       // Clone internal publications
-      for (final Publication originalPub: internalPublications) {
+      for (final Publication originalPub : internalPublications) {
         copyPublication(originalPub, mediaPackage, newMp, removeTags, addTags, overrideTags);
       }
 
@@ -308,22 +250,31 @@ public class DuplicateEventWorkflowOperationHandler extends AbstractWorkflowOper
         copyProperties(namespace, mediaPackage, newMp);
       }
 
-      setCopyCount(mediaPackage, copyNumber);
+      // Remove temporary files of new media package
+      try {
+        workspace.cleanup(newMp.getIdentifier());
+      } catch (IOException e) {
+        logger.warn("Failed to cleanup the workspace for media package {}", newMp.getIdentifier());
+      }
     }
     return createResult(mediaPackage, Action.CONTINUE);
   }
 
-  private void updateTags(MediaPackageElement element, List<String> removeTags, List<String> addTags, List<String> overrideTags) {
+  private void updateTags(
+      MediaPackageElement element,
+      List<String> removeTags,
+      List<String> addTags,
+      List<String> overrideTags) {
     element.setIdentifier(null);
 
     if (overrideTags.size() > 0) {
       element.clearTags();
-      for (String tag : overrideTags) {
-        element.addTag(tag);
+      for (String overrideTag : overrideTags) {
+        element.addTag(overrideTag);
       }
     } else {
-      for (String tag : removeTags) {
-        element.removeTag(tag.substring(MINUS.length()));
+      for (String removeTag : removeTags) {
+        element.removeTag(removeTag.substring(MINUS.length()));
       }
       for (String tag : addTags) {
         element.addTag(tag.substring(PLUS.length()));
@@ -331,7 +282,10 @@ public class DuplicateEventWorkflowOperationHandler extends AbstractWorkflowOper
     }
   }
 
-  private MediaPackage copyMediaPackage(MediaPackage source, long copyNumber, String copyNumberPrefix) throws WorkflowOperationException {
+  private MediaPackage copyMediaPackage(
+      MediaPackage source,
+      long copyNumber,
+      String copyNumberPrefix) throws WorkflowOperationException {
     // We are not using MediaPackage.clone() here, since it does "too much" for us (e.g. copies all the attachments)
     MediaPackage destination;
     try {
@@ -352,37 +306,39 @@ public class DuplicateEventWorkflowOperationHandler extends AbstractWorkflowOper
   }
 
   private void copyPublication(
-          Publication sourcePublication,
-          MediaPackage source,
-          MediaPackage destination,
-          List<String> removeTags,
-          List<String> addTags,
-          List<String> overrideTags) throws WorkflowOperationException {
+      Publication sourcePublication,
+      MediaPackage source,
+      MediaPackage destination,
+      List<String> removeTags,
+      List<String> addTags,
+      List<String> overrideTags) throws WorkflowOperationException {
     final String newPublicationId = UUID.randomUUID().toString();
-    final Publication newPublication = PublicationImpl.publication(newPublicationId, CHANNEL_ID, null, null);
+    final Publication newPublication = PublicationImpl.publication(newPublicationId,
+        InternalPublicationChannel.CHANNEL_ID, null, null);
 
     // re-distribute elements of publication to internal publication channel
     final Collection<MediaPackageElement> sourcePubElements = new HashSet<>();
     sourcePubElements.addAll(Arrays.asList(sourcePublication.getAttachments()));
     sourcePubElements.addAll(Arrays.asList(sourcePublication.getCatalogs()));
     sourcePubElements.addAll(Arrays.asList(sourcePublication.getTracks()));
-    for (final MediaPackageElement e: sourcePubElements) {
+    for (final MediaPackageElement e : sourcePubElements) {
       try {
         // We first have to copy the media package element into the workspace
         final MediaPackageElement element = (MediaPackageElement) e.clone();
         final File sourceFile = workspace.get(element.getURI());
-        final URI tmpUri = workspace.put(
-                destination.getIdentifier().toString(), element.getIdentifier().toString(),
-                FilenameUtils.getName(element.getURI().toString()),
-                new FileInputStream(sourceFile)
-        );
-        element.setIdentifier(null);
-        element.setURI(tmpUri);
+        try (InputStream inputStream = new FileInputStream(sourceFile)) {
+          final URI tmpUri = workspace.put(destination.getIdentifier().toString(), element.getIdentifier(),
+              FilenameUtils.getName(element.getURI().toString()), inputStream);
+          element.setIdentifier(null);
+          element.setURI(tmpUri);
+        }
 
         // Now we can distribute it to the new media package
         destination.add(element); // Element has to be added before it can be distributed
-        final Job j = distributionService.distribute(CHANNEL_ID, destination, element.getIdentifier());
-        final MediaPackageElement distributedElement = JobUtil.payloadAsMediaPackageElement(serviceRegistry).apply(j);
+        final Job job = distributionService.distribute(InternalPublicationChannel.CHANNEL_ID, destination,
+            element.getIdentifier());
+        final MediaPackageElement distributedElement =
+            JobUtil.payloadAsMediaPackageElement(serviceRegistry).apply(job);
         destination.remove(element);
 
         updateTags(distributedElement, removeTags, addTags, overrideTags);
@@ -393,33 +349,39 @@ public class DuplicateEventWorkflowOperationHandler extends AbstractWorkflowOper
       }
     }
 
-    // Using an altered copy of the source publication's URI is a bit hacky, but it works without knowing the URI pattern...
+    // Using an altered copy of the source publication's URI is a bit hacky,
+    // but it works without knowing the URI pattern...
     String publicationUri = sourcePublication.getURI().toString();
     publicationUri = publicationUri.replace(source.getIdentifier().toString(), destination.getIdentifier().toString());
-    publicationUri = publicationUri.replace(sourcePublication.getIdentifier().toString(), newPublicationId);
+    publicationUri = publicationUri.replace(sourcePublication.getIdentifier(), newPublicationId);
     newPublication.setURI(URI.create(publicationUri));
     destination.add(newPublication);
   }
 
   private MediaPackage copyDublinCore(
-          MediaPackage source,
-          MediaPackageElement sourceDublinCore,
-          MediaPackage destination,
-          List<String> removeTags,
-          List<String> addTags,
-          List<String> overrideTags) throws WorkflowOperationException {
+      MediaPackage source,
+      MediaPackageElement sourceDublinCore,
+      MediaPackage destination,
+      List<String> removeTags,
+      List<String> addTags,
+      List<String> overrideTags) throws WorkflowOperationException {
     final DublinCoreCatalog destinationDublinCore = DublinCoreUtil.loadEpisodeDublinCore(workspace, source).get();
     destinationDublinCore.setIdentifier(null);
     destinationDublinCore.setURI(sourceDublinCore.getURI());
     destinationDublinCore.set(DublinCore.PROPERTY_TITLE, destination.getTitle());
     destinationDublinCore.setFlavor(sourceDublinCore.getFlavor());
-    for (String tag: sourceDublinCore.getTags()) {
+    for (String tag : sourceDublinCore.getTags()) {
       destinationDublinCore.addTag(tag);
     }
     updateTags(destinationDublinCore, removeTags, addTags, overrideTags);
     try (InputStream inputStream = IOUtils.toInputStream(destinationDublinCore.toXmlString(), "UTF-8")) {
-      destination = ingestService.addCatalog(inputStream, "dublincore.xml", MediaPackageElements.EPISODE, destination);
-    } catch (Exception e) {
+      final String elementId = UUID.randomUUID().toString();
+      final URI newUrl = workspace.put(destination.getIdentifier().compact(), elementId, "dublincore.xml",
+          inputStream);
+      final MediaPackageElement mpe = destination.add(newUrl, MediaPackageElement.Type.Catalog,
+          MediaPackageElements.EPISODE);
+      mpe.setIdentifier(elementId);
+    } catch (IOException e) {
       throw new WorkflowOperationException(e);
     }
     return destination;
@@ -428,40 +390,15 @@ public class DuplicateEventWorkflowOperationHandler extends AbstractWorkflowOper
   private void copyProperties(String namespace, MediaPackage source, MediaPackage destination) {
     final AQueryBuilder q = assetManager.createQuery();
     final AResult properties = q.select(q.propertiesOf(namespace))
-            .where(q.mediaPackageId(source.getIdentifier().toString())).run();
+        .where(q.mediaPackageId(source.getIdentifier().toString())).run();
     if (properties.getRecords().head().isNone()) {
-      logger.error("AssetManager could not find source media package {}. This should never happen.", source.getIdentifier(), namespace);
+      logger.info("No properties to copy for media package {}.", source.getIdentifier(), namespace);
       return;
     }
     for (final Property p : properties.getRecords().head().get().getProperties()) {
-      final PropertyId newPropId = PropertyId.mk(destination.getIdentifier().toString(), namespace, p.getId().getName());
+      final PropertyId newPropId = PropertyId.mk(destination.getIdentifier().toString(), namespace, p.getId()
+          .getName());
       assetManager.setProperty(Property.mk(newPropId, p.getValue()));
-    }
-  }
-
-  private void setCopyCount(MediaPackage mediaPackage, long copyNumber) {
-    final AQueryBuilder q = assetManager.createQuery();
-    final Props p = new Props(q);
-    assetManager.setProperty(p.copyCount().mk(mediaPackage.getIdentifier().toString(), copyNumber));
-  }
-
-  private long getCopyCount(MediaPackage mediaPackage) {
-    final AQueryBuilder q = assetManager.createQuery();
-    final Props p = new Props(q);
-    final AResult property = q.select(p.copyCount().target())
-            .where(q.mediaPackageId(mediaPackage.getIdentifier().toString())).run();
-    if (property.getRecords().head().isNone() || property.getRecords().head().get().getProperties().head().isNone()) {
-      return 0;
-    }
-    return property.getRecords().head().get().getProperties().head().get().getValue().get(Value.LONG);
-  }
-
-  private static class Props extends PropertySchema {
-    Props(AQueryBuilder q) {
-      super(q, DuplicateEventWorkflowOperationHandler.class.getName());
-    }
-    public PropertyField<Long> copyCount() {
-      return longProp(COPY_COUNT_PROPERTY_NAME);
     }
   }
 }

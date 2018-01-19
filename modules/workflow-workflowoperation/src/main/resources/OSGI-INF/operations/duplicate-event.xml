@@ -15,6 +15,4 @@
     cardinality="1..1" policy="static" bind="setAssetManager" />
   <reference name="distributionService" target="(distribution.channel=download)" interface="org.opencastproject.distribution.api.DistributionService"
     cardinality="1..1" policy="static" bind="setDistributionService"/>
-  <reference name="IngestService" interface="org.opencastproject.ingest.api.IngestService"
-    cardinality="1..1" policy="static" bind="setIngestService" />
 </scr:component>
