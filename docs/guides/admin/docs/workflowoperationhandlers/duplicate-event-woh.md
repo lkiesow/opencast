@@ -9,7 +9,8 @@ Description
 The duplicate event operation can be used to duplicate an event by copying an existing one. The main use case are events,
 which contain a series of different presentations which were all recorded with just one recording. In order to create
 seperate events for each presentation, the original recording can be copied and each copy can be cut to only contain
-one presentation. This operation only works with events, which were not published, yet.
+one presentation. If the original event was already published, the duplicate won't be published right away. The user will
+have to publish it manually when he is done editing it.
 
 Parameter Table
 ---------------
@@ -34,7 +35,6 @@ Operation Example
       exception-handler-workflow="partial-error"
       description="Duplicate event">
       <configurations>
-        <configuration key="source-tags">archive</configuration>
         <configuration key="source-flavors">*/*</configuration>
         <configuration key="number-of-events">${numberOfEvents}</configuration>
         <configuration key="max-number-of-events">1000</configuration>
