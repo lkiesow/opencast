@@ -144,8 +144,7 @@ public class DuplicateEventWorkflowOperationHandlerTest {
     configurations.put(TARGET_TAGS_PROPERTY, "");
     configurations.put(NUMBER_PROPERTY, "" + numCopies);
     configurations.put(MAX_NUMBER_PROPERTY, "" + 10);
-    configurations.put(PROPERTY_NAMESPACES_PROPERTY,
-        "org.opencastproject.assetmanager.security,org.opencastproject.scheduler");
+    configurations.put(PROPERTY_NAMESPACES_PROPERTY, "org.opencastproject.assetmanager.security");
     configurations.put(COPY_NUMBER_PREFIX_PROPERTY, "copy");
 
     // run the operation handler
@@ -172,8 +171,7 @@ public class DuplicateEventWorkflowOperationHandlerTest {
     configurations.put(TARGET_TAGS_PROPERTY, "tag1,tag2");
     configurations.put(NUMBER_PROPERTY, "" + 1);
     configurations.put(MAX_NUMBER_PROPERTY, "" + 10);
-    configurations.put(PROPERTY_NAMESPACES_PROPERTY,
-        "org.opencastproject.assetmanager.security,org.opencastproject.scheduler");
+    configurations.put(PROPERTY_NAMESPACES_PROPERTY, "org.opencastproject.assetmanager.security");
     configurations.put(COPY_NUMBER_PREFIX_PROPERTY, "copy");
 
     // run the operation handler
@@ -194,8 +192,7 @@ public class DuplicateEventWorkflowOperationHandlerTest {
     configurations.put(TARGET_TAGS_PROPERTY, "-part1,+tag3");
     configurations.put(NUMBER_PROPERTY, "" + 1);
     configurations.put(MAX_NUMBER_PROPERTY, "" + 10);
-    configurations.put(PROPERTY_NAMESPACES_PROPERTY,
-        "org.opencastproject.assetmanager.security,org.opencastproject.scheduler");
+    configurations.put(PROPERTY_NAMESPACES_PROPERTY, "org.opencastproject.assetmanager.security");
     configurations.put(COPY_NUMBER_PREFIX_PROPERTY, "copy");
 
     // run the operation handler
@@ -289,8 +286,7 @@ public class DuplicateEventWorkflowOperationHandlerTest {
     configurations.put(TARGET_TAGS_PROPERTY, "");
     configurations.put(NUMBER_PROPERTY, "" + numCopies);
     configurations.put(MAX_NUMBER_PROPERTY, "" + maxCopies);
-    configurations.put(PROPERTY_NAMESPACES_PROPERTY,
-        "org.opencastproject.assetmanager.security,org.opencastproject.scheduler");
+    configurations.put(PROPERTY_NAMESPACES_PROPERTY, "org.opencastproject.assetmanager.security");
     configurations.put(COPY_NUMBER_PREFIX_PROPERTY, "copy");
 
     // run the operation handler

@@ -40,7 +40,7 @@ Operation Example
         <configuration key="max-number-of-events">1000</configuration>
         <configuration key="target-tags"></configuration>
         <configuration key="property-namespaces">
-          org.opencastproject.assetmanager.security,org.opencastproject.scheduler
+          org.opencastproject.assetmanager.security
         </configuration>
         <configuration key="copy-number-prefix">copy</configuration>
       </configurations>
