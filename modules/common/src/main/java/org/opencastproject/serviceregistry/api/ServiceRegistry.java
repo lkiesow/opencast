@@ -493,6 +493,17 @@ public interface ServiceRegistry {
   List<Job> getJobs(String serviceType, Status status) throws ServiceRegistryException;
 
   /**
+   * get a list of jobs matching a specific operation type.
+   *
+   * @param operation
+   *          Return jobs only for this operation
+   * @return  the jobs matching this criteria
+   * @throws ServiceRegistryException
+   *          if there is a problem accessing the service registry
+   */
+  List<Job> getOperationJobs(String operation) throws ServiceRegistryException;
+
+  /**
    * Get the list of active jobs.
    *
    * @return list of active jobs
