@@ -1730,6 +1730,28 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
     }
   }
 
+  @Override
+  public List<String> getJobPayloads(String operation) throws ServiceRegistryException {
+    EntityManager em = emf.createEntityManager();
+    try {
+      Query query = em.createNativeQuery("SELECT j.payload FROM mh_job j "
+              + "where j.operation = :operation order by j.dateCreated");
+      query.setParameter("operation", operation);
+      logger.warn("query: {}", query);
+      List<String> payloads = new LinkedList<>();
+      for (Object row : query.getResultList()) {
+        logger.warn("row: {}", row);
+        // The sole entry of each row is the jobs payload
+        String cell = ((String[]) row)[0];
+        payloads.add(cell);
+        logger.debug("Got payload: {}", cell);
+      }
+      return payloads;
+    } catch (Exception e) {
+      throw new ServiceRegistryException(e);
+    }
+  }
+
   /**
    * {@inheritDoc}
    *

@@ -523,6 +523,16 @@ public abstract class ServiceRegistryRemoteBase implements ServiceRegistry {
   }
 
   @Override
+  public List<Job> getOperationJobs(String operation) throws ServiceRegistryException {
+    throw new ServiceRegistryException("Not yet implemented");
+  }
+
+  @Override
+  public List<String> getJobPayloads(String operation) throws ServiceRegistryException {
+    throw new ServiceRegistryException("Not yet implemented");
+  }
+
+  @Override
   public List<Job> getActiveJobs() throws ServiceRegistryException {
     QueryStringBuilder qsb = new QueryStringBuilder("activeJobs.xml");
     final HttpGet get = get(qsb.toString());

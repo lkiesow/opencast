@@ -2394,6 +2394,10 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
   @Override
   public void repopulate(final String indexName) throws Exception {
     List<Job> jobs = new ArrayList<>();
+    logger.warn("get job payload");
+    for (String pay : serviceRegistry.getJobPayloads(Operation.START_WORKFLOW.toString())) {
+      logger.warn("payload: {}", pay);
+    }
     try {
       for (Job job : serviceRegistry.getJobs(WorkflowService.JOB_TYPE, null)) {
         if (WorkflowServiceImpl.Operation.START_WORKFLOW.toString().equals(job.getOperation())) {

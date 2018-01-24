@@ -707,6 +707,16 @@ public class ServiceRegistryInMemoryImpl implements ServiceRegistry {
     return result;
   }
 
+  @Override
+  public List<Job> getOperationJobs(String operation) throws ServiceRegistryException {
+    return null;
+  }
+
+  @Override
+  public List<String> getJobPayloads(String operation) throws ServiceRegistryException {
+    return null;
+  }
+
   /**
    * {@inheritDoc}
    *
