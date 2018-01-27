@@ -80,6 +80,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -234,7 +235,10 @@ public class DuplicateEventWorkflowOperationHandlerTest {
     reset(workspace, assetManager, distributionService);
 
     URI uriDc = getClass().getResource("/dublincore.xml").toURI();
-    expect(workspace.read(eq(URI.create("dublincore.xml")))).andReturn(new File(uriDc)).times(numberOfCopies);
+    for (int i = 0; i < numberOfCopies; i++) {
+      expect(workspace.read(eq(URI.create("dublincore.xml")))).andReturn(new FileInputStream(new File(uriDc)))
+              .times(1);
+    }
     expect(workspace.get(anyObject())).andReturn(new File(getClass().getResource("/av.mov").toURI())).anyTimes();
     expect(workspace.put(anyString(), anyString(), eq("dublincore.xml"), anyObject()))
         .andReturn(uriDc).times(numberOfCopies);
