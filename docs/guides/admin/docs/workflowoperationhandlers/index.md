@@ -36,6 +36,7 @@ The following table contains the workflow operations that are available in an ou
 |copy                |Copy media package elements to target directory                |[Documentation](copy-woh.md)|
 |cover-image         |Generate a cover-image containing metadata                     |[Documentation](coverimage-woh.md)|
 |defaults            |Applies default workflow configuration values                  |[Documentation](defaults-woh.md)|
+|demux               |Demuxes a media container                                      |[Documentation](demux-woh.md)|
 |editor              |Waiting for user to review, then cut video based on edit-list  |[Documentation](editor-woh.md)|
 |encode              |Encode media files to differents formats in parallel           |[Documentation](encode-woh.md)|
 |error-resolution    |Internal operation to pause a workflow in error                |[Documentation](error-resolution-woh.md)|
@@ -53,10 +54,12 @@ The following table contains the workflow operations that are available in an ou
 |ingest-download     |Download files from external URL for ingest                    |[Documentation](ingestdownload-woh.md)|
 |inspect             |Inspect the media (check if it is valid)                       |[Documentation](inspect-woh.md)|
 |log                 |Log workflow status                                            |[Documentation](log-woh.md)|
+|multiencode         |Encode multiple files in parallel                              |[Documentation](multiencode-woh.md)|
 |normalize-audio     |Normalize first audio stream                                   |[Documentation](normalizeaudio-woh.md)|
 |partial-import      |Import partial tracks and process according to a SMIL document |[Documentation](partial-import-woh.md)|
 |post-mediapackage   |Send mediapackage to remote service                            |[Documentation](postmediapackage-woh.md)|
 |prepare-av          |Preparing audio and video work versions                        |[Documentation](prepareav-woh.md)|
+|process-smil        |Process media according to a SMIL file                         |[Documentation](process-smil-woh.md)|
 |probe-resolution    |Set workflow instance variables based on video resolution      |[Documentation](probe-resolution-woh.md)|
 |publish-aws         |Distribute and publish media to Amazon S3 and Cloudfront       |[Documentation](publishaws-woh.md)|
 |publish-configure   |Distribute and publish media to the configured publication     |[Documentation](publishconfigure-woh.md)|

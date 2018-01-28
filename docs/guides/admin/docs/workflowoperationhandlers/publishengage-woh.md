@@ -32,15 +32,15 @@ Operation Example
 -----------------
 
     <operation
-        id="publish-engage"
-        max-attempts="2"
-        fail-on-error="true"
-        exception-handler-workflow="error"
-        description="Distribute and publish to engage player">
-        <configurations>
-            <configuration key="download-source-tags">engage,atom,rss</configuration>
-            <configuration key="streaming-source-tags">engage</configuration>
-            <configuration key="check-availability">true</configuration>
-            <configuration key="strategy">merge</configuration>
-        </configurations>
+      id="publish-engage"
+      max-attempts="2"
+      fail-on-error="true"
+      exception-handler-workflow="error"
+      description="Distribute and publish to engage player">
+      <configurations>
+        <configuration key="download-source-tags">engage,atom,rss</configuration>
+        <configuration key="streaming-source-tags">engage</configuration>
+        <configuration key="check-availability">true</configuration>
+        <configuration key="strategy">merge</configuration>
+      </configurations>
     </operation>

@@ -1,25 +1,16 @@
-# DemuxWorkflowHandler
+Demux Workflow Operation Handler
+================================
 
-## Description
+Description
+-----------
 
-The DemuxWorkflowHandler is used to demux presenter and presentation source source media from capture agents (such as epiphan pearl)
-that mux the two together for uploads.
-It uses a special encoding profile that has two outputs, it then flavors the target media in the order listed in the encoding profile output.
+This operation is used to demux multiple video streams from one input file. This can be usefuly, for example, if a
+capture agent puts multiple video streams into one file for uploads.  It uses a special encoding profile that has two
+outputs, it then flavors the target media in the order listed in the encoding profile output.
 
-The source recording are selected by source-flavors 
 
-# Example
-
-## profile:
-
-profile.epiphan-demux.name = epiphan-demux
-profile.epiphan-demux.input = visual
-profile.epiphan-demux.output = visual
-profile.epiphan-demux.suffix = -30fps.mp4
-profile.epiphan-demux.mimetype = video/mp4
-profile.epiphan-demux.ffmpeg.command = -strict unofficial -i #{in.video.path} -itsoffset 0.149 -i #{in.video.path} -map 0:0 -map 1:1 -c:v copy -c:a copy #{out.dir}/#{out.name}_presenter#{out.suffix} -c:v copy -c:a copy -map 0:2 -map 1:3  #{out.dir}/#{out.name}_presentation#{out.suffix}
-
-## Parameter Table
+Parameter Table
+---------------
 
 |configuration keys | example                     | description                                                         |
 |-------------------|-----------------------------|---------------------------------------------------------------------|
@@ -28,18 +19,27 @@ profile.epiphan-demux.ffmpeg.command = -strict unofficial -i #{in.video.path} -i
 |target-flavors     | presenter/source,presentation/source  | Specifies the flavors of the new media                       |
 |encoding-profile   | epiphan-demux               | Specifies the encoding profile |
 
-	 
  
 ## Operation Example
 
-   <operation
+    <operation
       id="demux"
       exception-handler-workflow="ng-partial-error"
-      description="Extract epiphan presenter and presentation video from multitrack source (target listed in the same order in encoding profile)">
+      description="Extract presenter and presentation video from multitrack source">
       <configurations>
         <configuration key="source-flavors">multitrack/source</configuration>
         <configuration key="target-flavors">presenter/source,presentation/source</configuration>
         <configuration key="target-tags">archive</configuration>
-        <configuration key="encoding-profile">epiphan-demux</configuration>
+        <configuration key="encoding-profile"demux</configuration>
       </configurations>
     </operation>
+
+
+Encoding Profile
+----------------
+
+Note that the encoding profile needs to contain multiple output files:
+
+    profile.demux.ffmpeg.command = -i #{in.video.path} \
+      -map 0:0 -map 0:1 -c copy #{out.dir}/#{out.name}_presenter#{out.suffix} \
+      -map 0:2 -map 0:3 -c copy #{out.dir}/#{out.name}_presentation#{out.suffix}
