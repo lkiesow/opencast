@@ -48,6 +48,7 @@ import org.opencastproject.workflow.api.WorkflowInstance;
 import org.opencastproject.workflow.api.WorkflowInstance.WorkflowState;
 import org.opencastproject.workflow.api.WorkflowOperationInstance;
 import org.opencastproject.workflow.api.WorkflowParser;
+import org.opencastproject.workflow.api.WorkflowParsingException;
 import org.opencastproject.workflow.api.WorkflowQuery;
 import org.opencastproject.workflow.api.WorkflowQuery.QueryTerm;
 import org.opencastproject.workflow.api.WorkflowQuery.Sort;
@@ -274,25 +275,25 @@ public class WorkflowServiceSolrIndex implements WorkflowServiceIndex {
     if (instancesInSolr == 0) {
       logger.info("The workflow index is empty, looking for workflows to index");
       // this may be a new index, so get all of the existing workflows and index them
-      List<String> workflows;
+      List<String> workflowPayloads;
 
       try {
-        workflows =  serviceRegistry.getJobPayloads(WorkflowServiceImpl.Operation.START_WORKFLOW.toString());
+        workflowPayloads =  serviceRegistry.getJobPayloads(WorkflowServiceImpl.Operation.START_WORKFLOW.toString());
       } catch (ServiceRegistryException e) {
         logger.error("Unable to load the workflows jobs: {}", e.getMessage());
         throw new ServiceException(e.getMessage());
       }
 
-      final int total = workflows.size();
+      final int total = workflowPayloads.size();
       if (total == 0) {
         logger.info("No workflows found. Repopulating index finished.");
         return;
       }
 
-      logger.info("Populating the workflow index with {} workflows", workflows.size());
+      logger.info("Populating the workflow index with {} workflows", total);
 
       int current = 0;
-      for (String payload : workflows) {
+      for (String payload : workflowPayloads) {
         current++;
         WorkflowInstance instance = null;
         try {
@@ -301,13 +302,14 @@ public class WorkflowServiceSolrIndex implements WorkflowServiceIndex {
           securityService.setOrganization(organization);
           securityService.setUser(SecurityUtil.createSystemUser(systemUserName, organization));
           index(instance);
-        } catch (WorkflowDatabaseException e) {
-          logger.warn("Skipping restoring of workflow {}: {}", instance.getId(), e.getMessage());
+        } catch (WorkflowParsingException | WorkflowDatabaseException e) {
+          logger.warn("Skipping restoring of workflow {}", payload, e);
         }
         if (current % 100 == 0) {
           logger.info("Indexing workflow {}/{} ({} percent done)", current, total, current * 100 / total);
         }
       }
+
 
       logger.info("Finished populating the workflow search index");
     }
