@@ -12,15 +12,16 @@ outputs, it then flavors the target media in the order listed in the encoding pr
 Parameter Table
 ---------------
 
-|configuration keys | example                     | description                                                         |
-|-------------------|-----------------------------|---------------------------------------------------------------------|
-|source-flavors     | multitrack/source           | Which media should be encoded                               |
-|target-tags        | archive                     | Specifies the tags of the new media                               |
-|target-flavors     | presenter/source,presentation/source  | Specifies the flavors of the new media                       |
-|encoding-profile   | epiphan-demux               | Specifies the encoding profile |
+|configuration keys | example                     | description                                      |
+|-------------------|-----------------------------|--------------------------------------------------|
+|source-flavors     | multitrack/source           | Which media should be encoded                    |
+|target-tags        | archive                     | Specifies the tags of the new media              |
+|target-flavors     | presenter/source,presentation/source  | Specifies the flavors of the new media |
+|encoding-profile   | epiphan-demux               | Specifies the encoding profile                   |
 
  
-## Operation Example
+Operation Example
+-----------------
 
     <operation
       id="demux"

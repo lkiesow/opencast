@@ -6,8 +6,7 @@ TODO: Make this easier to understand
 Description
 -----------
 
-This operation can be used to encode multiple source media into multiple formats concurrently. The source recordings are
-selected by `source-flavors` *and* `source-tags`.
+This operation can be used to encode multiple source media into multiple formats concurrently.
 
 - Each source media selector has its own sets of encoding profile ids (one for each target recording) and target tags. 
 - Each source medium is processed to one or multiple formats in one FFmpeg command.
