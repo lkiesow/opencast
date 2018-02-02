@@ -1,54 +1,35 @@
 Multi-encode Workflow Operation Handler
 =======================================
 
-TODO: Make this easier to understand
-
 Description
 -----------
 
 This operation can be used to encode multiple source media into multiple formats concurrently.
 
-- Each source media selector has its own sets of encoding profile ids (one for each target recording) and target tags. 
-- Each source medium is processed to one or multiple formats in one FFmpeg command.
-- The target media are optionally tagged with the encoding profile ids.
-- This operation handles each single source flavor selector independently.
-- The parameters for each configuration, such as flavor are separated into sections by `;`.
-- Each source selector can have its own set of target tags and flavors, defined as a common delimited list.
+The operation supports multiple selectors (flavors and tags). Selectors are separated by `;`. Each selection will spawn
+a separate job which can be processed simultaneously anywhere on the Opencast cluster. For example, if
+`presenter/source` and `presentation/source` are specified as source flavors, both sources will be processed at the same
+time, possibly on separate worker nodes, speeding up the overall workflow processing time.
 
-One source selector means that all the matching recording will be processed the same way:
+Each job can furthermore encode their source media to multiple output files, for example, to convert into several
+qualities while only decoding the source media once.
 
-    <configuration key="source-flavors">*/source</configuration>
+Note that, if multiple source selectors are configured (e.g. `source-flavors: presenter/source;presentation/source`) all
+other output configuration can be specified globally by just providing a single configuration value or for each job
+separately, by separating the configuration for each job using `;`. However, the amount of configurations must either
+match the amount of jobs or a general option (no semicolon) must be specified. A mismatching amount will result in an
+error.
 
-Two different source selectors means that all the matching recordings in the
-first selector will be processed according to the parameters in the first
-section and the all the matching recordings in the second selector will be
-processed according to the parameters in next section. 
+For example, this would specify two parallel jobs for which each resulting track will get the tags `engage-download` and
+`rss`:
 
     <configuration key="source-flavors">presenter/source;presentation/source</configuration>
+    <configuration key="target-tags">engage-download,rss</configuration>
 
-Each source selector can have only one corresponding section.
-If there is only one source selector, but multiple sections in the parameters, then the sections are collapsed
-into one and they will apply to all the source flavors in the source selector.
+While this would still have the first result tagged `engage-download` and `rss` while the second result would only be
+tagged `rss`.
 
-    <configuration key="target-flavor">*/preview</configuration>
 
-All targets are flavored the same way. Using the example above, the output tracks will have the flavors
-`presenter/preview` and `presentation/preview`.
-
-    <configuration key="target-tags">engage-streaming,rss,atom;engage-download,rss,atom</configuration>
-
-Using the example above, `presenter/preview` is tagged with `engage-streaming,rss,atom` and `presentation/preview` is
-tagged with `engage-download,rss,atom`.
-
-The use of the semi-colon is optional. If it is absent, there is only one section.  If there is only one section, then
-the same configuration is applied to all the sources.  If a configuration has the same number of sections as the source,
-then the configurations for the operation are taken from the corresponding sections.
-
-Operations on all the source flavors run on different servers concurrently.
-
-> Note: Each source flavor generates all the target formats in one FFmpeg call by incorporating relevant parts of the
-> encoding profile command. Care must be taken that no complex filters are used in the encoding profiles for this
-> operation, as it can cause a conflict.
 
 For example, if `presenter/source` is to encoded with `mp4-low.http,mp4-medium.http` and `presentation/source` is to be
 encoded with `mp4-hd.http,mp4-hd.http` The target flavors are `presenter/delivery` and `presentation/delivery` and all
@@ -65,8 +46,15 @@ Parameter Table
 |target-tags       | rss,archive              | Specifies the tags of the new media                                 |
 |encoding-profiles | mp4-low.http,mp4-medium.http*;*mp4-hd.http,mp4-hd.http | Specifies the encoding profiles to use for each source flavor       |
 |tag-with-profile  | true (default to false)     | target medium are tagged with coresponding encoding profile Id      |
-	 
- 
+
+
+Encoding Profile
+----------------
+
+> Note: Each source flavor generates all the target formats in one FFmpeg call by incorporating relevant parts of the
+> encoding profile command. Care must be taken that no complex filters are used in the encoding profiles for this
+> operation, as it can cause a conflict.
+
 Operation Example
 -----------------
 
