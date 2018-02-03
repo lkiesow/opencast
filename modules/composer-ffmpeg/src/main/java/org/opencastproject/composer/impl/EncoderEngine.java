@@ -645,8 +645,8 @@ public class EncoderEngine implements AutoCloseable {
    */
   protected class OutputAggregate {
     private final List<EncodingProfile> pf;
-    private final ArrayList<String> outputs = new ArrayList<String>();
-    private final ArrayList<String> outputFiles = new ArrayList<String>();
+    private final ArrayList<String> outputs = new ArrayList<>();
+    private final ArrayList<String> outputFiles = new ArrayList<>();
     private final ArrayList<String> vpads; // output pads for each segment
     private final ArrayList<String> apads;
     private final ArrayList<String> vfilter; // filters for each output format
@@ -787,11 +787,11 @@ public class EncoderEngine implements AutoCloseable {
       IdBuilder idbuilder = IdBuilderFactory.newInstance().newIdBuilder();
       int size = profiles.size();
       // Init
-      vfilter = new ArrayList<String>(java.util.Collections.nCopies(size, null));
-      afilter = new ArrayList<String>(java.util.Collections.nCopies(size, null));
+      vfilter = new ArrayList<>(java.util.Collections.nCopies(size, null));
+      afilter = new ArrayList<>(java.util.Collections.nCopies(size, null));
       // name of output pads to map to files
-      apads = new ArrayList<String>(java.util.Collections.nCopies(size, null));
-      vpads = new ArrayList<String>(java.util.Collections.nCopies(size, null));
+      apads = new ArrayList<>(java.util.Collections.nCopies(size, null));
+      vpads = new ArrayList<>(java.util.Collections.nCopies(size, null));
 
       vsplit = (size > 1) ? (vInputPad + "split=" + size) : null; // number of splits
       asplit = (size > 1) ? (aInputPad + "asplit=" + size) : null;
@@ -835,7 +835,6 @@ public class EncoderEngine implements AutoCloseable {
             i++;
           } else if (opt.startsWith("-filter_complex") || opt.startsWith("-lavfi")) { // safer to quit now than to
             // baffle users with strange errors later
-            i++;
             logger.error("Command does not support complex filters - only simple -af or -vf filters are supported");
             throw new EncoderException(
                     "Cannot parse complex filters in" + profile.getIdentifier() + " for this operation");
@@ -850,9 +849,9 @@ public class EncoderEngine implements AutoCloseable {
             if (str.contains("copy")) // c
               i++;
             else
-              cmd = cmd + " " + opt;
+              cmd += " " + opt;
           } else { // keep the rest
-            cmd = cmd + " " + opt;
+            cmd += " " + opt;
           }
           i++;
         }
@@ -1175,7 +1174,7 @@ public class EncoderEngine implements AutoCloseable {
    * @throws EncoderException
    *           if it fails
    */
-  public List<File> multiOutputCmd(File videoSource, List<EncodingProfile> profiles, Map<String, String> properties,
+  List<File> multiOutputCmd(File videoSource, List<EncodingProfile> profiles, Map<String, String> properties,
           boolean hasVideo, boolean hasAudio) throws EncoderException {
     if (videoSource == null)
       throw new IllegalArgumentException("At least one track must be specified.");
@@ -1185,10 +1184,10 @@ public class EncoderEngine implements AutoCloseable {
     // Set encoding parameters
     OutputAggregate outmaps = new OutputAggregate(profiles, params, (hasVideo) ? "[0:v]" : null,
             (hasAudio) ? "[0:a]" : null);
-    List<File> inputs = new ArrayList<File>(); // Set up inputs for reporting
+    List<File> inputs = new ArrayList<>(); // Set up inputs for reporting
     inputs.add(videoSource);
-    List<String> command = new ArrayList<String>();
-    List<String> clauses = new ArrayList<String>();
+    List<String> command = new ArrayList<>();
+    List<String> clauses = new ArrayList<>();
     if (hasAudio) {
       clauses.add(outmaps.getAsplit());
       clauses.add(outmaps.getAudioFilter());
@@ -1197,7 +1196,6 @@ public class EncoderEngine implements AutoCloseable {
       clauses.add(outmaps.getVsplit());
       clauses.add(outmaps.getVideoFilter());
     }
-    command.add("-y"); // overwrite old files
     command.add("-nostats"); // no progress report
     command.add("-i"); // Add inputfile in the order of entry
     try {

@@ -2236,7 +2236,7 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
     try {
       // Job Load is based on number of encoding profiles - by default, 1 profile = 1.0f load
       float load = (1 + profileIds.size()) * perEncodingProfileJobLoad;
-      ArrayList<String> args = new ArrayList<String>();
+      ArrayList<String> args = new ArrayList<>();
       args.addAll(Arrays.asList(MediaPackageElementParser.getAsXml(sourceTrack)));
       args.addAll(profileIds);
       return serviceRegistry.createJob(JOB_TYPE, Operation.MultiEncode.toString(), args, load);
@@ -2263,8 +2263,7 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
    * @throws MediaPackageException
    *           - if bad mp
    */
-  protected List<Track> multiEncode(final Job job, Track videoTrack, List<String> profileIds,
-          Map<String, String> properties) throws EncoderException, MediaPackageException {
+  List<Track> multiEncode(final Job job, Track videoTrack, List<String> profileIds, Map<String, String> properties) throws EncoderException, MediaPackageException {
     if (job == null)
       throw new IllegalArgumentException("The Job parameter must not be null");
 
@@ -2272,7 +2271,7 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
       final File videoFile = (videoTrack != null) ? loadTrackIntoWorkspace(job, "source", videoTrack) : null;
 
       // Get the encoding profile
-      List<EncodingProfile> profiles = new ArrayList<EncodingProfile>();
+      List<EncodingProfile> profiles = new ArrayList<>();
       for (String profileId : profileIds) {
         EncodingProfile profile = getProfile(job, profileId);
         profiles.add(profile);
@@ -2285,7 +2284,7 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
         outputs = encoderEngine.multiOutputCmd(videoFile, profiles, properties, videoTrack.hasVideo(),
                 videoTrack.hasAudio());
       } catch (EncoderException e) {
-        Map<String, String> params = new HashMap<String, String>();
+        Map<String, String> params = new HashMap<>();
         params.put("video", (videoFile != null) ? videoTrack.getURI().toString() : "EMPTY");
         params.put("profile", profiles.get(0).getIdentifier());
         params.put("properties", (properties != null) ? properties.toString() : "EMPTY");
@@ -2300,17 +2299,15 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
         return null;
       List<URI> outputURLs = new ArrayList<URI>();
       List<Job> inspectionJobs = new ArrayList<Job>();
-      InputStream in = null;
       // Set up inspection of all the outputs
       JobBarrier barrier = new JobBarrier(job, serviceRegistry);
       for (File output : outputs) { // inspect each output media in order
-        URI returnURL = null;
-        in = new FileInputStream(output);
-        try {
+        URI returnURL;
+        try (InputStream in = new FileInputStream(output)) {
           // Use name instead of just extension because there are now multiples files from the same source
           // Downstream has to tag them correctly
-          String newname = String.format("%s.%s", job.getId(), FilenameUtils.getName(output.getAbsolutePath()));
-          returnURL = workspace.putInCollection(COLLECTION, newname, in); // File copied OK
+          String newName = String.format("%s.%s", job.getId(), FilenameUtils.getName(output.getAbsolutePath()));
+          returnURL = workspace.putInCollection(COLLECTION, newName, in); // File copied OK
           logger.info("Copied the encoded file {} to the workspace at {}", output, returnURL);
           outputURLs.add(returnURL);
         } catch (Exception e) {
@@ -2318,8 +2315,6 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
           cleanup(outputs.toArray(new File[outputs.size()]));
           cleanupWorkspace(outputURLs.toArray(new URI[outputURLs.size()]));
           throw new EncoderException("Unable to put the encoded files into the workspace", e);
-        } finally {
-          IOUtils.closeQuietly(in);
         }
         Job inspectionJob = inspectionService.inspect(returnURL);
         inspectionJobs.add(inspectionJob);
@@ -2328,7 +2323,7 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
       cleanup(outputs.toArray(new File[outputs.size()])); // cleanup
       inspectionSuccessful(barrier, "Inspection failed for some output media from MultiOutputEncode"); // So that I can
 
-      List<Track> outputTracks = new ArrayList<Track>();
+      List<Track> outputTracks = new ArrayList<>();
       for (Job j : inspectionJobs) {
         Track inspectedTrack = (Track) MediaPackageElementParser.getFromXml(j.getPayload());
         String targetTrackId = idBuilder.createNew().toString();

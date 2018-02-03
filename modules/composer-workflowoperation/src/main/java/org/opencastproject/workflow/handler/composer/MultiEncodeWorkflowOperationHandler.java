@@ -53,8 +53,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.SortedMap;
-import java.util.TreeMap;
 
 //
 /**
@@ -66,26 +64,8 @@ public class MultiEncodeWorkflowOperationHandler extends AbstractWorkflowOperati
   /** The logging facility */
   private static final Logger logger = LoggerFactory.getLogger(MultiEncodeWorkflowOperationHandler.class);
 
-  /** The configuration options for this handler */
-  private static final SortedMap<String, String> CONFIG_OPTIONS;
-
-  /** seperator for independent clauses */
-  static final String SEPARATOR = ";";
-
-  static {
-    CONFIG_OPTIONS = new TreeMap<String, String>();
-    CONFIG_OPTIONS.put("source-flavors", "The \"flavor\" of the track to use as a source input");
-    CONFIG_OPTIONS.put("source-tags",
-            "The \"tag\" of the track to use as a source input (if used,track is both (source tag AND source flavor) )");
-    CONFIG_OPTIONS.put("encoding-profiles",
-            "The encoding profile to use, this is one profile with multiple outputs listed");
-    CONFIG_OPTIONS.put("target-flavors",
-            "The flavors to apply to the encoded file in the same order as in the encoding profile,sections separated by \";\"");
-    CONFIG_OPTIONS.put("target-tags",
-            "The tags to apply to the encoded files, sections ordered as in the encoding profile and separated by \";\"");
-    CONFIG_OPTIONS.put("tag-with-profile",
-            "Add encoding profile name as a tag to the corresponding encoded file (default: true)");
-  }
+  /** separator for independent clauses */
+  private static final String SEPARATOR = ";";
 
   /** The composer service */
   private ComposerService composerService = null;
@@ -112,16 +92,6 @@ public class MultiEncodeWorkflowOperationHandler extends AbstractWorkflowOperati
    */
   public void setWorkspace(Workspace workspace) {
     this.workspace = workspace;
-  }
-
-  /**
-   * {@inheritDoc}
-   *
-   * @see org.opencastproject.workflow.api.WorkflowOperationHandler#getConfigurationOptions()
-   */
-  @Override
-  public SortedMap<String, String> getConfigurationOptions() {
-    return CONFIG_OPTIONS;
   }
 
   /**
@@ -357,8 +327,7 @@ public class MultiEncodeWorkflowOperationHandler extends AbstractWorkflowOperati
 
   private String[] getConfigAsArray(WorkflowOperationInstance operation, String name) {
     String sourceOption = StringUtils.trimToNull(operation.getConfiguration(name));
-    String[] options = (sourceOption != null) ? sourceOption.split(SEPARATOR) : null;
-    return (options);
+    return StringUtils.split(sourceOption, SEPARATOR);
   }
 
   /*
@@ -405,13 +374,13 @@ public class MultiEncodeWorkflowOperationHandler extends AbstractWorkflowOperati
             profiles);
 
     long totalTimeInQueue = 0;
-    Map<Job, JobInformation> encodingJobs = new HashMap<Job, JobInformation>();
+    Map<Job, JobInformation> encodingJobs = new HashMap<>();
     // Find the encoding profiles - should only be one per flavor or tag
     for (ElementProfileTagFlavor eptf : selectors) {
       // Look for elements matching the tag and flavor
       Collection<Track> elements = eptf.elementSelector.select(mediaPackage, true);
       for (Track track : elements) { // For each source
-        logger.info("Encoding track {} using encoding profile '{}'", track, eptf.getProfiles().get(0).toString());
+        logger.info("Encoding track {} using encoding profile '{}'", track, eptf.getProfiles().get(0));
         // Start encoding and wait for the result
         encodingJobs.put(composerService.multiEncode(track, eptf.getProfiles()),
                 new JobInformation(track, eptf, tagWithProfile));

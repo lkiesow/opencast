@@ -71,3 +71,9 @@ Operation Example
         <configuration key="tag-with-profile">true</configuration>
       </configurations>
     </operation>
+
+
+TODO
+----
+
+- multiencode requires inspection: fail fast if none present
