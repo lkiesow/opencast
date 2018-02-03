@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<scr:components xmlns:scr="http://www.osgi.org/xmlns/scr/v1.1.0">
+  <scr:component
+    name="org.opencastproject.animate.impl.AnimateServiceImpl"
+    immediate="true" activate="activate">
+    <implementation class="org.opencastproject.animate.impl.AnimateServiceImpl" />
+    <property name="service.description" value="Animation Service" />
+    <property name="service.pid" value="org.opencastproject.animate.impl.AnimateServiceImpl" />
+    <service>
+      <provide interface="org.opencastproject.animate.api.AnimateService" />
+      <provide interface="org.osgi.service.cm.ManagedService" />
+    </service>
+    <reference name="workspace" interface="org.opencastproject.workspace.api.Workspace" cardinality="1..1"
+      policy="static" bind="setWorkspace" />
+    <reference name="serviceRegistry" interface="org.opencastproject.serviceregistry.api.ServiceRegistry"
+      cardinality="1..1" policy="static" bind="setServiceRegistry" />
+  </scr:component>
+</scr:components>
