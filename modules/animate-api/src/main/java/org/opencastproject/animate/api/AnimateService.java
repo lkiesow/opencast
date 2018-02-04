@@ -24,7 +24,6 @@ package org.opencastproject.animate.api;
 import org.opencastproject.job.api.Job;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Map;
 
 /**
@@ -37,5 +36,5 @@ public interface AnimateService {
    */
   String JOB_TYPE = "org.opencastproject.animate";
 
-  Job animate(File animation, Map<String, String> metadata) throws IOException;
+  Job animate(File animation, Map<String, String> metadata, Map<String, String> options) throws AnimateServiceException;
 }
