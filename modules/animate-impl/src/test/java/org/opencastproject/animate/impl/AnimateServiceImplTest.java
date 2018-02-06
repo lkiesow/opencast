@@ -44,6 +44,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -118,8 +119,9 @@ public class AnimateServiceImplTest {
     metadata.put("episode.title", "Test");
     metadata.put("episode.author", "John Doe");
     metadata.put("series.title", "The Art Of Animation");
-    Map<String, String> options = new HashMap<>();
-    options.put("-t", "ffmpeg");
+    List<String> options = new ArrayList<>(2);
+    options.add("-t");
+    options.add("ffmpeg");
     Job job = animateService.animate(animation, metadata, options);
     File output = new File(job.getPayload());
     Assert.assertTrue(output.isFile());
@@ -130,7 +132,7 @@ public class AnimateServiceImplTest {
   public void testMissingEncodingOptions() throws Exception {
     File animation = new File(getClass().getResource("/synfig-test-animation.sif").toURI());
     Map<String, String> metadata = new HashMap<>();
-    Map<String, String> options = new HashMap<>();
+    List<String> options = new ArrayList<>(0);
     Job job = null;
     try {
       job = animateService.animate(animation, metadata, options);

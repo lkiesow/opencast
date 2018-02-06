@@ -85,6 +85,7 @@ public class AnimateServiceImpl extends AbstractJobProducer implements AnimateSe
   private final Set<Process> activeProcesses = new HashSet<>();
 
   private final Type stringMapType = new TypeToken<Map<String, String>>() { }.getType();
+  private final Type stringListType = new TypeToken<List<String>>() { }.getType();
 
   /** Creates a new animate service instance. */
   public AnimateServiceImpl() {
@@ -128,7 +129,7 @@ public class AnimateServiceImpl extends AbstractJobProducer implements AnimateSe
     String animation = arguments.get(0);
     Gson gson = new Gson();
     Map<String, String> metadata = gson.fromJson(arguments.get(1), stringMapType);
-    Map<String, String> options = gson.fromJson(arguments.get(2), stringMapType);
+    List<String> options = gson.fromJson(arguments.get(2), stringListType);
 
     // filter animation and get new, custom input file
     File input = customAnimation(job, animation, metadata);
@@ -145,10 +146,7 @@ public class AnimateServiceImpl extends AbstractJobProducer implements AnimateSe
     command.add(input.getAbsolutePath());
     command.add("-o");
     command.add(output.getAbsolutePath());
-    for (Map.Entry<String, String> arg: options.entrySet()) {
-      command.add(arg.getKey());
-      command.add(arg.getValue());
-    }
+    command.addAll(options);
     logger.info("Executing animation command: {}", command);
 
     Process process = null;
@@ -203,8 +201,7 @@ public class AnimateServiceImpl extends AbstractJobProducer implements AnimateSe
 
 
   @Override
-  public Job animate(File animation, Map<String, String> metadata, Map<String, String> options) throws
-          AnimateServiceException {
+  public Job animate(File animation, Map<String, String> metadata, List<String> options) throws AnimateServiceException {
     Gson gson = new Gson();
     List<String> arguments = Arrays.asList(animation.getAbsolutePath(), gson.toJson(metadata), gson.toJson(options));
     try {
@@ -214,6 +211,10 @@ public class AnimateServiceImpl extends AbstractJobProducer implements AnimateSe
     }
   }
 
+  @Override
+  public void cleanup(Job job) {
+    FileUtils.deleteQuietly(new File(workspace.rootDirectory(), String.format("animate/%d", job.getId())));
+  }
 
   @Override
   protected ServiceRegistry getServiceRegistry() {
