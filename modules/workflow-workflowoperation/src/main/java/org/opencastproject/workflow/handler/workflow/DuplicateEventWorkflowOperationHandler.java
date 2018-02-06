@@ -45,6 +45,7 @@ import org.opencastproject.metadata.dublincore.DublinCore;
 import org.opencastproject.metadata.dublincore.DublinCoreCatalog;
 import org.opencastproject.metadata.dublincore.DublinCoreUtil;
 import org.opencastproject.util.JobUtil;
+import org.opencastproject.util.NotFoundException;
 import org.opencastproject.workflow.api.AbstractWorkflowOperationHandler;
 import org.opencastproject.workflow.api.WorkflowInstance;
 import org.opencastproject.workflow.api.WorkflowOperationException;
@@ -59,8 +60,6 @@ import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -252,8 +251,9 @@ public class DuplicateEventWorkflowOperationHandler extends AbstractWorkflowOper
 
       // Remove temporary files of new media package
       try {
-        workspace.cleanup(newMp.getIdentifier());
-      } catch (IOException e) {
+        workspace.delete(newMp.getIdentifier().toString(),
+                newMp.getElementsByFlavor(MediaPackageElements.EPISODE)[0].getIdentifier());
+      } catch (IOException | NotFoundException e) {
         logger.warn("Failed to cleanup the workspace for media package {}", newMp.getIdentifier());
       }
     }
@@ -325,8 +325,7 @@ public class DuplicateEventWorkflowOperationHandler extends AbstractWorkflowOper
       try {
         // We first have to copy the media package element into the workspace
         final MediaPackageElement element = (MediaPackageElement) e.clone();
-        final File sourceFile = workspace.get(element.getURI());
-        try (InputStream inputStream = new FileInputStream(sourceFile)) {
+        try (InputStream inputStream = workspace.read(element.getURI())) {
           final URI tmpUri = workspace.put(destination.getIdentifier().toString(), element.getIdentifier(),
               FilenameUtils.getName(element.getURI().toString()), inputStream);
           element.setIdentifier(null);
@@ -344,6 +343,7 @@ public class DuplicateEventWorkflowOperationHandler extends AbstractWorkflowOper
         updateTags(distributedElement, removeTags, addTags, overrideTags);
 
         PublicationImpl.addElementToPublication(newPublication, distributedElement);
+        workspace.delete(destination.getIdentifier().toString(), element.getIdentifier());
       } catch (Exception exception) {
         throw new WorkflowOperationException(exception);
       }
