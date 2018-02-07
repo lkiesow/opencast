@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definition xmlns="http://workflow.opencastproject.org">
+
+  <id>animate</id>
+  <title>Fast Testing Workflow</title>
+  <tags>
+    <tag>upload</tag>
+    <tag>schedule</tag>
+  </tags>
+  <description>
+    A minimal workflow that transcodes the media into distribution formats, then
+    sends the resulting distribution files, along with their associated metadata,
+    to the distribution channels.
+  </description>
+
+  <operations>
+
+    <operation
+      id="animate"
+      description="Applying default configuration values">
+      <configurations>
+        <configuration key="animation-file">/home/lars/cloud.lkiesow.de/opencast-intro/opencast-intro-episode-title.sif</configuration>
+		  <configuration key="target-flavor">presentation/preview</configuration>
+        <configuration key="target-tags">archive</configuration>
+      </configurations>
+    </operation>
+
+    <!-- Archive the current state of the media package -->
+
+    <operation
+      id="snapshot"
+      fail-on-error="true"
+      exception-handler-workflow="partial-error"
+      description="Archiving">
+      <configurations>
+        <configuration key="source-tags">archive</configuration>
+      </configurations>
+    </operation>
+
+    <!-- Cleanup the working file repository -->
+
+    <operation
+      id="cleanup"
+      fail-on-error="false"
+      description="Cleaning up">
+      <configurations>
+        <configuration key="preserve-flavors">security/*</configuration>
+        <configuration key="delete-external">true</configuration>
+      </configurations>
+    </operation>
+
+  </operations>
+
+</definition>
