@@ -33,6 +33,8 @@ import org.opencastproject.mediapackage.track.TrackImpl;
 import org.opencastproject.metadata.dublincore.DublinCoreCatalog;
 import org.opencastproject.metadata.dublincore.DublinCoreUtil;
 import org.opencastproject.metadata.dublincore.DublinCoreValue;
+import org.opencastproject.util.MimeType;
+import org.opencastproject.util.NotFoundException;
 import org.opencastproject.workflow.api.AbstractWorkflowOperationHandler;
 import org.opencastproject.workflow.api.WorkflowInstance;
 import org.opencastproject.workflow.api.WorkflowOperationException;
@@ -47,10 +49,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -78,9 +80,6 @@ public class AnimateWorkflowOperationHandler extends AbstractWorkflowOperationHa
 
   /** Animation fps configuration property name. */
   private static final String FPS_PROPERTY = "fps";
-
-  /** Output file extension configuration property name. */
-  private static final String OUTPUT_FILE_EXTENSION_PROPERTY = "output-file-extension";
 
   /** Target flavor configuration property name. */
   private static final String TARGET_FLAVOR_PROPERTY = "target-flavor";
@@ -140,7 +139,7 @@ public class AnimateWorkflowOperationHandler extends AbstractWorkflowOperationHa
   public WorkflowOperationResult start(WorkflowInstance workflowInstance, JobContext context)
           throws WorkflowOperationException {
     MediaPackage mediaPackage = workflowInstance.getMediaPackage();
-    logger.info("Start animate workflow operation for mediapackage {}", mediaPackage);
+    logger.info("Start animate workflow operation for media package {}", mediaPackage);
 
     WorkflowOperationInstance operation = workflowInstance.getCurrentOperation();
     List<String> arguments;
@@ -189,26 +188,26 @@ public class AnimateWorkflowOperationHandler extends AbstractWorkflowOperationHa
       throw new WorkflowOperationException(String.format("Animate job for media package '%s' failed", mediaPackage));
     }
 
+    // put animated clip into media package
     try {
-      // copy waveform attachments into workspace and add them to the media package
-      String output = job.getPayload();
+      URI output = new URI(job.getPayload());
       String id = UUID.randomUUID().toString();
-      InputStream in = new FileInputStream(new File(output));
-      URI uri = workspace.put(mediaPackage.getIdentifier().toString(), id, FilenameUtils.getName(output), in);
+      InputStream in = workspace.read(output);
+      URI uri = workspace.put(mediaPackage.getIdentifier().toString(), id, FilenameUtils.getName(output.getPath()), in);
       TrackImpl track = new TrackImpl();
       track.setIdentifier(id);
       track.setFlavor(targetFlavor);
       track.setURI(uri);
+      track.setMimeType(MimeType.mimeType("video", "mp4"));
 
       // add track to media package
       for (String tag : asList(targetTagsProperty)) {
         track.addTag(tag);
       }
       mediaPackage.add(track);
-    } catch (IOException e) {
+      workspace.delete(output);
+    } catch (IOException | URISyntaxException | NotFoundException e) {
       throw new WorkflowOperationException("Error handling animation service output", e);
-    } finally {
-      animateService.cleanup(job);
     }
 
     try {

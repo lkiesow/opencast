@@ -29,6 +29,7 @@ import org.opencastproject.serviceregistry.api.ServiceRegistry;
 import org.opencastproject.util.IoSupport;
 import org.opencastproject.workspace.api.Workspace;
 
+import org.apache.commons.io.FileUtils;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -44,6 +45,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.InputStream;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -86,7 +89,16 @@ public class AnimateServiceImplTest {
     EasyMock.expect(cc.getBundleContext()).andReturn(bc).anyTimes();
 
     Workspace workspace = EasyMock.createMock(Workspace.class);
-    EasyMock.expect(workspace.rootDirectory()).andReturn(testFolder.newFolder().getAbsolutePath()).anyTimes();
+    final String directory = testFolder.newFolder().getAbsolutePath();
+    EasyMock.expect(workspace.rootDirectory()).andReturn(directory).anyTimes();
+    final Capture<String> collection = EasyMock.newCapture();
+    final Capture<String> name = EasyMock.newCapture();
+    final Capture<InputStream> in = EasyMock.newCapture();
+    EasyMock.expect(workspace.putInCollection(capture(collection), capture(name), capture(in))).andAnswer(() -> {
+      File output = new File(directory, "out.mp4");
+      FileUtils.copyInputStreamToFile(in.getValue(), output);
+      return output.toURI();
+    }).once();
 
     // Finish setting up the mocks
     EasyMock.replay(bc, cc, workspace);
@@ -123,7 +135,7 @@ public class AnimateServiceImplTest {
     options.add("-t");
     options.add("ffmpeg");
     Job job = animateService.animate(animation, metadata, options);
-    File output = new File(job.getPayload());
+    File output = new File(new URI(job.getPayload()));
     Assert.assertTrue(output.isFile());
   }
 

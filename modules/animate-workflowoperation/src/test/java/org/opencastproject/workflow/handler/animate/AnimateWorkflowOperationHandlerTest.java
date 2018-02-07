@@ -51,6 +51,7 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.net.URI;
 
 public class AnimateWorkflowOperationHandlerTest {
 
@@ -99,14 +100,14 @@ public class AnimateWorkflowOperationHandlerTest {
 
     AnimateService animateService = EasyMock.createMock(AnimateService.class);
     EasyMock.expect(animateService.animate(anyObject(), anyObject(), anyObject())).andReturn(job);
-    animateService.cleanup(job);
-    EasyMock.expectLastCall();
 
     Workspace workspace = EasyMock.createMock(Workspace.class);
     EasyMock.expect(workspace.put(anyString(), anyString(), anyString(), anyObject())).andReturn(file.toURI()).anyTimes();
     EasyMock.expect(workspace.read(anyObject()))
             .andAnswer(() -> getClass().getResourceAsStream("/dc-episode.xml")).anyTimes();
     workspace.cleanup(anyObject(Id.class));
+    EasyMock.expectLastCall();
+    workspace.delete(anyObject(URI.class));
     EasyMock.expectLastCall();
 
     EasyMock.replay(animateService, workspace, workflow);

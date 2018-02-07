@@ -38,6 +38,4 @@ public interface AnimateService {
   String JOB_TYPE = "org.opencastproject.animate";
 
   Job animate(File animation, Map<String, String> metadata, List<String> options) throws AnimateServiceException;
-
-  void cleanup(Job job);
 }

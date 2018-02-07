@@ -47,9 +47,11 @@ import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.Type;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Dictionary;
@@ -68,7 +70,7 @@ public class AnimateServiceImpl extends AbstractJobProducer implements AnimateSe
   private String synfigBinary = SYNFIG_BINARY_DEFAULT;
 
   /** The load introduced on the system by creating an inspect job */
-  public static final float DEFAULT_JOB_LOAD = 1.0f;
+  private static final float DEFAULT_JOB_LOAD = 1.0f;
 
   /** The load introduced on the system by creating an inspect job */
   private float jobLoad = DEFAULT_JOB_LOAD;
@@ -190,7 +192,11 @@ public class AnimateServiceImpl extends AbstractJobProducer implements AnimateSe
       activeProcesses.remove(process);
     }
 
-    return output.getAbsolutePath();
+    URI uri = workspace.putInCollection("animate-" + job.getId(), output.getName(),
+            new FileInputStream(output));
+    FileUtils.deleteQuietly(new File(workspace.rootDirectory(), String.format("animate/%d", job.getId())));
+
+    return uri.toString();
   }
 
 
@@ -225,12 +231,6 @@ public class AnimateServiceImpl extends AbstractJobProducer implements AnimateSe
     } catch (ServiceRegistryException e) {
       throw new AnimateServiceException(e);
     }
-  }
-
-  @Override
-  public void cleanup(Job job) {
-    logger.debug("Clean up animation job workspace");
-    FileUtils.deleteQuietly(new File(workspace.rootDirectory(), String.format("animate/%d", job.getId())));
   }
 
   @Override
