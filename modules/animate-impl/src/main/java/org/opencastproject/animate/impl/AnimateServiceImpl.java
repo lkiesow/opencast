@@ -45,8 +45,10 @@ import org.osgi.service.component.ComponentContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -84,8 +86,8 @@ public class AnimateServiceImpl extends AbstractJobProducer implements AnimateSe
 
   private final Set<Process> activeProcesses = new HashSet<>();
 
-  private final Type stringMapType = new TypeToken<Map<String, String>>() { }.getType();
-  private final Type stringListType = new TypeToken<List<String>>() { }.getType();
+  private static final Type stringMapType = new TypeToken<Map<String, String>>() { }.getType();
+  private static final Type stringListType = new TypeToken<List<String>>() { }.getType();
 
   /** Creates a new animate service instance. */
   public AnimateServiceImpl() {
@@ -100,6 +102,7 @@ public class AnimateServiceImpl extends AbstractJobProducer implements AnimateSe
     if (path != null) {
       synfigBinary = path;
     }
+    logger.debug("Activated animate service");
   }
 
   @Override
@@ -111,6 +114,7 @@ public class AnimateServiceImpl extends AbstractJobProducer implements AnimateSe
     inspectJobLoad = LoadUtil.getConfiguredLoadValue(properties, INSPECT_JOB_LOAD_KEY, DEFAULT_INSPECT_JOB_LOAD,
             serviceRegistry);
     */
+    logger.debug("Updated animate service");
   }
 
   /**
@@ -120,6 +124,7 @@ public class AnimateServiceImpl extends AbstractJobProducer implements AnimateSe
    */
   @Override
   protected String process(Job job) throws Exception {
+    logger.debug("Started processing job {}", job.getId());
     if (!OPERATION.equals(job.getOperation())) {
       throw new ServiceRegistryException(String.format("This service can't handle operations of type '%s'",
               job.getOperation()));
@@ -152,8 +157,17 @@ public class AnimateServiceImpl extends AbstractJobProducer implements AnimateSe
     Process process = null;
     try {
       ProcessBuilder processBuilder = new ProcessBuilder(command);
+      processBuilder.redirectErrorStream(true);
       process = processBuilder.start();
       activeProcesses.add(process);
+
+      // print synfig (+ffmpeg) output
+      try (BufferedReader in = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+        String line;
+        while ((line = in.readLine()) != null) {
+          logger.debug("synfig: {}", line);
+        }
+      }
 
       // wait until the task is finished
       int exitCode = process.waitFor();
@@ -182,6 +196,7 @@ public class AnimateServiceImpl extends AbstractJobProducer implements AnimateSe
 
   private File customAnimation(final Job job, final String input, final Map<String, String> metadata)
           throws IOException {
+    logger.debug("Start customizing the animation");
     File output = new File(workspace.rootDirectory(), String.format("animate/%d/%s.%s", job.getId(),
             FilenameUtils.getBaseName(input), FilenameUtils.getExtension(input)));
     FileUtils.forceMkdirParent(output);
@@ -205,6 +220,7 @@ public class AnimateServiceImpl extends AbstractJobProducer implements AnimateSe
     Gson gson = new Gson();
     List<String> arguments = Arrays.asList(animation.getAbsolutePath(), gson.toJson(metadata), gson.toJson(options));
     try {
+      logger.debug("Create animate service job");
       return serviceRegistry.createJob(JOB_TYPE, OPERATION, arguments, jobLoad);
     } catch (ServiceRegistryException e) {
       throw new AnimateServiceException(e);
@@ -213,6 +229,7 @@ public class AnimateServiceImpl extends AbstractJobProducer implements AnimateSe
 
   @Override
   public void cleanup(Job job) {
+    logger.debug("Clean up animation job workspace");
     FileUtils.deleteQuietly(new File(workspace.rootDirectory(), String.format("animate/%d", job.getId())));
   }
 
