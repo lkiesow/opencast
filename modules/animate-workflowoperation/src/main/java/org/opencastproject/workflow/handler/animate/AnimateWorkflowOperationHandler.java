@@ -173,7 +173,7 @@ public class AnimateWorkflowOperationHandler extends AbstractWorkflowOperationHa
       arguments.add("--video-codec");
       arguments.add("libx264-lossless");
       arguments.add("--video-bitrate");
-      arguments.add("10000")
+      arguments.add("10000");
       addArgumentIfExists(operation, arguments, WIDTH_PROPERTY, "-w");
       addArgumentIfExists(operation, arguments, HEIGHT_PROPERTY, "-h");
       addArgumentIfExists(operation, arguments, FPS_PROPERTY, "--fps");
