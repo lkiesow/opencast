@@ -166,9 +166,14 @@ public class AnimateWorkflowOperationHandler extends AbstractWorkflowOperationHa
     if (StringUtils.isNotEmpty(cmd)) {
       arguments = Arrays.asList(StringUtils.split(cmd));
     } else {
+      // set default encoding
       arguments = new ArrayList<>();
       arguments.add("-t");
       arguments.add("ffmpeg");
+      arguments.add("--video-codec");
+      arguments.add("libx264-lossless");
+      arguments.add("--video-bitrate");
+      arguments.add("10000")
       addArgumentIfExists(operation, arguments, WIDTH_PROPERTY, "-w");
       addArgumentIfExists(operation, arguments, HEIGHT_PROPERTY, "-h");
       addArgumentIfExists(operation, arguments, FPS_PROPERTY, "--fps");
