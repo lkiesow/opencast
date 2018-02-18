@@ -47,7 +47,7 @@ import java.util.List;
 import java.util.Map;
 
 import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.GET;
+import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
@@ -98,7 +98,7 @@ public class AnimateServiceRestEndpoint extends AbstractJobProducerEndpoint {
     this.animateService = animateService;
   }
 
-  @GET
+  @POST
   @Produces(MediaType.TEXT_XML)
   @Path("animate")
   @RestQuery(name = "animate", description = "Create animates video clip",
