@@ -41,8 +41,8 @@ import com.google.gson.reflect.TypeToken;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.lang.reflect.Type;
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 
@@ -104,7 +104,7 @@ public class AnimateServiceRestEndpoint extends AbstractJobProducerEndpoint {
   @RestQuery(name = "animate", description = "Create animates video clip",
     restParameters = {
       @RestParameter(name = "animation", isRequired = true, type = STRING,
-              description = "Path to the animation"),
+              description = "Location of to the animation"),
       @RestParameter(name = "arguments", isRequired = true, type = STRING,
               description = "Synfig command line arguments as JSON array"),
       @RestParameter(name = "metadata", isRequired = true, type = STRING,
@@ -123,7 +123,7 @@ public class AnimateServiceRestEndpoint extends AbstractJobProducerEndpoint {
       Map<String, String> metadata = gson.fromJson(metadataString, stringMapType);
       List<String> arguments = gson.fromJson(argumentsString, stringListType);
       logger.debug("Start animation");
-      Job job = animateService.animate(new File(animation), metadata, arguments);
+      Job job = animateService.animate(new URI(animation), metadata, arguments);
       return Response.ok(new JaxbJob(job)).build();
     } catch (JsonSyntaxException e) {
       logger.debug("Invalid data passed to REST endpoint:\nanimation: {}\nmetadata: {}\narguments: {})",

@@ -23,7 +23,7 @@ package org.opencastproject.animate.api;
 
 import org.opencastproject.job.api.Job;
 
-import java.io.File;
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 
@@ -37,5 +37,18 @@ public interface AnimateService {
    */
   String JOB_TYPE = "org.opencastproject.animate";
 
-  Job animate(File animation, Map<String, String> metadata, List<String> options) throws AnimateServiceException;
+  /**
+   * Generate animated video clip based on an Synfig animation file and a set of metadata.
+   *
+   * @param animation
+   *          Location of the animation file to use
+   * @param metadata
+   *          Map of metadata used for replacements
+   * @param arguments
+   *          List of Synfig command line arguments
+   * @return Animate service job.
+   * @throws AnimateServiceException
+   *          If something went wrong during the animation
+   */
+  Job animate(URI animation, Map<String, String> metadata, List<String> arguments) throws AnimateServiceException;
 }

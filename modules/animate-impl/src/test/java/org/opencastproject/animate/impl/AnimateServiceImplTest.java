@@ -126,7 +126,7 @@ public class AnimateServiceImplTest {
 
   @Test
   public void testAnimate() throws Exception {
-    File animation = new File(getClass().getResource("/synfig-test-animation.sif").toURI());
+    URI animation = getClass().getResource("/synfig-test-animation.sif").toURI();
     Map<String, String> metadata = new HashMap<>();
     metadata.put("episode.title", "Test");
     metadata.put("episode.author", "John Doe");
@@ -141,13 +141,16 @@ public class AnimateServiceImplTest {
 
 
   @Test
-  public void testMissingEncodingOptions() throws Exception {
-    File animation = new File(getClass().getResource("/synfig-test-animation.sif").toURI());
+  public void testBrokenEncodingOptions() throws Exception {
+    URI animation = getClass().getResource("/synfig-test-animation.sif").toURI();
     Map<String, String> metadata = new HashMap<>();
     List<String> options = new ArrayList<>(0);
+    options.add("-t");
+    options.add("santa-claus");
     Job job = null;
     try {
       job = animateService.animate(animation, metadata, options);
+      logger.error("The test should have never reached this.");
     } catch (Exception e) {
       // we expect this
     }

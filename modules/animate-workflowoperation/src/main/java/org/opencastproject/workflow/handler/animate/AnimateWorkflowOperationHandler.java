@@ -22,19 +22,19 @@ package org.opencastproject.workflow.handler.animate;
 
 import org.opencastproject.animate.api.AnimateService;
 import org.opencastproject.animate.api.AnimateServiceException;
+import org.opencastproject.inspection.api.MediaInspectionService;
 import org.opencastproject.job.api.Job;
 import org.opencastproject.job.api.JobContext;
 import org.opencastproject.mediapackage.Catalog;
 import org.opencastproject.mediapackage.EName;
 import org.opencastproject.mediapackage.MediaPackage;
 import org.opencastproject.mediapackage.MediaPackageElementFlavor;
+import org.opencastproject.mediapackage.MediaPackageElementParser;
 import org.opencastproject.mediapackage.MediaPackageElements;
 import org.opencastproject.mediapackage.track.TrackImpl;
 import org.opencastproject.metadata.dublincore.DublinCoreCatalog;
 import org.opencastproject.metadata.dublincore.DublinCoreUtil;
 import org.opencastproject.metadata.dublincore.DublinCoreValue;
-import org.opencastproject.util.MimeType;
-import org.opencastproject.util.NotFoundException;
 import org.opencastproject.workflow.api.AbstractWorkflowOperationHandler;
 import org.opencastproject.workflow.api.WorkflowInstance;
 import org.opencastproject.workflow.api.WorkflowOperationException;
@@ -52,7 +52,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -92,6 +91,9 @@ public class AnimateWorkflowOperationHandler extends AbstractWorkflowOperationHa
 
   /** The workspace service. */
   private Workspace workspace = null;
+
+  /** The inspection service */
+  private MediaInspectionService mediaInspectionService;
 
   @Override
   public void activate(ComponentContext cc) {
@@ -145,10 +147,11 @@ public class AnimateWorkflowOperationHandler extends AbstractWorkflowOperationHa
     List<String> arguments;
 
     // Check required options
-    final File animation = new File(StringUtils.trimToEmpty(operation.getConfiguration(ANIMATION_FILE_PROPERTY)));
-    if (!animation.isFile()) {
-      throw new WorkflowOperationException(String.format("Animation file `%s` does not exist", animation));
+    final File animationFile = new File(StringUtils.trimToEmpty(operation.getConfiguration(ANIMATION_FILE_PROPERTY)));
+    if (!animationFile.isFile()) {
+      throw new WorkflowOperationException(String.format("Animation file `%s` does not exist", animationFile));
     }
+    URI animation = animationFile.toURI();
 
     final MediaPackageElementFlavor targetFlavor;
     try {
@@ -203,7 +206,13 @@ public class AnimateWorkflowOperationHandler extends AbstractWorkflowOperationHa
       track.setIdentifier(id);
       track.setFlavor(targetFlavor);
       track.setURI(uri);
-      track.setMimeType(MimeType.mimeType("video", "mp4"));
+
+      Job inspection = mediaInspectionService.enrich(track, true);
+      if (!waitForStatus(inspection).isSuccess()) {
+        throw new AnimateServiceException(String.format("Animating %s failed", animation));
+      }
+
+      track = (TrackImpl) MediaPackageElementParser.getFromXml(inspection.getPayload());
 
       // add track to media package
       for (String tag : asList(targetTagsProperty)) {
@@ -211,7 +220,7 @@ public class AnimateWorkflowOperationHandler extends AbstractWorkflowOperationHa
       }
       mediaPackage.add(track);
       workspace.delete(output);
-    } catch (IOException | URISyntaxException | NotFoundException e) {
+    } catch (Exception e) {
       throw new WorkflowOperationException("Error handling animation service output", e);
     }
 
@@ -221,12 +230,16 @@ public class AnimateWorkflowOperationHandler extends AbstractWorkflowOperationHa
       throw new WorkflowOperationException(e);
     }
 
-    logger.info("Animate workflow operation for mediapackage {} completed", mediaPackage);
+    logger.info("Animate workflow operation for media package {} completed", mediaPackage);
     return createResult(mediaPackage, WorkflowOperationResult.Action.CONTINUE);
   }
 
   public void setAnimateService(AnimateService animateService) {
     this.animateService = animateService;
+  }
+
+  public void setMediaInspectionService(MediaInspectionService mediaInspectionService) {
+    this.mediaInspectionService = mediaInspectionService;
   }
 
   public void setWorkspace(Workspace workspace) {

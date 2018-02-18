@@ -21,19 +21,23 @@
 
 package org.opencastproject.workflow.handler.animate;
 
+import static org.easymock.EasyMock.anyBoolean;
 import static org.easymock.EasyMock.anyObject;
 import static org.easymock.EasyMock.anyString;
 
 import org.opencastproject.animate.api.AnimateService;
+import org.opencastproject.inspection.api.MediaInspectionService;
 import org.opencastproject.job.api.Job;
 import org.opencastproject.job.api.JobBarrier;
 import org.opencastproject.job.api.JobImpl;
 import org.opencastproject.mediapackage.Catalog;
 import org.opencastproject.mediapackage.MediaPackage;
 import org.opencastproject.mediapackage.MediaPackageBuilderImpl;
+import org.opencastproject.mediapackage.MediaPackageElementParser;
 import org.opencastproject.mediapackage.MediaPackageElements;
 import org.opencastproject.mediapackage.identifier.Id;
 import org.opencastproject.mediapackage.identifier.IdImpl;
+import org.opencastproject.mediapackage.track.TrackImpl;
 import org.opencastproject.metadata.dublincore.DublinCores;
 import org.opencastproject.workflow.api.WorkflowInstanceImpl;
 import org.opencastproject.workflow.api.WorkflowOperationException;
@@ -110,9 +114,15 @@ public class AnimateWorkflowOperationHandlerTest {
     workspace.delete(anyObject(URI.class));
     EasyMock.expectLastCall();
 
-    EasyMock.replay(animateService, workspace, workflow);
+    job = new JobImpl(1);
+    job.setPayload(MediaPackageElementParser.getAsXml(new TrackImpl()));
+    MediaInspectionService mediaInspectionService = EasyMock.createMock(MediaInspectionService.class);
+    EasyMock.expect(mediaInspectionService.enrich(anyObject(), anyBoolean())).andReturn(job).once();
+
+    EasyMock.replay(animateService, workspace, workflow, mediaInspectionService);
 
     handler.setAnimateService(animateService);
+    handler.setMediaInspectionService(mediaInspectionService);
     handler.setWorkspace(workspace);
   }
 

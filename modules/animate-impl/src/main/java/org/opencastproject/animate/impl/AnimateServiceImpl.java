@@ -32,6 +32,7 @@ import org.opencastproject.serviceregistry.api.ServiceRegistry;
 import org.opencastproject.serviceregistry.api.ServiceRegistryException;
 import org.opencastproject.util.ConfigurationException;
 import org.opencastproject.util.IoSupport;
+import org.opencastproject.util.NotFoundException;
 import org.opencastproject.workspace.api.Workspace;
 
 import com.google.gson.Gson;
@@ -39,6 +40,7 @@ import com.google.gson.reflect.TypeToken;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.text.StringEscapeUtils;
 import org.osgi.service.cm.ManagedService;
 import org.osgi.service.component.ComponentContext;
@@ -49,12 +51,14 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.reflect.Type;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Dictionary;
+import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -112,6 +116,12 @@ public class AnimateServiceImpl extends AbstractJobProducer implements AnimateSe
     if (properties == null)
       return;
 
+    Enumeration<String> e = properties.keys();
+    while (e.hasMoreElements()) {
+      String k = e.nextElement();
+      logger.error("properties: {} -> {}", k, properties.get(k));
+    }
+
     /*
     inspectJobLoad = LoadUtil.getConfiguredLoadValue(properties, INSPECT_JOB_LOAD_KEY, DEFAULT_INSPECT_JOB_LOAD,
             serviceRegistry);
@@ -133,7 +143,7 @@ public class AnimateServiceImpl extends AbstractJobProducer implements AnimateSe
     }
 
     List<String> arguments = job.getArguments();
-    String animation = arguments.get(0);
+    URI animation = new URI(arguments.get(0));
     Gson gson = new Gson();
     Map<String, String> metadata = gson.fromJson(arguments.get(1), stringMapType);
     List<String> options = gson.fromJson(arguments.get(2), stringListType);
@@ -143,7 +153,7 @@ public class AnimateServiceImpl extends AbstractJobProducer implements AnimateSe
 
     // prepare output file
     File output = new File(workspace.rootDirectory(), String.format("animate/%d/%s.%s", job.getId(),
-            FilenameUtils.getBaseName(animation), "mp4"));
+            FilenameUtils.getBaseName(animation.getPath()), "mkv"));
     FileUtils.forceMkdirParent(output);
 
     // create animation process.
@@ -167,7 +177,7 @@ public class AnimateServiceImpl extends AbstractJobProducer implements AnimateSe
       try (BufferedReader in = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
         String line;
         while ((line = in.readLine()) != null) {
-          logger.debug("synfig: {}", line);
+          logger.debug("Synfig: {}", line);
         }
       }
 
@@ -200,13 +210,22 @@ public class AnimateServiceImpl extends AbstractJobProducer implements AnimateSe
   }
 
 
-  private File customAnimation(final Job job, final String input, final Map<String, String> metadata)
-          throws IOException {
+  private File customAnimation(final Job job, final URI input, final Map<String, String> metadata)
+          throws IOException, NotFoundException {
     logger.debug("Start customizing the animation");
     File output = new File(workspace.rootDirectory(), String.format("animate/%d/%s.%s", job.getId(),
-            FilenameUtils.getBaseName(input), FilenameUtils.getExtension(input)));
+            FilenameUtils.getBaseName(input.getPath()), FilenameUtils.getExtension(input.getPath())));
     FileUtils.forceMkdirParent(output);
-    String animation = FileUtils.readFileToString(new File(input), "utf-8");
+    String animation;
+    try {
+      animation = FileUtils.readFileToString(new File(input), "UTF-8");
+    } catch (IOException e) {
+      // Maybe no local file?
+      logger.debug("Falling back to workspace to read {}", input);
+      try (InputStream in = workspace.read(input)) {
+        animation = IOUtils.toString(in, "UTF-8");
+      }
+    }
 
     // replace all metadata
     for (Map.Entry<String, String> entry: metadata.entrySet()) {
@@ -222,12 +241,12 @@ public class AnimateServiceImpl extends AbstractJobProducer implements AnimateSe
 
 
   @Override
-  public Job animate(File animation, Map<String, String> metadata, List<String> options) throws AnimateServiceException {
+  public Job animate(URI animation, Map<String, String> metadata, List<String> arguments) throws AnimateServiceException {
     Gson gson = new Gson();
-    List<String> arguments = Arrays.asList(animation.getAbsolutePath(), gson.toJson(metadata), gson.toJson(options));
+    List<String> jobArguments = Arrays.asList(animation.toString(), gson.toJson(metadata), gson.toJson(arguments));
     try {
       logger.debug("Create animate service job");
-      return serviceRegistry.createJob(JOB_TYPE, OPERATION, arguments, jobLoad);
+      return serviceRegistry.createJob(JOB_TYPE, OPERATION, jobArguments, jobLoad);
     } catch (ServiceRegistryException e) {
       throw new AnimateServiceException(e);
     }

@@ -76,6 +76,11 @@
       <artifactId>slf4j-log4j12</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.opencastproject</groupId>
+      <artifactId>opencast-inspection-service-api</artifactId>
+      <version>5-SNAPSHOT</version>
+    </dependency>
   </dependencies>
   <build>
     <plugins>

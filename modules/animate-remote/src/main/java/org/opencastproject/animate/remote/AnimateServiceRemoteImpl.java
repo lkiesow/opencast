@@ -37,8 +37,8 @@ import org.apache.http.message.BasicNameValuePair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -54,7 +54,7 @@ public class AnimateServiceRemoteImpl extends RemoteBase implements AnimateServi
   }
 
   @Override
-  public Job animate(File animation, Map<String, String> metadata, List<String> options)
+  public Job animate(URI animation, Map<String, String> metadata, List<String> options)
           throws AnimateServiceException {
 
     Gson gson = new Gson();
@@ -62,7 +62,7 @@ public class AnimateServiceRemoteImpl extends RemoteBase implements AnimateServi
     String optionJson = gson.toJson(options);
 
     List<NameValuePair> params = new ArrayList<>();
-    params.add(new BasicNameValuePair("animation", animation.getAbsolutePath()));
+    params.add(new BasicNameValuePair("animation", animation.toString()));
     params.add(new BasicNameValuePair("arguments", optionJson));
     params.add(new BasicNameValuePair("metadata", metadataJson));
 
