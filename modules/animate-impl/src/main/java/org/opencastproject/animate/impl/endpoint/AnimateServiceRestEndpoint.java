@@ -24,6 +24,7 @@ package org.opencastproject.animate.impl.endpoint;
 import static org.opencastproject.util.doc.rest.RestParameter.Type.STRING;
 
 import org.opencastproject.animate.api.AnimateService;
+import org.opencastproject.animate.api.AnimateServiceException;
 import org.opencastproject.job.api.JaxbJob;
 import org.opencastproject.job.api.Job;
 import org.opencastproject.job.api.JobProducer;
@@ -43,14 +44,15 @@ import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Type;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Map;
 
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.FormParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
@@ -115,9 +117,9 @@ public class AnimateServiceRestEndpoint extends AbstractJobProducerEndpoint {
       @RestResponse(description = "Internal error", responseCode = HttpServletResponse.SC_INTERNAL_SERVER_ERROR) },
     returnDescription = "Returns the path to the generated animation video")
   public Response animate(
-          @QueryParam("animation") String animation,
-          @QueryParam("arguments") String argumentsString,
-          @QueryParam("metadata") String metadataString) {
+          @FormParam("animation") String animation,
+          @FormParam("arguments") String argumentsString,
+          @FormParam("metadata") String metadataString) {
     Gson gson = new Gson();
     try {
       Map<String, String> metadata = gson.fromJson(metadataString, stringMapType);
@@ -125,12 +127,12 @@ public class AnimateServiceRestEndpoint extends AbstractJobProducerEndpoint {
       logger.debug("Start animation");
       Job job = animateService.animate(new URI(animation), metadata, arguments);
       return Response.ok(new JaxbJob(job)).build();
-    } catch (JsonSyntaxException e) {
+    } catch (JsonSyntaxException | URISyntaxException | NullPointerException e) {
       logger.debug("Invalid data passed to REST endpoint:\nanimation: {}\nmetadata: {}\narguments: {})",
               animation, metadataString, argumentsString);
       return Response.status(Response.Status.BAD_REQUEST).build();
-    } catch (Exception e) {
-      logger.error(e.getMessage());
+    } catch (AnimateServiceException e) {
+      logger.error("Error animating file {}", animation, e);
       return Response.serverError().build();
     }
   }

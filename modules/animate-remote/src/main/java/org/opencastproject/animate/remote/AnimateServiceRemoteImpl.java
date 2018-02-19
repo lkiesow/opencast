@@ -48,6 +48,8 @@ public class AnimateServiceRemoteImpl extends RemoteBase implements AnimateServi
 
   private static final Logger logger = LoggerFactory.getLogger(AnimateServiceRemoteImpl.class);
 
+  private static final Gson gson = new Gson();
+
   /** Creates a new animate service instance. */
   public AnimateServiceRemoteImpl() {
     super(JOB_TYPE);
@@ -57,10 +59,11 @@ public class AnimateServiceRemoteImpl extends RemoteBase implements AnimateServi
   public Job animate(URI animation, Map<String, String> metadata, List<String> options)
           throws AnimateServiceException {
 
-    Gson gson = new Gson();
+    // serialize arguments and metadata
     String metadataJson = gson.toJson(metadata);
     String optionJson = gson.toJson(options);
 
+    // Build form parameters
     List<NameValuePair> params = new ArrayList<>();
     params.add(new BasicNameValuePair("animation", animation.toString()));
     params.add(new BasicNameValuePair("arguments", optionJson));
@@ -69,7 +72,7 @@ public class AnimateServiceRemoteImpl extends RemoteBase implements AnimateServi
     logger.info("Animating {}", animation);
     HttpResponse response = null;
     try {
-      HttpPost post = new HttpPost("/animate/animate");
+      HttpPost post = new HttpPost("/animate");
       post.setEntity(new UrlEncodedFormEntity(params));
       response = getResponse(post);
       if (response == null) {

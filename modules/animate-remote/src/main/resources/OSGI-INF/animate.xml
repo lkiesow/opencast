@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <scr:component xmlns:scr="http://www.osgi.org/xmlns/scr/v1.1.0"
-               name="org.opencastproject.animate.impl.AnimateServiceRemoteImpl"
+               name="org.opencastproject.animate.remote.AnimateServiceRemoteImpl"
                immediate="true">
-  <implementation class="org.opencastproject.animate.impl.AnimateServiceRemoteImpl" />
+  <implementation class="org.opencastproject.animate.remote.AnimateServiceRemoteImpl" />
   <property name="service.description" value="Remote Animation Service" />
   <service>
     <provide interface="org.opencastproject.animate.api.AnimateService" />
