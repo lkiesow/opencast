@@ -32,6 +32,7 @@ import org.opencastproject.serviceregistry.api.ServiceRegistry;
 import org.opencastproject.serviceregistry.api.ServiceRegistryException;
 import org.opencastproject.util.ConfigurationException;
 import org.opencastproject.util.IoSupport;
+import org.opencastproject.util.LoadUtil;
 import org.opencastproject.util.NotFoundException;
 import org.opencastproject.workspace.api.Workspace;
 
@@ -41,6 +42,7 @@ import com.google.gson.reflect.TypeToken;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.StringEscapeUtils;
 import org.osgi.service.cm.ManagedService;
 import org.osgi.service.component.ComponentContext;
@@ -58,26 +60,29 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Dictionary;
-import java.util.Enumeration;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /** Create video animations using Synfig */
 public class AnimateServiceImpl extends AbstractJobProducer implements AnimateService, ManagedService {
 
-  public static final String SYNFIG_BINARY_CONFIG = "org.opencastproject.animate.synfig.path";
+  /** Configuration key for setting a custom synfig path */
+  private static final String SYNFIG_BINARY_CONFIG = "synfig.path";
 
+  /** Default path to the synfig binary */
   public static final String SYNFIG_BINARY_DEFAULT = "synfig";
 
+  /** Path to the synfig binary */
   private String synfigBinary = SYNFIG_BINARY_DEFAULT;
 
-  /** The load introduced on the system by creating an inspect job */
-  private static final float DEFAULT_JOB_LOAD = 1.0f;
+  /** Configuration key for this operation's job load */
+  private static final String JOB_LOAD_CONFIG = "job.load.animate";
 
   /** The load introduced on the system by creating an inspect job */
-  private float jobLoad = DEFAULT_JOB_LOAD;
+  private static final float JOB_LOAD_DEFAULT = 1.0f;
+
+  /** The load introduced on the system by creating an inspect job */
+  private float jobLoad = JOB_LOAD_DEFAULT;
 
   private static final Logger logger = LoggerFactory.getLogger(AnimateServiceImpl.class);
 
@@ -90,8 +95,6 @@ public class AnimateServiceImpl extends AbstractJobProducer implements AnimateSe
   private UserDirectoryService userDirectoryService;
   private OrganizationDirectoryService organizationDirectoryService;
 
-  private final Set<Process> activeProcesses = new HashSet<>();
-
   private static final Type stringMapType = new TypeToken<Map<String, String>>() { }.getType();
   private static final Type stringListType = new TypeToken<List<String>>() { }.getType();
 
@@ -103,11 +106,6 @@ public class AnimateServiceImpl extends AbstractJobProducer implements AnimateSe
   @Override
   public void activate(ComponentContext cc) {
     super.activate(cc);
-    // Get synfig path
-    final String path = cc.getBundleContext().getProperty(SYNFIG_BINARY_CONFIG);
-    if (path != null) {
-      synfigBinary = path;
-    }
     logger.debug("Activated animate service");
   }
 
@@ -115,18 +113,15 @@ public class AnimateServiceImpl extends AbstractJobProducer implements AnimateSe
   public void updated(Dictionary properties) throws ConfigurationException {
     if (properties == null)
       return;
+    logger.debug("Start updating animate service");
 
-    Enumeration<String> e = properties.keys();
-    while (e.hasMoreElements()) {
-      String k = e.nextElement();
-      logger.error("properties: {} -> {}", k, properties.get(k));
-    }
+    synfigBinary = StringUtils.defaultIfBlank((String) properties.get(SYNFIG_BINARY_CONFIG), SYNFIG_BINARY_DEFAULT);
+    logger.debug("Set synfig binary path to {}", synfigBinary);
 
-    /*
-    inspectJobLoad = LoadUtil.getConfiguredLoadValue(properties, INSPECT_JOB_LOAD_KEY, DEFAULT_INSPECT_JOB_LOAD,
-            serviceRegistry);
-    */
-    logger.debug("Updated animate service");
+    jobLoad = LoadUtil.getConfiguredLoadValue(properties, JOB_LOAD_CONFIG, JOB_LOAD_DEFAULT, serviceRegistry);
+    logger.debug("Set animate job load to {}", jobLoad);
+
+    logger.debug("Finished updating animate service");
   }
 
   /**
@@ -171,7 +166,6 @@ public class AnimateServiceImpl extends AbstractJobProducer implements AnimateSe
       ProcessBuilder processBuilder = new ProcessBuilder(command);
       processBuilder.redirectErrorStream(true);
       process = processBuilder.start();
-      activeProcesses.add(process);
 
       // print synfig (+ffmpeg) output
       try (BufferedReader in = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
@@ -199,7 +193,6 @@ public class AnimateServiceImpl extends AbstractJobProducer implements AnimateSe
     } finally {
       IoSupport.closeQuietly(process);
       FileUtils.deleteQuietly(input);
-      activeProcesses.remove(process);
     }
 
     URI uri = workspace.putInCollection("animate-" + job.getId(), output.getName(),

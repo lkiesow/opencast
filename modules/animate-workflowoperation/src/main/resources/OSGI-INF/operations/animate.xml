@@ -8,12 +8,12 @@
   <service>
     <provide interface="org.opencastproject.workflow.api.WorkflowOperationHandler" />
   </service>
-  <reference cardinality="1..1" interface="org.opencastproject.serviceregistry.api.ServiceRegistry"
-             name="ServiceRegistry" policy="static" bind="setServiceRegistry" />
-  <reference cardinality="1..1" interface="org.opencastproject.animate.api.AnimateService"
-             name="AnimateService" policy="static" bind="setAnimateService" />
-  <reference cardinality="1..1" interface="org.opencastproject.inspection.api.MediaInspectionService"
-             name="MediaInspectionService" policy="static" bind="setMediaInspectionService" />
-  <reference cardinality="1..1" interface="org.opencastproject.workspace.api.Workspace"
-             name="Workspace" policy="static" bind="setWorkspace" />
+  <reference interface="org.opencastproject.serviceregistry.api.ServiceRegistry"
+             name="ServiceRegistry" bind="setServiceRegistry" />
+  <reference interface="org.opencastproject.animate.api.AnimateService"
+             name="AnimateService" bind="setAnimateService" />
+  <reference interface="org.opencastproject.inspection.api.MediaInspectionService"
+             name="MediaInspectionService" bind="setMediaInspectionService" />
+  <reference interface="org.opencastproject.workspace.api.Workspace"
+             name="Workspace" bind="setWorkspace" />
 </scr:component>

@@ -279,6 +279,9 @@
     <feature start-level="80">opencast-core</feature>
 
     <bundle start-level="82">mvn:org.opencastproject/opencast-admin-ui/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-animate-api/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-animate-remote/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-animate-workflowoperation/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-asset-manager-impl/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-asset-manager-storage-fs/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-asset-manager-workflowoperation/${project.version}</bundle>
@@ -361,7 +364,7 @@
     <bundle start-level="82">mvn:org.opencastproject/opencast-usertracking-impl/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-transcription-service-api/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-transcription-service-ibm-watson-impl/${project.version}</bundle>
-    <bundle start-level="82">mvn:org.opencastproject/opencast-transcription-service-workflowoperation/${project.version}</bundle>    
+    <bundle start-level="82">mvn:org.opencastproject/opencast-transcription-service-workflowoperation/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-videoeditor-api/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-videoeditor-remote/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-videoeditor-workflowoperation/${project.version}</bundle>
@@ -379,6 +382,9 @@
     <feature start-level="80">opencast-core</feature>
 
     <bundle start-level="82">mvn:org.opencastproject/opencast-admin-ui/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-animate-api/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-animate-remote/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-animate-workflowoperation/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-annotation-api/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-annotation-impl/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-asset-manager-impl/${project.version}</bundle>
@@ -480,7 +486,7 @@
     <bundle start-level="82">mvn:org.opencastproject/opencast-timelinepreviews-workflowoperation/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-transcription-service-api/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-transcription-service-ibm-watson-impl/${project.version}</bundle>
-    <bundle start-level="82">mvn:org.opencastproject/opencast-transcription-service-workflowoperation/${project.version}</bundle>    
+    <bundle start-level="82">mvn:org.opencastproject/opencast-transcription-service-workflowoperation/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-usertracking-api/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-usertracking-impl/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-videoeditor-api/${project.version}</bundle>
@@ -516,6 +522,8 @@
   <feature name="opencast-worker">
     <feature start-level="80">opencast-core</feature>
 
+    <bundle start-level="82">mvn:org.opencastproject/opencast-animate-api/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-animate-impl/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-caption-api/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-caption-impl/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-composer-ffmpeg/${project.version}</bundle>
@@ -557,6 +565,9 @@
   <feature name="opencast-adminworker">
     <feature start-level="80">opencast-core</feature>
 
+    <bundle start-level="82">mvn:org.opencastproject/opencast-animate-api/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-animate-impl/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-animate-workflowoperation/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-admin-ui/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-asset-manager-impl/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-asset-manager-storage-fs/${project.version}</bundle>
@@ -641,9 +652,9 @@
     <bundle start-level="82">mvn:org.opencastproject/opencast-timelinepreviews-workflowoperation/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-transcription-service-api/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-transcription-service-ibm-watson-impl/${project.version}</bundle>
-    <bundle start-level="82">mvn:org.opencastproject/opencast-transcription-service-workflowoperation/${project.version}</bundle>    
+    <bundle start-level="82">mvn:org.opencastproject/opencast-transcription-service-workflowoperation/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-usertracking-api/${project.version}</bundle>
-    <bundle start-level="82">mvn:org.opencastproject/opencast-usertracking-impl/${project.version}</bundle>    
+    <bundle start-level="82">mvn:org.opencastproject/opencast-usertracking-impl/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-videoeditor-api/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-videoeditor-ffmpeg-impl/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-videoeditor-workflowoperation/${project.version}</bundle>
