@@ -1042,6 +1042,7 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
   @Override
   public void remove(long workflowInstanceId) throws WorkflowDatabaseException, NotFoundException,
           UnauthorizedException, WorkflowParsingException, WorkflowStateException {
+    logger.error("using workflow index: remove(workflowInstanceId) ");
     final Lock lock = this.lock.get(workflowInstanceId);
     lock.lock();
     try {
@@ -1428,6 +1429,7 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
    */
   protected void index(final WorkflowInstance workflowInstance) throws WorkflowDatabaseException {
     // Update the search index
+    logger.error("using workflow index: index(workflowInstance)");
     index.update(workflowInstance);
   }
 
@@ -1438,6 +1440,7 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
    */
   @Override
   public long countWorkflowInstances() throws WorkflowDatabaseException {
+    logger.error("using workflow index: countWorkflowInstances()");
     return index.countWorkflowInstances(null, null);
   }
 
@@ -1449,6 +1452,7 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
    */
   @Override
   public long countWorkflowInstances(WorkflowState state, String operation) throws WorkflowDatabaseException {
+    logger.error("using workflow index: countWorkflowInstances(state, operation)");
     return index.countWorkflowInstances(state, operation);
   }
 
@@ -1459,6 +1463,7 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
    */
   @Override
   public WorkflowStatistics getStatistics() throws WorkflowDatabaseException {
+    logger.error("using workflow index: getStatistics()");
     return index.getStatistics();
   }
 
@@ -1469,6 +1474,7 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
    */
   @Override
   public WorkflowSet getWorkflowInstances(WorkflowQuery query) throws WorkflowDatabaseException {
+    logger.error("using workflow index: getWorkflowInstances(query)");
     return index.getWorkflowInstances(query, Permissions.Action.WRITE.toString(), true);
   }
 
@@ -1484,6 +1490,7 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
     if (!user.hasRole(GLOBAL_ADMIN_ROLE) && !user.hasRole(user.getOrganization().getAdminRole()))
       throw new UnauthorizedException(user, getClass().getName() + ".getForAdministrativeRead");
 
+    logger.error("using workflow index: getWorkflowInstancesForAdministrativeRead(query)");
     return index.getWorkflowInstances(query, Permissions.Action.WRITE.toString(), false);
   }
 
