@@ -369,11 +369,6 @@ public class DuplicateEventWorkflowOperationHandler extends AbstractWorkflowOper
     destinationDublinCore.setIdentifier(null);
     destinationDublinCore.setURI(sourceDublinCore.getURI());
     destinationDublinCore.set(DublinCore.PROPERTY_TITLE, destination.getTitle());
-    destinationDublinCore.setFlavor(sourceDublinCore.getFlavor());
-    for (String tag : sourceDublinCore.getTags()) {
-      destinationDublinCore.addTag(tag);
-    }
-    updateTags(destinationDublinCore, removeTags, addTags, overrideTags);
     try (InputStream inputStream = IOUtils.toInputStream(destinationDublinCore.toXmlString(), "UTF-8")) {
       final String elementId = UUID.randomUUID().toString();
       final URI newUrl = workspace.put(destination.getIdentifier().compact(), elementId, "dublincore.xml",
@@ -381,6 +376,10 @@ public class DuplicateEventWorkflowOperationHandler extends AbstractWorkflowOper
       final MediaPackageElement mpe = destination.add(newUrl, MediaPackageElement.Type.Catalog,
           MediaPackageElements.EPISODE);
       mpe.setIdentifier(elementId);
+      for (String tag : sourceDublinCore.getTags()) {
+        mpe.addTag(tag);
+      }
+      updateTags(mpe, removeTags, addTags, overrideTags);
     } catch (IOException e) {
       throw new WorkflowOperationException(e);
     }
