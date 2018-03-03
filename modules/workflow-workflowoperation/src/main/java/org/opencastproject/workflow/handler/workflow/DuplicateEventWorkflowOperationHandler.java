@@ -115,9 +115,6 @@ public class DuplicateEventWorkflowOperationHandler extends AbstractWorkflowOper
   /** The distribution service */
   protected DistributionService distributionService;
 
-  /** Keeps track of temporary files which have to be deleted when done. */
-  private List<URI> temporaryFiles;
-
   /**
    * Callback for the OSGi declarative services configuration.
    *
@@ -223,13 +220,14 @@ public class DuplicateEventWorkflowOperationHandler extends AbstractWorkflowOper
     }
 
     for (int i = 0; i < numberOfEvents; i++) {
-      temporaryFiles = new ArrayList<>();
+      final List<URI> temporaryFiles = new ArrayList<>();
 
       // Clone the media package (without its elements)
       MediaPackage newMp = copyMediaPackage(mediaPackage, i + 1, copyNumberPrefix);
 
       // Create and add new episode dublin core with changed title
-      newMp = copyDublinCore(mediaPackage, originalEpisodeDc[0], newMp, removeTags, addTags, overrideTags);
+      newMp = copyDublinCore(mediaPackage, originalEpisodeDc[0], newMp, removeTags, addTags, overrideTags,
+          temporaryFiles);
 
       // Clone regular elements
       for (final MediaPackageElement e : elements) {
@@ -240,7 +238,7 @@ public class DuplicateEventWorkflowOperationHandler extends AbstractWorkflowOper
 
       // Clone internal publications
       for (final Publication originalPub : internalPublications) {
-        copyPublication(originalPub, mediaPackage, newMp, removeTags, addTags, overrideTags);
+        copyPublication(originalPub, mediaPackage, newMp, removeTags, addTags, overrideTags, temporaryFiles);
       }
 
       assetManager.takeSnapshot(AssetManager.DEFAULT_OWNER, newMp);
@@ -320,7 +318,8 @@ public class DuplicateEventWorkflowOperationHandler extends AbstractWorkflowOper
       MediaPackage destination,
       List<String> removeTags,
       List<String> addTags,
-      List<String> overrideTags) throws WorkflowOperationException {
+      List<String> overrideTags,
+      List<URI> temporaryFiles) throws WorkflowOperationException {
     final String newPublicationId = UUID.randomUUID().toString();
     final Publication newPublication = PublicationImpl.publication(newPublicationId,
         InternalPublicationChannel.CHANNEL_ID, null, null);
@@ -374,7 +373,8 @@ public class DuplicateEventWorkflowOperationHandler extends AbstractWorkflowOper
       MediaPackage destination,
       List<String> removeTags,
       List<String> addTags,
-      List<String> overrideTags) throws WorkflowOperationException {
+      List<String> overrideTags,
+      List<URI> temporaryFiles) throws WorkflowOperationException {
     final DublinCoreCatalog destinationDublinCore = DublinCoreUtil.loadEpisodeDublinCore(workspace, source).get();
     destinationDublinCore.setIdentifier(null);
     destinationDublinCore.setURI(sourceDublinCore.getURI());
