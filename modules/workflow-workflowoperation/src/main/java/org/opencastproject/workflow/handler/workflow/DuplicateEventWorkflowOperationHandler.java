@@ -70,6 +70,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 
@@ -221,50 +222,59 @@ public class DuplicateEventWorkflowOperationHandler extends AbstractWorkflowOper
 
     for (int i = 0; i < numberOfEvents; i++) {
       final List<URI> temporaryFiles = new ArrayList<>();
+      MediaPackage newMp = null;
 
-      // Clone the media package (without its elements)
-      MediaPackage newMp = copyMediaPackage(mediaPackage, i + 1, copyNumberPrefix);
-
-      // Create and add new episode dublin core with changed title
-      newMp = copyDublinCore(mediaPackage, originalEpisodeDc[0], newMp, removeTags, addTags, overrideTags,
-          temporaryFiles);
-
-      // Clone regular elements
-      for (final MediaPackageElement e : elements) {
-        final MediaPackageElement element = (MediaPackageElement) e.clone();
-        updateTags(element, removeTags, addTags, overrideTags);
-        newMp.add(element);
-      }
-
-      // Clone internal publications
-      for (final Publication originalPub : internalPublications) {
-        copyPublication(originalPub, mediaPackage, newMp, removeTags, addTags, overrideTags, temporaryFiles);
-      }
-
-      assetManager.takeSnapshot(AssetManager.DEFAULT_OWNER, newMp);
-
-      // Clone properties of media package
-      for (String namespace : propertyNamespaces) {
-        copyProperties(namespace, mediaPackage, newMp);
-      }
-
-      // Remove temporary files of new media package
-      for (URI temporaryFile : temporaryFiles) {
-        try {
-          workspace.delete(temporaryFile);
-        } catch (NotFoundException e) {
-          logger.debug("{} could not be found in the workspace and hence, cannot be deleted.", temporaryFile);
-        } catch (IOException e) {
-          logger.warn("Failed to delete {} from workspace.", temporaryFile);
-        }
-      }
       try {
-        workspace.cleanup(newMp.getIdentifier());
-      } catch (IOException e) {
-        logger.warn("Failed to cleanup the workspace for media package {}", newMp.getIdentifier());
+        // Clone the media package (without its elements)
+        newMp = copyMediaPackage(mediaPackage, i + 1, copyNumberPrefix);
+
+        // Create and add new episode dublin core with changed title
+        newMp = copyDublinCore(mediaPackage, originalEpisodeDc[0], newMp, removeTags, addTags, overrideTags,
+                temporaryFiles);
+
+        // Clone regular elements
+        for (final MediaPackageElement e : elements) {
+          final MediaPackageElement element = (MediaPackageElement) e.clone();
+          updateTags(element, removeTags, addTags, overrideTags);
+          newMp.add(element);
+        }
+
+        // Clone internal publications
+        for (final Publication originalPub : internalPublications) {
+          copyPublication(originalPub, mediaPackage, newMp, removeTags, addTags, overrideTags, temporaryFiles);
+        }
+
+        assetManager.takeSnapshot(AssetManager.DEFAULT_OWNER, newMp);
+
+        // Clone properties of media package
+        for (String namespace : propertyNamespaces) {
+          copyProperties(namespace, mediaPackage, newMp);
+        }
+      } finally {
+        cleanup(temporaryFiles, Optional.ofNullable(newMp));
       }
     }
     return createResult(mediaPackage, Action.CONTINUE);
+  }
+
+  private void cleanup(List<URI> temporaryFiles, Optional<MediaPackage> newMp) {
+    // Remove temporary files of new media package
+    for (URI temporaryFile : temporaryFiles) {
+      try {
+        workspace.delete(temporaryFile);
+      } catch (NotFoundException e) {
+        logger.debug("{} could not be found in the workspace and hence, cannot be deleted.", temporaryFile);
+      } catch (IOException e) {
+        logger.warn("Failed to delete {} from workspace.", temporaryFile);
+      }
+    }
+    newMp.ifPresent(mp -> {
+      try {
+        workspace.cleanup(mp.getIdentifier());
+      } catch (IOException e) {
+        logger.warn("Failed to cleanup the workspace for media package {}", mp.getIdentifier());
+      }
+    });
   }
 
   private void updateTags(
