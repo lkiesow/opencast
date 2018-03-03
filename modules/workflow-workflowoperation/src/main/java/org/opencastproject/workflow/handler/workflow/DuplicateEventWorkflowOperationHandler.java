@@ -45,6 +45,7 @@ import org.opencastproject.metadata.dublincore.DublinCore;
 import org.opencastproject.metadata.dublincore.DublinCoreCatalog;
 import org.opencastproject.metadata.dublincore.DublinCoreUtil;
 import org.opencastproject.util.JobUtil;
+import org.opencastproject.util.NotFoundException;
 import org.opencastproject.workflow.api.AbstractWorkflowOperationHandler;
 import org.opencastproject.workflow.api.WorkflowInstance;
 import org.opencastproject.workflow.api.WorkflowOperationException;
@@ -114,6 +115,9 @@ public class DuplicateEventWorkflowOperationHandler extends AbstractWorkflowOper
   /** The distribution service */
   protected DistributionService distributionService;
 
+  /** Keeps track of temporary files which have to be deleted when done. */
+  private List<URI> temporaryFiles;
+
   /**
    * Callback for the OSGi declarative services configuration.
    *
@@ -144,12 +148,6 @@ public class DuplicateEventWorkflowOperationHandler extends AbstractWorkflowOper
     this.distributionService = distributionService;
   }
 
-  /**
-   * {@inheritDoc}
-   *
-   * @see org.opencastproject.workflow.api.WorkflowOperationHandler#start(WorkflowInstance,
-   *      JobContext)
-   */
   @Override
   public WorkflowOperationResult start(final WorkflowInstance workflowInstance, final JobContext context)
       throws WorkflowOperationException {
@@ -225,6 +223,8 @@ public class DuplicateEventWorkflowOperationHandler extends AbstractWorkflowOper
     }
 
     for (int i = 0; i < numberOfEvents; i++) {
+      temporaryFiles = new ArrayList<>();
+
       // Clone the media package (without its elements)
       MediaPackage newMp = copyMediaPackage(mediaPackage, i + 1, copyNumberPrefix);
 
@@ -251,6 +251,15 @@ public class DuplicateEventWorkflowOperationHandler extends AbstractWorkflowOper
       }
 
       // Remove temporary files of new media package
+      for (URI temporaryFile : temporaryFiles) {
+        try {
+          workspace.delete(temporaryFile);
+        } catch (NotFoundException e) {
+          logger.debug("{} could not be found in the workspace and hence, cannot be deleted.", temporaryFile);
+        } catch (IOException e) {
+          logger.warn("Failed to delete {} from workspace.", temporaryFile);
+        }
+      }
       try {
         workspace.cleanup(newMp.getIdentifier());
       } catch (IOException e) {
@@ -329,6 +338,7 @@ public class DuplicateEventWorkflowOperationHandler extends AbstractWorkflowOper
         try (InputStream inputStream = new FileInputStream(sourceFile)) {
           final URI tmpUri = workspace.put(destination.getIdentifier().toString(), element.getIdentifier(),
               FilenameUtils.getName(element.getURI().toString()), inputStream);
+          temporaryFiles.add(tmpUri);
           element.setIdentifier(null);
           element.setURI(tmpUri);
         }
@@ -373,6 +383,7 @@ public class DuplicateEventWorkflowOperationHandler extends AbstractWorkflowOper
       final String elementId = UUID.randomUUID().toString();
       final URI newUrl = workspace.put(destination.getIdentifier().compact(), elementId, "dublincore.xml",
           inputStream);
+      temporaryFiles.add(newUrl);
       final MediaPackageElement mpe = destination.add(newUrl, MediaPackageElement.Type.Catalog,
           MediaPackageElements.EPISODE);
       mpe.setIdentifier(elementId);
