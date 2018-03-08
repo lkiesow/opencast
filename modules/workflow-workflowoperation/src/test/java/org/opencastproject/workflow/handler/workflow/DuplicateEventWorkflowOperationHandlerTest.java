@@ -29,7 +29,6 @@ import static org.easymock.EasyMock.eq;
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.replay;
 import static org.easymock.EasyMock.reset;
-
 import static org.opencastproject.workflow.handler.workflow.DuplicateEventWorkflowOperationHandler
     .COPY_NUMBER_PREFIX_PROPERTY;
 import static org.opencastproject.workflow.handler.workflow.DuplicateEventWorkflowOperationHandler

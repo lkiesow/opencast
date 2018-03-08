@@ -60,8 +60,6 @@ import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -343,8 +341,7 @@ public class DuplicateEventWorkflowOperationHandler extends AbstractWorkflowOper
       try {
         // We first have to copy the media package element into the workspace
         final MediaPackageElement element = (MediaPackageElement) e.clone();
-        final File sourceFile = workspace.get(element.getURI());
-        try (InputStream inputStream = new FileInputStream(sourceFile)) {
+        try (InputStream inputStream = workspace.read(element.getURI())) {
           final URI tmpUri = workspace.put(destination.getIdentifier().toString(), element.getIdentifier(),
               FilenameUtils.getName(element.getURI().toString()), inputStream);
           temporaryFiles.add(tmpUri);
