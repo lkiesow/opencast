@@ -27,4 +27,4 @@ install:
 
 script:
   - (! grep -rq '	' modules assemblies pom.xml --include=pom.xml)
-  - grep -r ' $' modules assemblies pom.xml --include=pom.xml
+  - (! grep -rq ' $' modules assemblies pom.xml --include=pom.xml)
