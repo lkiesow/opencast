@@ -27,4 +27,4 @@ install:
 
 script:
   - (! grep -rq '	' modules assemblies pom.xml --include=pom.xml)
-  - mvn --batch-mode clean install -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn -Pnone
+  - grep -r ' $' modules assemblies pom.xml --include=pom.xml
