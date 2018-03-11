@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definition xmlns="http://workflow.opencastproject.org">
+
+  <id>demux</id>
+  <title>Demux Testing Workflow</title>
+  <tags>
+    <tag>upload</tag>
+  </tags>
+
+  <operations>
+    <operation
+      id="demux"
+      exception-handler-workflow="partial-error"
+      description="Extract presenter and presentation video from multistream source">
+      <configurations>
+        <configuration key="source-flavors">multitrack/source</configuration>
+        <configuration key="target-flavors">presenter/preview,presentation/preview</configuration>
+        <configuration key="target-tags">archive</configuration>
+        <configuration key="encoding-profile">demux</configuration>
+      </configurations>
+    </operation>
+
+    <operation
+      id="publish-configure"
+      exception-handler-workflow="partial-error"
+      description="Publish to preview publication channel">
+      <configurations>
+        <configuration key="source-flavors">*/preview</configuration>
+        <configuration key="channel-id">internal</configuration>
+        <configuration key="url-pattern">http://localhost:8080/admin-ng/index.html#/events/events/${event_id}/tools/playback</configuration>
+      </configurations>
+    </operation>
+
+    <operation
+      id="publish-engage"
+      fail-on-error="true"
+      exception-handler-workflow="partial-error"
+      description="Publishing to Engage">
+      <configurations>
+        <configuration key="download-source-flavors">dublincore/*,security/*,*/preview</configuration>
+      </configurations>
+    </operation>
+
+    <operation
+      id="snapshot"
+      fail-on-error="true"
+      exception-handler-workflow="partial-error"
+      description="Archiving">
+      <configurations>
+        <configuration key="source-tags">archive</configuration>
+      </configurations>
+    </operation>
+
+    <operation
+      id="cleanup"
+      fail-on-error="false"
+      description="Cleaning up">
+      <configurations>
+        <configuration key="preserve-flavors">security/*</configuration>
+        <configuration key="delete-external">true</configuration>
+      </configurations>
+    </operation>
+
+  </operations>
+
+</definition>

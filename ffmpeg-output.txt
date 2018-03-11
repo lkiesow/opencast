@@ -1,0 +1,3 @@
+% ffmpeg -y -i ocr-test-very-small-no-audio-40sec-640x400.mkv -nostats -map 0:v "$(pwd)/x.mp4" -map 0:v "$(pwd)/y.mp4"  2>&1 | sed -n "s/^Output .* to '\(.*\)':$/\1/p"                [0]
+/home/lars/videos/x.mp4
+/home/lars/videos/y.mp4
