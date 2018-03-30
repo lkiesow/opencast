@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definition xmlns="http://workflow.opencastproject.org">
+
+  <id>concat</id>
+  <title>Concat (samecodec) Testing Workflow</title>
+  <tags>
+    <tag>upload</tag>
+  </tags>
+<description>
+    Concatenate uploaded videos of the same codec/timebase/resolution into one file ordered by filename in lexicographical order. There is no re-encoding.
+</description>
+
+  <operations>
+    <operation
+      id="defaults"
+      description="Applying default configuration values">
+      <configurations>
+        <configuration key="noTranscode">true</configuration>
+      </configurations>
+    </operation>
+
+     <operation
+      id="inspect"
+      fail-on-error="true"
+      exception-handler-workflow="partial-error"
+      description="Inspecting audio and video streams">
+      <configurations>
+        <configuration key="overwrite">false</configuration>
+        <configuration key="accept-no-media">false</configuration>
+      </configurations>
+    </operation>
+
+    <operation
+      id="concat"
+      exception-handler-workflow="partial-error"
+      description="Concatenate multiple video segments into one presenter preview">
+      <configurations>
+         <!-- 1+ files are numbered and sorted lexicographically  -->
+         <configuration key="source-flavor-numbered-files">multipart/chunked+source</configuration>
+         <configuration key="target-flavor">presenter/preview</configuration>
+         <!-- same codec and size, do not transcode before concatenation, put them into a container -->
+         <configuration key="same-codec">true</configuration>
+         <configuration key="target-tags">archive</configuration>
+         <!-- Do not transcode after concatenation -->
+        <configuration key="encoding-profile">concat-samecodec.work</configuration>
+      </configurations>
+    </operation>
+
+    <operation
+      id="publish-configure"
+      exception-handler-workflow="partial-error"
+      description="Publish to preview publication channel">
+      <configurations>
+        <configuration key="source-flavors">*/preview</configuration>
+        <configuration key="channel-id">internal</configuration>
+        <configuration key="url-pattern">http://localhost:8080/admin-ng/index.html#/events/events/${event_id}/tools/playback</configuration>
+        <configuration key="check-availability">true</configuration>
+      </configurations>
+    </operation>
+
+    <operation
+      id="publish-engage"
+      fail-on-error="true"
+      exception-handler-workflow="partial-error"
+      description="Publishing to Engage">
+      <configurations>
+        <configuration key="download-source-flavors">dublincore/*,security/*,*/preview</configuration>
+      </configurations>
+    </operation>
+
+    <operation
+      id="snapshot"
+      fail-on-error="true"
+      exception-handler-workflow="partial-error"
+      description="Archiving">
+      <configurations>
+        <configuration key="source-tags">archive</configuration>
+      </configurations>
+    </operation>
+
+    <operation
+      id="cleanup"
+      fail-on-error="false"
+      description="Cleaning up">
+      <configurations>
+        <configuration key="preserve-flavors">security/*</configuration>
+        <configuration key="delete-external">true</configuration>
+      </configurations>
+    </operation>
+
+  </operations>
+
+</definition>
