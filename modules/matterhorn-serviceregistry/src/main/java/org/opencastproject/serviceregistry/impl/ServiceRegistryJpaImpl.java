@@ -772,10 +772,10 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
       if (heartbeatInterval == 0) {
         logger.info("Heartbeat disabled");
       } else if (heartbeatInterval < 0) {
-        logger.warn("Heartbeat interval {} minutes too low, adjusting to {}", heartbeatInterval, DEFAULT_HEART_BEAT);
+        logger.warn("Heartbeat interval {} seconds too low, adjusting to {}", heartbeatInterval, DEFAULT_HEART_BEAT);
         heartbeatInterval = DEFAULT_HEART_BEAT;
       } else {
-        logger.info("Dispatch interval set to {} minutes", heartbeatInterval);
+        logger.info("Heartbeat interval set to {} seconds", heartbeatInterval);
       }
     }
 
@@ -977,9 +977,12 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
    */
   protected JpaJob updateInternal(EntityManager em, JpaJob job) throws PersistenceException {
     EntityTransaction tx = em.getTransaction();
+    JpaJob originalJob = null;
+    JpaJob fromDb = null;
     try {
       tx.begin();
-      JpaJob fromDb = em.find(JpaJob.class, job.getId());
+      fromDb = em.find(JpaJob.class, job.getId());
+      originalJob = JpaJob.from(fromDb.toJob());
       if (fromDb == null) {
         throw new NoResultException();
       }
@@ -991,10 +994,46 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
       setJobUri(job);
       return job;
     } catch (PersistenceException e) {
+      dumpJobs(originalJob, fromDb);
       if (tx.isActive()) {
         tx.rollback();
       }
       throw e;
+    }
+  }
+
+  private void dumpJobs(JpaJob originalJob, JpaJob fromDb) {
+    try {
+      if (originalJob == null) {
+        logger.error("originalJob is null");
+        return;
+      }
+      if (originalJob.getStatus() == null) {
+        logger.error("originalJob.getStatus() is null");
+        return;
+      }
+      if (!originalJob.getStatus().equals(fromDb.getStatus()))
+        logger.error("JPA status mismatch: " + originalJob.getStatus() + " vs " + fromDb.getStatus());
+      if (originalJob.getProcessorServiceRegistration() == null) {
+        logger.error("originalJob.getProcessorServiceRegistration() is null");
+        return;
+      }
+      if (fromDb.getProcessorServiceRegistration() == null) {
+        logger.error("fromDb.getProcessorServiceRegistration() is null");
+        return;
+      }
+      if (!originalJob.getProcessorServiceRegistration().getId().equals(fromDb.getProcessorServiceRegistration().getId()))
+        logger.error("JPA processor service mismatch: " + originalJob.getProcessorServiceRegistration().getId() + " vs " + fromDb.getProcessorServiceRegistration().getId());
+      if (!originalJob.getDateStarted().equals(fromDb.getDateStarted()))
+        logger.error("JPA date started mismatch: " + originalJob.getDateStarted() + " vs " + fromDb.getDateStarted());
+      if (!originalJob.getBlockedJobIds().equals(fromDb.getBlockedJobIds()))
+        logger.error("JPA blocked job ids mismatch: " + originalJob.getBlockedJobIds() + " vs " + fromDb.getBlockedJobIds());
+      if (!originalJob.getBlockingJobId().equals(fromDb.getBlockingJobId()))
+        logger.error("JPA blocking job id mismatch: " + originalJob.getBlockingJobId() + " vs " + fromDb.getBlockingJobId());
+      if (!originalJob.getChildJobsString().equals(fromDb.getChildJobsString()))
+        logger.error("JPA child job id mismatch: " + originalJob.getChildJobsString() + " vs " + fromDb.getChildJobsString());
+    } catch (Exception e) {
+      logger.error("Error logging job state information in dumpJobs()", e);
     }
   }
 
@@ -3231,69 +3270,75 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
     @Override
     public void run() {
       logger.debug("Checking for unresponsive services");
-      List<ServiceRegistration> serviceRegistrations = getOnlineServiceRegistrations();
 
-      for (ServiceRegistration service : serviceRegistrations) {
-        hostsStatistics.updateHost(((ServiceRegistrationJpaImpl) service).getHostRegistration());
-        servicesStatistics.updateService(service);
-        if (!service.isJobProducer())
-          continue;
-        if (service.isInMaintenanceMode())
-          continue;
+      try {
+        List<ServiceRegistration> serviceRegistrations = getOnlineServiceRegistrations();
 
-        // We think this service is online and available. Prove it.
-        String serviceUrl = UrlSupport.concat(service.getHost(), service.getPath(), "dispatch");
-        HttpHead options = new HttpHead(serviceUrl);
-        HttpResponse response = null;
-        try {
+        for (ServiceRegistration service : serviceRegistrations) {
+          hostsStatistics.updateHost(((ServiceRegistrationJpaImpl) service).getHostRegistration());
+          servicesStatistics.updateService(service);
+          if (!service.isJobProducer())
+            continue;
+          if (service.isInMaintenanceMode())
+            continue;
+
+          // We think this service is online and available. Prove it.
+          String serviceUrl = UrlSupport.concat(service.getHost(), service.getPath(), "dispatch");
+
+          HttpHead options = new HttpHead(serviceUrl);
+          HttpResponse response = null;
           try {
-            response = client.execute(options);
-            if (response != null) {
-              switch (response.getStatusLine().getStatusCode()) {
-                case HttpStatus.SC_OK:
-                  // this service is reachable, continue checking other services
-                  logger.trace("Service " + service.toString() + " is responsive: " + response.getStatusLine());
-                  if (unresponsive.remove(service)) {
-                    logger.info("Service {} is still online", service);
-                  } else if (!service.isOnline()) {
-                    try {
-                      setOnlineStatus(service.getServiceType(), service.getHost(), service.getPath(), true, true);
-                      logger.info("Service {} is back online", service);
-                    } catch (ServiceRegistryException e) {
-                      logger.warn("Error setting online status for {}", service);
+            try {
+              response = client.execute(options);
+              if (response != null) {
+                switch (response.getStatusLine().getStatusCode()) {
+                  case HttpStatus.SC_OK:
+                    // this service is reachable, continue checking other services
+                    logger.trace("Service " + service.toString() + " is responsive: " + response.getStatusLine());
+                    if (unresponsive.remove(service)) {
+                      logger.info("Service {} is still online", service);
+                    } else if (!service.isOnline()) {
+                      try {
+                        setOnlineStatus(service.getServiceType(), service.getHost(), service.getPath(), true, true);
+                        logger.info("Service {} is back online", service);
+                      } catch (ServiceRegistryException e) {
+                        logger.warn("Error setting online status for {}", service);
+                      }
                     }
-                  }
-                  continue;
-                default:
-                  if (!service.isOnline())
                     continue;
-                  logger.warn("Service {} is not working as expected: {}", service, response.getStatusLine());
+                  default:
+                    if (!service.isOnline())
+                      continue;
+                    logger.warn("Service {} is not working as expected: {}", service, response.getStatusLine());
+                }
+              } else {
+                logger.warn("Service {} does not respond: {}", service.toString());
               }
-            } else {
-              logger.warn("Service {} does not respond: {}", service.toString());
+            } catch (TrustedHttpClientException e) {
+              if (!service.isOnline())
+                continue;
+              logger.warn("Unable to reach {} : {}", service, e);
             }
-          } catch (TrustedHttpClientException e) {
-            if (!service.isOnline())
-              continue;
-            logger.warn("Unable to reach {} : {}", service, e);
-          }
 
-          // If we get here, the service did not respond as expected
-          try {
-            if (unresponsive.contains(service)) {
-              unRegisterService(service.getServiceType(), service.getHost());
-              unresponsive.remove(service);
-              logger.warn("Marking {} as offline", service);
-            } else {
-              unresponsive.add(service);
-              logger.warn("Added {} to the watch list", service);
+            // If we get here, the service did not respond as expected
+            try {
+              if (unresponsive.contains(service)) {
+                unRegisterService(service.getServiceType(), service.getHost());
+                unresponsive.remove(service);
+                logger.warn("Marking {} as offline", service);
+              } else {
+                unresponsive.add(service);
+                logger.warn("Added {} to the watch list", service);
+              }
+            } catch (ServiceRegistryException e) {
+              logger.warn("Unable to unregister unreachable service: {} : {}", service, e);
             }
-          } catch (ServiceRegistryException e) {
-            logger.warn("Unable to unregister unreachable service: {} : {}", service, e);
+          } finally {
+            client.close(response);
           }
-        } finally {
-          client.close(response);
         }
+      } catch (Throwable t) {
+        logger.warn("Error while checking for unresponsive services", t);
       }
 
       logger.debug("Finished checking for unresponsive services");

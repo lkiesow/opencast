@@ -33,7 +33,6 @@ import net.fortuna.ical4j.model.Calendar;
 import net.fortuna.ical4j.model.DateTime;
 import net.fortuna.ical4j.model.ParameterList;
 import net.fortuna.ical4j.model.component.VEvent;
-import net.fortuna.ical4j.model.parameter.Cn;
 import net.fortuna.ical4j.model.parameter.Encoding;
 import net.fortuna.ical4j.model.parameter.FmtType;
 import net.fortuna.ical4j.model.parameter.Value;
@@ -41,8 +40,8 @@ import net.fortuna.ical4j.model.parameter.XParameter;
 import net.fortuna.ical4j.model.property.Attach;
 import net.fortuna.ical4j.model.property.CalScale;
 import net.fortuna.ical4j.model.property.Description;
+import net.fortuna.ical4j.model.property.LastModified;
 import net.fortuna.ical4j.model.property.Location;
-import net.fortuna.ical4j.model.property.Organizer;
 import net.fortuna.ical4j.model.property.ProdId;
 import net.fortuna.ical4j.model.property.RelatedTo;
 import net.fortuna.ical4j.model.property.Uid;
@@ -54,7 +53,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.net.URI;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -125,7 +123,7 @@ public class CalendarGenerator {
    * @return true if the event could be added.
    */
   public boolean addEvent(MediaPackage mp, DublinCoreCatalog catalog, String agentId, Date start, Date end,
-          String captureAgentMetadata) {
+          Date lastModified, String captureAgentMetadata) {
     String eventId = mp.getIdentifier().compact();
 
     logger.debug("Creating iCaleandar VEvent from scheduled event '{}'", eventId);
@@ -143,17 +141,12 @@ public class CalendarGenerator {
 
     VEvent event = new VEvent(startDate, endDate, catalog.getFirst(DublinCore.PROPERTY_TITLE));
     try {
-      ParameterList pl = new ParameterList();
-      if (StringUtils.isNotEmpty(catalog.getFirst(DublinCore.PROPERTY_CREATOR))) {
-        pl.add(new Cn(catalog.getFirst(DublinCore.PROPERTY_CREATOR)));
-      }
       event.getProperties().add(new Uid(eventId));
 
-      // TODO Organizer should be URI (email-address?) created fake address
-      if (StringUtils.isNotEmpty(catalog.getFirst(DublinCore.PROPERTY_CREATOR))) {
-        URI organizer = new URI("mailto", catalog.getFirst(DublinCore.PROPERTY_CREATOR) + "@matterhorn.opencast", null);
-        event.getProperties().add(new Organizer(pl, organizer));
-      }
+      DateTime lastModifiedDate = new DateTime(lastModified);
+      lastModifiedDate.setUtc(true);
+      event.getProperties().add(new LastModified(lastModifiedDate));
+
       if (StringUtils.isNotEmpty(catalog.getFirst(DublinCore.PROPERTY_DESCRIPTION))) {
         event.getProperties().add(new Description(catalog.getFirst(DublinCore.PROPERTY_DESCRIPTION)));
       }
