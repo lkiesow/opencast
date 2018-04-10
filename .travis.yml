@@ -50,3 +50,10 @@ script:
   - _t build mvn --batch-mode clean install -Pnone -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
   - _t site  mvn --batch-mode install -DskipTests=true -Pnone -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
   - _t site  mvn --batch-mode site -Pnone -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
+
+deploy:
+  provider: script
+  script: bash .upload-crowdin.sh
+  on:
+    all_branches: true
+    condition: $TRAVIS_BRANCH =~ ^develop|r/
