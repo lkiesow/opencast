@@ -89,3 +89,10 @@ jobs:
         - mvn install --quiet -DskipTests=true -Dcheckstyle.skip=true -Pnone
       script:
         - mvn site -Pnone -Dcheckstyle.skip=true
+
+deploy:
+  provider: script
+  script: bash .upload-crowdin.sh
+  on:
+    all_branches: true
+    condition: $TRAVIS_BRANCH =~ ^develop|r/
