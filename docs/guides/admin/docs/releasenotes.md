@@ -83,6 +83,9 @@ Configuration changes
 ---------------------
 Please check the [configuration changes](upgrade.md#configuration-changes) section in the upgrade notes.
 
+- The role ROLE_UI_EVENTS_DETAILS_GENERAL_VIEW for viewing the publications (previously general) tab in the event
+  details modal has been renamed to ROLE_UI_EVENTS_DETAILS_PUBLICATIONS_VIEW for consistency.
+
 
 Release Schedule
 ----------------
