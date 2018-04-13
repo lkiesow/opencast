@@ -135,8 +135,8 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 
 import net.fortuna.ical4j.model.Period;
-import net.fortuna.ical4j.model.ValidationException;
 import net.fortuna.ical4j.model.property.RRule;
+import net.fortuna.ical4j.validate.ValidationException;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -1684,9 +1684,6 @@ public class SchedulerServiceImpl extends AbstractIndexProducer implements Sched
       return cal.getCalendar().toString();
 
     } catch (Exception e) {
-      if (e instanceof SchedulerException)
-        throw e;
-      logger.error("Failed getting calendar: {}", getStackTrace(e));
       throw new SchedulerException(e);
     }
   }
