@@ -97,6 +97,7 @@ pages:
    - Copy: 'workflowoperationhandlers/copy-woh.md'
    - Clone: 'workflowoperationhandlers/clone-woh.md'
    - Cover Image: 'workflowoperationhandlers/coverimage-woh.md'
+   - Crop Video: 'workflowopernationhandlers/cropvideo-woh.md'
    - Defaults: 'workflowoperationhandlers/defaults-woh.md'
    - Duplicate Event: 'workflowoperationhandlers/duplicate-event-woh.md'
    - Editor: 'workflowoperationhandlers/editor-woh.md'
