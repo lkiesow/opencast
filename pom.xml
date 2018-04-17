@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.opencastproject</groupId>
   <artifactId>base</artifactId>
-  <version>5-SNAPSHOT</version>
+  <version>6-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>opencast</name>
   <description>Opencast is a media capture, processing, management and distribution system</description>
@@ -210,6 +210,7 @@
     <module>modules/urlsigning-verifier-service-impl</module>
     <module>modules/userdirectory</module>
     <module>modules/userdirectory-ldap</module>
+    <module>modules/userdirectory-moodle</module>
     <module>modules/userdirectory-sakai</module>
     <module>modules/usertracking-api</module>
     <module>modules/usertracking-impl</module>
