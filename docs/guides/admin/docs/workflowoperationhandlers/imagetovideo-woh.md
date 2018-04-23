@@ -17,24 +17,26 @@ Tags and flavors can be used in combination. But combined they should match one 
 
 \* **mandatory**
 
-##Operation example
+## Operation example
 
-    <operation
-      id="image-to-video"
-      fail-on-error="true"
-      exception-handler-workflow="error"
-      description="Composite">
-      <configurations>
-        <configuration key="source-tags">intro</configuration>
-        <configuration key="source-flavor">intro/source</configuration>
-        <configuration key="target-tags">intro-video</configuration>
-        <configuration key="target-flavor">intro/video</configuration>
-        <configuration key="duration">10</configuration>
-        <configuration key="profile">image-movie</configuration>
-      </configurations>
-    </operation>
+```xml
+<operation
+  id="image-to-video"
+  fail-on-error="true"
+  exception-handler-workflow="error"
+  description="Composite">
+  <configurations>
+    <configuration key="source-tags">intro</configuration>
+    <configuration key="source-flavor">intro/source</configuration>
+    <configuration key="target-tags">intro-video</configuration>
+    <configuration key="target-flavor">intro/video</configuration>
+    <configuration key="duration">10</configuration>
+    <configuration key="profile">image-movie</configuration>
+  </configurations>
+</operation>
+```
 
-##Encoding profile example
+## Encoding profile example
 
     # Image to video
     profile.image-movie.name = image to video

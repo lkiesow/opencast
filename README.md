@@ -10,6 +10,9 @@ official Opencast Matterhorn repository.
 Opencast
 ========
 
+[![Build Status](https://travis-ci.org/opencast/opencast.svg?branch=develop)
+](https://travis-ci.org/opencast/opencast)
+
 Open Source Lecture Capture & Video Management for Education
 
 Opencast is a free, open-source platform to support the management of

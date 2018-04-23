@@ -5,16 +5,63 @@ All important decisions for Opencast have to be made on list. To do that committ
 `#proposal`) to list on which other committers may then vote. Opencast uses lazy consensus meaning that no response
 signals agreement. Apart from that committers may vote with:
 
- - `+1` yes, agree - also willing to help bring about the proposed action
- - `+0` yes, agree - not willing or able to help bring about the proposed action
- - `-0` no, disagree - but will not oppose the action going forward
- - `-1` veto, disagree - opposes the action going forward and must propose an alternate action to address the issue or a
-   justification for not addressing the issue
+* `+1` yes, agree - also willing to help bring about the proposed action
+* `+0` yes, agree - not willing or able to help bring about the proposed action
+* `-0` no, disagree - but will not oppose the action going forward
+* `-1` veto, disagree - opposes the action going forward and must propose an alternate action to address the issue or a
+  justification for not addressing the issue
 
-A proposal is accepted when no veto (`-1`) is voted within a time spawn of 72 hours (not counting weekends) after being sent to list.
+A proposal is accepted when no veto (`-1`) is voted within a time spawn of 72 hours (not counting weekends) after being
+sent to list.
 
 Passed Proposals
 ----------------
+
+### Drop Undocumented Workflow Handler
+Proposed by Lars Kiesow <lkiesow@uos.de>, passed on Fri, 10 Nov 2017
+
+```no-highlight
+Hi,
+lately I discovered a couple of undocumented and probably unused
+workflow operation handler, for example the 'failing' operation to name
+one of them. All of these are not really useful in their current
+undocumented form. That is why I hereby #propose to
+
+  drop all workflow operation handler still undocumented at the end of
+  the year.
+
+If this proposal passes, I will create and publish a list of all
+operations which would be dropped in their current state. If someone
+still wants to keep any of them, the only thing they need to do is to
+write a short documentation page for those operations. A task easily
+done.
+
+That way we may get rid of some unused, unnecessary old operations
+while ensuring that all of the actually useful ones are documented and
+thus usable without special inner knowledge of Opencast.
+
+Regards,
+Lars
+```
+
+### Changing Translation Sources
+Proposed by Sven Stauber <sven.stauber@switch.ch>, passed on December 20, 2017
+
+```no-highlight
+Dear Opencast Developers
+
+I hereby #propose to add an additional rule to our development process as
+described on [1]:
+
+Adding or changing translation sources is not allowed in release branches
+(implying that pull requests doing so need to be directed to the branch
+develop).
+
+Best regards
+Sven
+
+[1] https://docs.opencast.org/develop/developer/development-process/
+```
 
 ### Crowdin Acceptance Policy
 Proposed by Greg Logan <gregorydlogan@gmail.com>, passed on November 17, 2017
@@ -22,11 +69,20 @@ Proposed by Greg Logan <gregorydlogan@gmail.com>, passed on November 17, 2017
 ```no-highlight
 Hi all,
 
-Per the discussion in the meeting today, we need to set a policy regarding what is expected of our Crowdin translators prior to joining the translation team.  My proposal is that they must write a brief, understandable sentence regarding why they want to help translate Opencast via the Crowdin UI.  This is an optional field in the workflow where they request to be a translator (ie, no new tools or fields) which is sometimes filled in, but mostly left blank.  Something like
+Per the discussion in the meeting today, we need to set a policy regarding what
+is expected of our Crowdin translators prior to joining the translation team.
+My proposal is that they must write a brief, understandable sentence regarding
+why they want to help translate Opencast via the Crowdin UI.  This is an
+optional field in the workflow where they request to be a translator (ie, no
+new tools or fields) which is sometimes filled in, but mostly left blank.
+Something like
 
 'I want to help translate $project into [language]'
 
-would be sufficient.  This filters out the bots, yet is simple enough that someone with Google translate ought to be able to work something out.  Once this passes I will update the Crowdin and Opencast docs regarding the requirements, and then we should be good to go.
+would be sufficient.  This filters out the bots, yet is simple enough that
+someone with Google translate ought to be able to work something out.  Once
+this passes I will update the Crowdin and Opencast docs regarding the
+requirements, and then we should be good to go.
 
 Proposal closes EOD 2017-11-17.
 ```
@@ -137,16 +193,18 @@ Lars
 Proposed by Stephen Marquard <stephen.marquard@uct.ac.za>, passed on June 9, 2017
 
 ```no-highlight
-To reduce the overhead involved in improving our documentation, I #propose that minor fixes
-to documentation may be committed to either maintenance branches or develop without requiring
-a JIRA issue or pull request.
+To reduce the overhead involved in improving our documentation, I #propose that
+minor fixes to documentation may be committed to either maintenance branches or
+develop without requiring a JIRA issue or pull request.
 
-Markdown docs can be edited directly on bitbucket (and git should we move to that), which is 
-a very fast and convenient way for developers to fix documentation.
+Markdown docs can be edited directly on bitbucket (and git should we move to
+that), which is a very fast and convenient way for developers to fix
+documentation.
 
-Constraints: documentation fixes committed in this way should be minor changes only;
-for example fixing typos, layout, formatting, links or small changes to existing content, 
-but no significant new content (which should continue to go through the usual review process).
+Constraints: documentation fixes committed in this way should be minor changes
+only; for example fixing typos, layout, formatting, links or small changes to
+existing content, but no significant new content (which should continue to go
+through the usual review process).
 ```
 
 ### Requiring Java 1.8 for 3.0
@@ -225,7 +283,7 @@ draft [1] into account, although I still dared to include the two last
 items but this time, hopefully with a convincing reason for why they
 should be removed.
 
-1. Old Administrative User Interface (matterhorn-admin-ui)
+1. Old Administrative User Interface (admin-ui)
    The reason for this should be obvious: We got a new one. The old one
    has not been tested for the last three releases, is not linked
    anywhere anymore and is partly buggy due to changes to Opencast. To
@@ -298,7 +356,7 @@ should be removed.
     except by components to be removed.
 
 
-20. matterhorn-search-service-feeds
+20. search-service-feeds
     Broken implementation for RSS/Atom feeds
 
 21. matterhorn-caption-* and embed operation
@@ -336,7 +394,7 @@ Hi,
 we discussed this on today's technical meeting and I'm slightly
 changing the proposal:
 
-20. Let's remove matterhorn-search-service-feeds only after September
+20. Let's remove search-service-feeds only after September
     1st which is a realistic time to get things into the next Opencast
     release. If someone has fixed the issue by them, we will, of
     course, keep it.
@@ -360,8 +418,8 @@ a patch adding exactly this functionality. The holdstate operations are
 definitely broken due to their UI.
 
 My suggestion for a compromise here:
- - Remove them if that patch for archiving the options is released
- - Remove them if no one fixes them in time (September 1st) for 2.3
+* Remove them if that patch for archiving the options is released
+* Remove them if no one fixes them in time (September 1st) for 2.3
 
 If you want to bring them back later, we always keep the code in our
 history.
@@ -427,9 +485,9 @@ Proposed by Lars Kiesow <lkiesow@uos.de>, passed on Thu, 14 Apr 2016 00:00:00 UT
 Hi everyone,
 traditionally, we have the three mailing lists:
 
- - matterhorn@opencast.org (development list)
- - matterhorn-users@opencast.org (user list)
- - community@opencast.org (more or less announcements)
+* matterhorn@opencast.org (development list)
+* matterhorn-users@opencast.org (user list)
+* community@opencast.org (more or less announcements)
 
 Recently, though, we have seen especially the last two list being used
 for user questions and problems. That is not surprising as we dropped
@@ -438,10 +496,9 @@ matterhorn-users is meant for questions about Opencast.
 
 That is why I would like to rename these lists to
 
- - dev@opencast.org or development@opencast.org (I prefer the short
-   name but don't have very strong feelings about that)
- - users@opencast.org
- - announcements@opencast.org
+* dev@opencast.org or development@opencast.org (I prefer the short name but don't have very strong feelings about that)
+* users@opencast.org
+* announcements@opencast.org
 
 Together with the already existing security-notices list, this gives
 these lists a very clear meaning. It would also have the benefit that
@@ -480,13 +537,11 @@ reviewing and merging [1] in the following way:
 
 [old]
 
- - Pull requests for bug fixes (t/MH-XXXXX-...) may be reviewed and
-   merged out of order.
+* Pull requests for bug fixes (t/MH-XXXXX-...) may be reviewed and merged out of order.
 
 [new]
 
- - Pull requests for bug fixes or documentation may be reviewed and
-   merged out of order.
+* Pull requests for bug fixes or documentation may be reviewed and merged out of order.
 
 Regards,
 Lars

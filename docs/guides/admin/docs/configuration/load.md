@@ -59,7 +59,6 @@ is running.  The current files with relevant configuration keys are:
 |------------------------------------------------------------------------------------------|------------------------------------|
 | org.opencastproject.caption.impl.CaptionServiceImpl.cfg                                  | Caption convertion services        |
 | org.opencastproject.composer.impl.ComposerServiceImpl.cfg                                | Caption embedding services         |
-| org.opencastproject.distribution.acl.AclDistributionService.cfg                          | ACL file distribution              |
 | org.opencastproject.distribution.distribution.streaming.StreamingDistributionService.cfg | Streaming distribution             |
 | org.opencastproject.distribution.download.DownloadDistributionServiceImpl.cfg            | Download distribution              |
 | org.opencastproject.execute.impl.ExecuteServiceImpl.cfg                                  | Execute service                    |
@@ -68,7 +67,7 @@ is running.  The current files with relevant configuration keys are:
 | org.opencastproject.inspection.impl.MediaInspectionServiceImpl.cfg                       | Media inspection using mediainfo   |
 | org.opencastproject.publication.youtube.YouTubePublicationServiceImpl.cfg                | Youtube distribution               |
 | org.opencastproject.publication.youtube.YouTubeV3PublicationServiceImpl.cfg              | Youtube distribution               |
-| org.opencastproject.search.impl.SearchServiceImpl.cfg                                    | Matterhorn engage index jobs       |
+| org.opencastproject.search.impl.SearchServiceImpl.cfg                                    | Opencast engage index jobs         |
 | org.opencastproject.silencedetection.impl.SilenceDetectionServiceImpl.cfg                | Silence detection                  |
 | org.opencastproject.textanalyzer.impl.TextAnalyzerServiceImpl.cfg                        | Text analysis, including slide OCR |
 | org.opencastproject.videoeditor.impl.VideoEditorServiceImpl.cfg                          | Video editor                       |
@@ -92,10 +91,10 @@ Step 4: Restart Opencast
 Many of these configuration files are only read on startup, so restarting Opencast is strongly recommended.
 
 Troubleshooting
-===============
+---------------
 
-Help, my system has deadlocked, or there are jobs which are always queued even if the system is otherwise idle
---------------------------------------------------------------------------------------------------------------
+### Help, my system has deadlocked, or there are jobs which are always queued even if the system is otherwise idle
+
 
 This can be caused by setting a job weight that exceeds the maximum load for *all* services of a given type.  For
 example, if you have a single worker with 8 cores and set an encoding job to have a jobload of 9.  Fortunately, there is
@@ -104,12 +103,12 @@ restarting Opencast.  To resolve a deadlock caused by job loads follow these ins
 job's ID from the admin UI.  This will be an integer greater than zero.  We will call this $jobid.  Once you have the
 job ID, follow these steps:
 
-- Stop Opencast
-- Log into your database
-- Make sure you are using the right schema.  Currently the default is called `opencast`
-- Update the job's load
-    - This will look something like `UPDATE mh_job SET job\_load=0.0 WHERE id=$jobid`
-- Log out of your database
-- Change the load specified in the configuration file to an appropriate value
-    - This may need to happen across all nodes!
-- Restart Opencast
+* Stop Opencast
+* Log into your database
+* Make sure you are using the right schema. Currently the default is called `opencast`
+* Update the job's load
+    * This will look something like `UPDATE mh_job SET job\_load=0.0 WHERE id=$jobid`
+* Log out of your database
+* Change the load specified in the configuration file to an appropriate value
+    * This may need to happen across all nodes!
+* Restart Opencast
