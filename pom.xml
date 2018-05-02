@@ -37,6 +37,7 @@
     <mina.version>2.0.16</mina.version>
   </properties>
   <modules>
+    <module>modules/eth-oaipmh</module>
     <module>modules/admin-ui</module>
     <module>modules/animate-api</module>
     <module>modules/animate-impl</module>

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<scr:components xmlns:scr="http://www.osgi.org/xmlns/scr/v1.1.0">
+	<scr:component name="ch.ethz.opencast.oaipmh.Cq5Repository"
+	               immediate="true"
+	               activate="activate">
+	  <implementation class="ch.ethz.opencast.oaipmh.Cq5Repository" />
+	  <service>
+	    <provide interface="org.opencastproject.oaipmh.server.OaiPmhRepository" />
+	  </service>
+	  <property name="service.description" value="ETHz CQ5 OAI-PMH repository" />
+	  <property name="service.pid" value="ch.ethz.opencast.oaipmh.Cq5Repository" />
+	  <reference name="persistence"
+	             interface="org.opencastproject.oaipmh.persistence.OaiPmhDatabase"
+	             cardinality="1..1"
+	             policy="static"
+	             bind="setPersistence" />
+	</scr:component>
+	<scr:component name="ch.ethz.opencast.oaipmh.DoiRepository"
+	               immediate="true"
+	               activate="activate">
+	  <implementation class="ch.ethz.opencast.oaipmh.DoiRepository" />
+	  <service>
+	    <provide interface="org.opencastproject.oaipmh.server.OaiPmhRepository" />
+	  </service>
+	  <property name="service.description" value="ETHz DOI OAI-PMH repository" />
+	  <property name="service.pid" value="ch.ethz.opencast.oaipmh.DoiRepository" />
+	  <reference name="persistence"
+	             interface="org.opencastproject.oaipmh.persistence.OaiPmhDatabase"
+	             cardinality="1..1"
+	             policy="static"
+	             bind="setPersistence" />
+	</scr:component>
+	<scr:component name="ch.ethz.opencast.oaipmh.MultimediaPortalRepository"
+	               immediate="true"
+	               activate="activate">
+	  <implementation class="ch.ethz.opencast.oaipmh.MultimediaPortalRepository" />
+	  <service>
+	    <provide interface="org.opencastproject.oaipmh.server.OaiPmhRepository" />
+	  </service>
+	  <property name="service.description" value="ETHz Multimedia Portal OAI-PMH repository" />
+	  <property name="service.pid" value="ch.ethz.opencast.oaipmh.MultimediaPortalRepository" />
+	  <reference name="persistence"
+	             interface="org.opencastproject.oaipmh.persistence.OaiPmhDatabase"
+	             cardinality="1..1"
+	             policy="static"
+	             bind="setPersistence" />
+	</scr:component>
+</scr:components>

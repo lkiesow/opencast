@@ -151,6 +151,7 @@
   <feature name="opencast-allinone">
     <feature start-level="80">opencast-core</feature>
 
+    <bundle start-level="82">mvn:org.opencastproject/eth-oaipmh/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-admin-ui/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-animate-api/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-animate-impl/${project.version}</bundle>
@@ -381,6 +382,7 @@
   <feature name="opencast-adminpresentation">
     <feature start-level="80">opencast-core</feature>
 
+    <bundle start-level="82">mvn:org.opencastproject/eth-oaipmh/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-admin-ui/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-animate-api/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-animate-remote/${project.version}</bundle>
@@ -727,6 +729,7 @@
   <feature name="opencast-presentation">
     <feature start-level="80">opencast-core</feature>
 
+    <bundle start-level="82">mvn:org.opencastproject/eth-oaipmh/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-annotation-api/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-annotation-impl/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-distribution-service-api/${project.version}</bundle>
