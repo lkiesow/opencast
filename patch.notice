@@ -1,0 +1,15 @@
+# Applied patches/branches
+
+eth/assemblies-and-rpms
+eth/assemblies-check-script
+eth/configuration
+eth/oai-pmh-repositories-bundle
+eth/mh-12829-backport-to-r5
+
+OC PR #237 fixes admin UI 'event details > assets view' issue from MH-12829 see:
+https://github.com/opencast/opencast/commit/f8affbab885c34770195ad8480f0b69e2fb77021.patch
+
+OAI-PMH Sets Preview
+https://github.com/lkiesow/opencast oaipmh-sets
+
+merged (cherry picked all commits) patch MH-12829-configurable-statistics-2 for develop as squashed 6fedf7ed2c7cc64f106faba6addb7d78041aa7e7
