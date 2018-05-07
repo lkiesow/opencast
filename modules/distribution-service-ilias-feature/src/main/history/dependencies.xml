@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<features xmlns="http://karaf.apache.org/xmlns/features/v1.3.0" name="matterhorn-distribution-service-ilias-feature-3.3.1">
+    <feature version="0.0.0">
+        <bundle>mvn:org.opencastproject/matterhorn-distribution-service-ilias-workflowoperation/3.3.1</bundle>
+        <bundle>mvn:org.opencastproject/matterhorn-distribution-service-ilias/3.3.1</bundle>
+    </feature>
+</features>
