@@ -15,21 +15,6 @@
  */
 package org.opencastproject.distribution.ilias.remote;
 
-import org.apache.http.client.methods.HttpPost;
-import org.opencastproject.distribution.api.DistributionException;
-import org.opencastproject.distribution.api.DistributionService;
-import org.opencastproject.distribution.api.DownloadDistributionService;
-import org.opencastproject.job.api.Job;
-import org.opencastproject.mediapackage.MediaPackage;
-import org.opencastproject.mediapackage.MediaPackageParser;
-import org.opencastproject.serviceregistry.api.RemoteBase;
-import org.osgi.service.component.ComponentContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.HashSet;
-import java.util.Set;
-
 import static java.lang.String.format;
 import static org.opencastproject.util.HttpUtil.param;
 import static org.opencastproject.util.HttpUtil.post;
@@ -38,13 +23,23 @@ import static org.opencastproject.util.data.Arrays.array;
 import static org.opencastproject.util.data.Arrays.mkString;
 import static org.opencastproject.util.data.functions.Options.join;
 
+import org.opencastproject.distribution.api.DistributionException;
+import org.opencastproject.distribution.api.DistributionService;
+import org.opencastproject.job.api.Job;
+import org.opencastproject.mediapackage.MediaPackage;
+import org.opencastproject.mediapackage.MediaPackageParser;
+import org.opencastproject.serviceregistry.api.RemoteBase;
+
 import com.google.gson.Gson;
 
-import javax.print.attribute.SetOfIntegerSyntax;
+import org.apache.http.client.methods.HttpPost;
+import org.osgi.service.component.ComponentContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** A remote distribution service invoker. */
 public class IliasDistributionServiceRemoteImpl extends RemoteBase
-        implements DistributionService, DownloadDistributionService {
+        implements DistributionService {
   /** The logger */
   private static final Logger logger = LoggerFactory.getLogger(IliasDistributionServiceRemoteImpl.class);
 
@@ -53,7 +48,6 @@ public class IliasDistributionServiceRemoteImpl extends RemoteBase
   private static final String PARAM_CHANNEL_ID = "channelId";
   private static final String PARAM_MEDIAPACKAGE = "mediapackage";
   private static final String PARAM_ELEMENT_ID = "elementId";
-  private static final String PARAM_CHECK_AVAILABILITY = "checkAvailability";
 
   private final Gson gson = new Gson();
 
@@ -73,53 +67,33 @@ public class IliasDistributionServiceRemoteImpl extends RemoteBase
     this.distributionChannel = (String) cc.getProperties().get(PARAM_REMOTE_SERVICE_CHANNEL);
     super.serviceType = mkString(array(JOB_TYPE_PREFIX, this.distributionChannel), ".");
   }
-
+  
   @Override
   public Job distribute(String channelId, MediaPackage mediaPackage, String elementId) throws DistributionException {
-    return distribute(channelId, mediaPackage, elementId, true);
-  }
-    @Override
-    public Job distribute(String channelId, MediaPackage mediaPackage, String elementId, boolean checkAvailability)
-            throws DistributionException {
-        Set<String> elementIds = new HashSet<String>();
-        elementIds.add(elementId);
-        return distribute(channelId, mediaPackage, elementIds, checkAvailability);
-    }
-  @Override
-  public Job distribute(String channelId, MediaPackage mediaPackage, Set<String>  elementIds,
-                        boolean checkAvailability)
-          throws DistributionException {
-    logger.info(format("Distributing %s to %s@%s", elementIds.size(), channelId, distributionChannel));
+    logger.info(format("Distributing %s to %s@%s", elementId, channelId, distributionChannel));
     final HttpPost req = post(param(PARAM_CHANNEL_ID, channelId),
                               param(PARAM_MEDIAPACKAGE, MediaPackageParser.getAsXml(mediaPackage)),
-                              param(PARAM_ELEMENT_ID, gson.toJson(elementIds)),
-                              param(PARAM_CHECK_AVAILABILITY, Boolean.toString(checkAvailability)));
+                              param(PARAM_ELEMENT_ID, gson.toJson(elementId)));
     for (Job job : join(runRequest(req, jobFromHttpResponse))) {
       return job;
     }
     throw new DistributionException(format("Unable to distribute element '%s' of "
                                                    + "mediapackage '%s' using a remote destribution service proxy",
-                                           elementIds.size(), mediaPackage.getIdentifier().toString()));
-  }
-    @Override
-    public Job retract(String channelId, MediaPackage mediaPackage, String elementId) throws DistributionException {
-        Set<String> elementIds = new HashSet<String>();
-        elementIds.add(elementId);
-        return retract(channelId, mediaPackage, elementIds);
+                                           elementId, mediaPackage.getIdentifier().toString()));
     }
 
-  @Override
-  public Job retract(String channelId, MediaPackage mediaPackage, Set<String> elementIds) throws DistributionException {
-    logger.info(format("Retracting %s from %s@%s", elementIds.size(), channelId, distributionChannel));
-    final HttpPost req = post("/retract",
+    @Override
+    public Job retract(String channelId, MediaPackage mediaPackage, String elementId) throws DistributionException {
+      logger.info(format("Retracting %s from %s@%s", elementId, channelId, distributionChannel));
+      final HttpPost req = post("/retract",
                               param(PARAM_MEDIAPACKAGE, MediaPackageParser.getAsXml(mediaPackage)),
-                              param(PARAM_ELEMENT_ID, gson.toJson(elementIds)),
+                              param(PARAM_ELEMENT_ID, gson.toJson(elementId)),
                               param(PARAM_CHANNEL_ID, channelId));
-    for (Job job : join(runRequest(req, jobFromHttpResponse))) {
-      return job;
-    }
-    throw new DistributionException(format("Unable to retract element '%s' of "
+      for (Job job : join(runRequest(req, jobFromHttpResponse))) {
+        return job;
+      }
+      throw new DistributionException(format("Unable to retract element '%s' of "
                                                    + "mediapackage '%s' using a remote destribution service proxy",
-                                           elementIds.size(), mediaPackage.getIdentifier().toString()));
+                                           elementId, mediaPackage.getIdentifier().toString()));
   }
 }

@@ -84,6 +84,9 @@
     <module>modules/distribution-service-adaptive-streaming-wowza</module>
     <module>modules/distribution-service-streaming-remote</module>
     <module>modules/distribution-workflowoperation</module>
+    <module>modules/distribution-service-ilias</module>
+    <module>modules/distribution-service-ilias-remote</module>
+    <module>modules/distribution-service-ilias-workflowoperation</module>
     <module>modules/dublincore</module>
     <module>modules/email-template-service-api</module>
     <module>modules/email-template-service-impl</module>
