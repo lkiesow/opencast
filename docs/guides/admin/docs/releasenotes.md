@@ -11,7 +11,7 @@ Configuration changes
 ---------------------
 
 - The tracking options defaults have changed to be more aware of the European Union's General Data Protection
-  Regulation. Note that you can [still use the old settings if you want to](configuration/logging.and.privacy.md).
+  Regulation. Note that you can [still use the old settings if you want to](configuration/user-statistics.and.privacy.md).
 
 
 Release Schedule
