@@ -465,6 +465,7 @@
               OSGI-INF/series_endpoint.xml,
               OSGI-INF/services_endpoint.xml,
               OSGI-INF/tasks_endpoint.xml,
+              OSGI-INF/stats_endpoint.xml,
               OSGI-INF/themes_endpoint.xml,
               OSGI-INF/tools_endpoint.xml,
               OSGI-INF/ui-roles-role-provider.xml,
