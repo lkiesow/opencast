@@ -23,13 +23,19 @@ package ch.ethz.opencast.oaipmh;
 import static org.opencastproject.oaipmh.util.OsgiUtil.getContextProperty;
 
 import org.opencastproject.oaipmh.Granularity;
+import org.opencastproject.oaipmh.matterhorn.MatterhornInlinedMetadataProvider;
+import org.opencastproject.oaipmh.matterhorn.MatterhornMetadataProvider;
 import org.opencastproject.oaipmh.persistence.OaiPmhDatabase;
+import org.opencastproject.oaipmh.server.MetadataProvider;
 import org.opencastproject.oaipmh.server.OaiPmhRepository;
 import org.opencastproject.oaipmh.server.ResumableQuery;
 import org.opencastproject.oaipmh.util.ResumptionTokenStore;
+import org.opencastproject.util.data.Collections;
 import org.opencastproject.util.data.Option;
 
 import org.osgi.service.component.ComponentContext;
+
+import java.util.List;
 
 
 /**
@@ -39,6 +45,9 @@ public abstract class AbstractEthRepository extends OaiPmhRepository {
   private static final String PROP_ADMIN_EMAIL = "org.opencastproject.admin.email";
 
   private final ResumptionTokenStore tokenStore = ResumptionTokenStore.create();
+  private List<MetadataProvider> metadataProviders = Collections.<MetadataProvider>list(
+            new MatterhornMetadataProvider(),
+            new MatterhornInlinedMetadataProvider());
 
   private OaiPmhDatabase persistence;
   private String adminEmail;
@@ -81,5 +90,10 @@ public abstract class AbstractEthRepository extends OaiPmhRepository {
   @Override
   public int getResultLimit() {
     return 50;
+  }
+
+  @Override
+  public List<MetadataProvider> getRepositoryMetadataProviders() {
+    return metadataProviders;
   }
 }

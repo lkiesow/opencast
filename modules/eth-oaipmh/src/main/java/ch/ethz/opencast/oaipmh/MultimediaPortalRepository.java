@@ -21,11 +21,6 @@
 package ch.ethz.opencast.oaipmh;
 
 import org.opencastproject.oaipmh.Granularity;
-import org.opencastproject.oaipmh.matterhorn.MatterhornMetadataProvider;
-import org.opencastproject.oaipmh.server.MetadataProvider;
-import org.opencastproject.util.data.Collections;
-
-import java.util.List;
 
 /** ETHz Multimedia Portal OAI-PMH repository serving the <code>matterhorn</code> metadata format. */
 public class MultimediaPortalRepository extends AbstractEthRepository {
@@ -42,10 +37,5 @@ public class MultimediaPortalRepository extends AbstractEthRepository {
   @Override
   public Granularity getRepositoryTimeGranularity() {
     return Granularity.SECOND;
-  }
-
-  @Override
-  public List<MetadataProvider> getRepositoryMetadataProviders() {
-    return Collections.<MetadataProvider>list(new MatterhornMetadataProvider());
   }
 }

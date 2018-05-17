@@ -20,11 +20,6 @@
  */
 package ch.ethz.opencast.oaipmh;
 
-import org.opencastproject.oaipmh.server.MetadataProvider;
-
-import java.util.Collections;
-import java.util.List;
-
 /** ETHz DOI OAI-PMH repository serving the <code>oai_dc</code> metadata format. */
 public class DoiRepository extends AbstractEthRepository {
   @Override
@@ -35,10 +30,5 @@ public class DoiRepository extends AbstractEthRepository {
   @Override
   public String getRepositoryName() {
     return "ETHz DOI OAI-PMH repository";
-  }
-
-  @Override
-  public List<MetadataProvider> getRepositoryMetadataProviders() {
-    return Collections.emptyList();
   }
 }

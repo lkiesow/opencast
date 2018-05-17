@@ -20,12 +20,6 @@
  */
 package ch.ethz.opencast.oaipmh;
 
-import org.opencastproject.oaipmh.matterhorn.MatterhornMetadataProvider;
-import org.opencastproject.oaipmh.server.MetadataProvider;
-import org.opencastproject.util.data.Collections;
-
-import java.util.List;
-
 /** ETHz CQ5 OAI-PMH repository serving the <code>matterhorn</code> metadata format. */
 public class Cq5Repository extends AbstractEthRepository {
   @Override
@@ -36,10 +30,5 @@ public class Cq5Repository extends AbstractEthRepository {
   @Override
   public String getRepositoryName() {
     return "ETHz CQ5 OAI-PMH repository";
-  }
-
-  @Override
-  public List<MetadataProvider> getRepositoryMetadataProviders() {
-    return Collections.<MetadataProvider> list(new MatterhornMetadataProvider());
   }
 }
