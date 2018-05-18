@@ -37,7 +37,7 @@ import org.opencastproject.mediapackage.MediaPackageElementFlavor;
 import org.opencastproject.mediapackage.MediaPackageException;
 import org.opencastproject.message.broker.api.assetmanager.AssetManagerItem;
 import org.opencastproject.oaipmh.persistence.OaiPmhDatabase;
-import org.opencastproject.oaipmh.persistence.Query;
+import org.opencastproject.oaipmh.persistence.QueryBuilder;
 import org.opencastproject.oaipmh.persistence.SearchResult;
 import org.opencastproject.oaipmh.persistence.SearchResultItem;
 import org.opencastproject.publication.api.OaiPmhPublicationService;
@@ -93,7 +93,7 @@ public class OaiPmhUpdatedEventHandlerTest extends EasyMockSupport {
   private OaiPmhPublicationService oaiPmhPublicationService;
 
   private Capture<User> adminUserCapture;
-  private Capture<Query> queryCapture;
+  private Capture<QueryBuilder> queryCapture;
 
   @Before
   public void setup() throws Exception {

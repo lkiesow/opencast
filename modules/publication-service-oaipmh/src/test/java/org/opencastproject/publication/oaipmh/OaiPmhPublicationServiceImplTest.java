@@ -38,7 +38,7 @@ import org.opencastproject.mediapackage.MediaPackageSupport;
 import org.opencastproject.mediapackage.Publication;
 import org.opencastproject.oaipmh.persistence.OaiPmhDatabase;
 import org.opencastproject.oaipmh.persistence.OaiPmhDatabaseException;
-import org.opencastproject.oaipmh.persistence.Query;
+import org.opencastproject.oaipmh.persistence.QueryBuilder;
 import org.opencastproject.oaipmh.persistence.impl.SearchResultImpl;
 import org.opencastproject.oaipmh.server.OaiPmhServerInfo;
 import org.opencastproject.publication.api.OaiPmhPublicationService;
@@ -254,7 +254,7 @@ public class OaiPmhPublicationServiceImplTest {
           throws PublicationException, OaiPmhDatabaseException, MediaPackageException, DistributionException {
     OaiPmhDatabase oaiDb = EasyMock.createNiceMock(OaiPmhDatabase.class);
     // mock empty DB
-    EasyMock.expect(oaiDb.search(EasyMock.anyObject(Query.class)))
+    EasyMock.expect(oaiDb.search(EasyMock.anyObject(QueryBuilder.class)))
             .andReturn(new SearchResultImpl(0, 0, new ArrayList<>())).once();
     Capture<MediaPackage> storedMpCap = EasyMock.newCapture();
     // capture stored media package

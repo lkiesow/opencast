@@ -46,7 +46,7 @@ import org.opencastproject.oaipmh.harvester.OaiPmhNamespaceContext;
 import org.opencastproject.oaipmh.matterhorn.MatterhornInlinedMetadataProvider;
 import org.opencastproject.oaipmh.persistence.OaiPmhDatabase;
 import org.opencastproject.oaipmh.persistence.OaiPmhDatabaseException;
-import org.opencastproject.oaipmh.persistence.Query;
+import org.opencastproject.oaipmh.persistence.QueryBuilder;
 import org.opencastproject.oaipmh.persistence.SearchResult;
 import org.opencastproject.oaipmh.persistence.SearchResultElementItem;
 import org.opencastproject.oaipmh.persistence.SearchResultItem;
@@ -233,12 +233,12 @@ public class OaiPmhRepositoryTest {
   @Test
   @SuppressWarnings("unchecked")
   public void testResumption() throws Exception {
-    List<SearchResultItem> items1 = new ArrayList<SearchResultItem>();
+    List<SearchResultItem> items1 = new ArrayList<>();
     items1.add(searchResultItem("id-1", utcDate(2011, 5, 10), false));
     items1.add(searchResultItem("id-2", utcDate(2011, 5, 11), false));
     items1.add(searchResultItem("id-3", utcDate(2011, 5, 12), false));
 
-    List<SearchResultItem> items2 = new ArrayList<SearchResultItem>();
+    List<SearchResultItem> items2 = new ArrayList<>();
     items2.add(searchResultItem("id-4", utcDate(2011, 5, 13), false));
     items2.add(searchResultItem("id-5", utcDate(2011, 5, 14), false));
 
@@ -250,7 +250,7 @@ public class OaiPmhRepositoryTest {
     EasyMock.expect(result.getLimit()).andReturn(RESULT_LIMIT).anyTimes();
     EasyMock.expect(result.getOffset()).andReturn(0L).times(3).andReturn(RESULT_LIMIT).anyTimes();
     EasyMock.expect(result.size()).andReturn((long) items1.size()).times(4).andReturn((long) items2.size()).times(4);
-    EasyMock.expect(persistence.search(EasyMock.<Query>anyObject())).andReturn(result).anyTimes();
+    EasyMock.expect(persistence.search(EasyMock.anyObject(QueryBuilder.class))).andReturn(result).anyTimes();
     EasyMock.replay(persistence);
     EasyMock.replay(result);
     // do testing
@@ -405,7 +405,7 @@ public class OaiPmhRepositoryTest {
       }
 
       @Override
-      public SearchResult search(Query q) {
+      public SearchResult search(QueryBuilder q) {
         return result;
       }
     };
@@ -424,6 +424,7 @@ public class OaiPmhRepositoryTest {
     EasyMock.expect(item.getId()).andReturn(id).anyTimes();
     EasyMock.expect(item.isDeleted()).andReturn(deleted).anyTimes();
     EasyMock.expect(item.getMediaPackageXml()).andReturn(mpXml).anyTimes();
+    EasyMock.expect(item.getSetSpecs()).andReturn(new ArrayList<>()).anyTimes();
 
     SearchResultElementItem episodeDcElement = EasyMock.createNiceMock(SearchResultElementItem.class);
     EasyMock.expect(episodeDcElement.getType()).andReturn("catalog").anyTimes();
