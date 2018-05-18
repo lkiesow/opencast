@@ -3,6 +3,7 @@ container: lkiesow/docker-opencast-ethz-build
 script:
    - test -d docs/rpmbuild/
    - mvn -e clean install -DskipTests=true
+   - sh .ci-check-assemblies.sh
    - rpmdev-setuptree
    - mv build/opencast-dist-*.tar.gz rpmbuild/SOURCES/
    - cp docs/rpmbuild/* rpmbuild/SOURCES/
