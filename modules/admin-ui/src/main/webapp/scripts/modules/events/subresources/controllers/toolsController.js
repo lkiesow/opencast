@@ -50,9 +50,9 @@ angular.module('adminNg.controllers')
         $scope.openTab = function (tab) {
             $scope.tab = tab;
             if ($scope.tab === "editor") {
-              $scope.area   = "segments";
+              $scope.area = "segments";
             } else if ($scope.tab === "playback") {
-              $scope.area   = "metadata";
+              $scope.area = "metadata";
             }
 
             // This fixes a problem where video playback breaks after switching tabs. Changing the location seems
