@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<scr:component xmlns:scr="http://www.osgi.org/xmlns/scr/v1.1.0"
+               name="org.opencastproject.workflow.handler.fex.FexServiceWorkflowOperationHandler" immediate="true">
+  <implementation class="org.opencastproject.workflow.handler.fex.FexServiceWorkflowOperationHandler"/>
+  <property name="service.description" value="Fex-Service Workflow Operation Handler"/>
+  <property name="workflow.operation" value="fexsend"/>
+  <service>
+    <provide interface="org.opencastproject.workflow.api.WorkflowOperationHandler"/>
+  </service>
+  <reference cardinality="1..1" interface="org.opencastproject.fex.api.FexSendService"
+             name="FexSendService" policy="static" bind="setFexSendService"/>
+  <reference cardinality="1..1" interface="org.opencastproject.series.api.SeriesService"
+             name="SeriesService" policy="static" bind="setSeriesService"/>
+  <reference name="fexService" interface="org.opencastproject.fex.api.FexService"
+             cardinality="1..1" policy="static" bind="setFexService"/>
+  <reference name="ServiceRegistry" cardinality="1..1"
+             interface="org.opencastproject.serviceregistry.api.ServiceRegistry"
+             policy="static" bind="setServiceRegistry"/>
+</scr:component>
