@@ -1,29 +1,44 @@
 <project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <artifactId>matterhorn-fex-fexsend</artifactId>
+  <artifactId>opencast-fex-fexsend</artifactId>
   <packaging>bundle</packaging>
-  <name>matterhorn-fex-fexsend</name>
+  <name>Opencast :: fex-fexsend</name>
   <parent>
     <groupId>org.opencastproject</groupId>
-    <artifactId>matterhorn-fex-service</artifactId>
-    <version>3.0-SNAPSHOT</version>
+    <artifactId>base</artifactId>
+    <version>5-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <properties>
-    <matterhorn.basedir>${project.basedir}/../..</matterhorn.basedir>
+    <opencast.basedir>${project.basedir}/../..</opencast.basedir>
     <checkstyle.skip>false</checkstyle.skip>
   </properties>
   <dependencies>
-    <!-- Matterhorn dependencies -->
+    <!-- opencast dependencies -->
     <dependency>
       <groupId>org.opencastproject</groupId>
-      <artifactId>matterhorn-series-service-impl</artifactId>
+      <artifactId>opencast-series-service-api</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>org.opencastproject</groupId>
-      <artifactId>matterhorn-workspace-api</artifactId>
+      <artifactId>opencast-workspace-api</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.opencastproject</groupId>
+      <artifactId>opencast-fex-service-api</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.opencastproject</groupId>
+      <artifactId>opencast-fex-service-objects</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.opencastproject</groupId>
+      <artifactId>opencast-fex-service-impl</artifactId>
       <version>${project.version}</version>
     </dependency>
     <!--  Thirdparty dependencies -->
@@ -71,19 +86,6 @@
       <groupId>org.easymock</groupId>
       <artifactId>easymock</artifactId>
       <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.opencastproject</groupId>
-      <artifactId>matterhorn-fex-service-api</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.opencastproject</groupId>
-      <artifactId>matterhorn-fex-service-objects</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.opencastproject</groupId>
-      <artifactId>matterhorn-fex-service-impl</artifactId>
-      <version>3.0-SNAPSHOT</version>
     </dependency>
   </dependencies>
   <build>

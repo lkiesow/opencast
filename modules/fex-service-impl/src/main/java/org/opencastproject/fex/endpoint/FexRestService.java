@@ -33,7 +33,7 @@ import org.opencastproject.fex.api.FexException;
 import org.opencastproject.fex.api.FexService;
 import org.opencastproject.fex.objects.Fex;
 import org.opencastproject.rest.RestConstants;
-import org.opencastproject.systems.MatterhornConstants;
+import org.opencastproject.systems.OpencastConstants;
 import org.opencastproject.util.NotFoundException;
 import org.opencastproject.util.UrlSupport;
 import org.opencastproject.util.doc.rest.RestParameter;
@@ -107,7 +107,7 @@ public class FexRestService {
     if (cc == null) {
       this.serverUrl = "http://localhost:8080";
     } else {
-      String ccServerUrl = cc.getBundleContext().getProperty(MatterhornConstants.SERVER_URL_PROPERTY);
+      String ccServerUrl = cc.getBundleContext().getProperty(OpencastConstants.SERVER_URL_PROPERTY);
       logger.debug("Configured server url is {}", ccServerUrl);
       if (ccServerUrl == null) {
         this.serverUrl = "http://localhost:8080";
