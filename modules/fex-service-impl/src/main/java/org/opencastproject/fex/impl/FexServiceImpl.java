@@ -27,7 +27,6 @@ import org.opencastproject.message.broker.api.MessageReceiver;
 import org.opencastproject.message.broker.api.MessageSender;
 import org.opencastproject.security.api.OrganizationDirectoryService;
 import org.opencastproject.security.api.SecurityService;
-import org.opencastproject.security.util.SecurityUtil;
 import org.opencastproject.util.NotFoundException;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
