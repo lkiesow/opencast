@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<scr:components xmlns:scr="http://www.osgi.org/xmlns/scr/v1.1.0">
+  <scr:component
+      name="org.opencastproject.fex.fexsend.FexSendServiceImpl" immediate="true" activate="activate">
+    <implementation class="org.opencastproject.fex.fexsend.FexSendServiceImpl"/>
+    <property name="service.description" value="Fex Send Service"/>
+    <property name="service.pid" value="org.opencastproject.fexSendService"/>
+
+    <service>
+      <provide interface="org.opencastproject.fex.api.FexSendService"/>
+      <provide interface="org.osgi.service.cm.ManagedService"/>
+    </service>
+    <reference name="serviceRegistry" interface="org.opencastproject.serviceregistry.api.ServiceRegistry"
+               cardinality="1..1" policy="static" bind="setServiceRegistry"/>
+    <reference name="security-service" interface="org.opencastproject.security.api.SecurityService"
+               cardinality="1..1" policy="static" bind="setSecurityService"/>
+    <reference name="user-directory" interface="org.opencastproject.security.api.UserDirectoryService"
+               cardinality="1..1" policy="static" bind="setUserDirectoryService"/>
+    <reference name="orgDirectory" interface="org.opencastproject.security.api.OrganizationDirectoryService"
+               cardinality="1..1" policy="static" bind="setOrganizationDirectoryService"/>
+    <reference name="seriesService" interface="org.opencastproject.series.api.SeriesService"
+               cardinality="1..1" policy="static" bind="setSeriesService"/>
+    <reference name="fexService" interface="org.opencastproject.fex.api.FexService"
+               cardinality="1..1" policy="static" bind="setFexService"/>
+    <reference name="workspace" interface="org.opencastproject.workspace.api.Workspace"
+               cardinality="1..1" policy="static" bind="setWorkspace"/>
+
+
+  </scr:component>
+  <scr:component name="org.opencastproject.fex.fexsend.endpoint.FexSendRestEndpoint" immediate="true">
+    <implementation class="org.opencastproject.fex.fexsend.endpoint.FexSendRestEndpoint"/>
+    <property name="service.description" value="Fex Send Service REST Endpoint"/>
+
+    <property name="opencast.service.type" value="org.opencastproject.fexSendService"/>
+    <property name="opencast.service.path" value="/fex/fexSend"/>
+    <property name="opencast.service.jobproducer" value="true"/>
+
+    <service>
+      <provide interface="org.opencastproject.fex.fexsend.endpoint.FexSendRestEndpoint"/>
+    </service>
+
+    <reference name="fexsend" interface="org.opencastproject.fex.api.FexSendService"
+               cardinality="1..1" policy="static" bind="setFexSendService"/>
+    <reference name="serviceRegistry" interface="org.opencastproject.serviceregistry.api.ServiceRegistry"
+               cardinality="1..1" policy="static" bind="setServiceRegistry"/>
+    <reference name="seriesService" interface="org.opencastproject.series.api.SeriesService"
+               cardinality="1..1" policy="static" bind="setSeriesService"/>
+    <reference name="fexService" interface="org.opencastproject.fex.api.FexService"
+               cardinality="1..1" policy="static" bind="setFexService"/>
+  </scr:component>
+</scr:components>
+
