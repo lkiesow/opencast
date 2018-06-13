@@ -70,15 +70,6 @@ public class FexServiceImpl implements FexService {
   protected MessageReceiver messageReceiver;
 
   /**
-   * The systems user name
-   */
-  private String systemUserName;
-
-  private static Error rethrow(Exception e) throws FexException {
-    throw new FexException(e);
-  }
-
-  /**
    * OSGi callback for setting persistence.
    */
   public void setPersistence(FexServiceDatabase persistence) {
@@ -114,8 +105,6 @@ public class FexServiceImpl implements FexService {
    */
   public void activate(ComponentContext cc) throws Exception {
     logger.info("Activating Fex Service");
-    systemUserName = cc.getBundleContext().getProperty(SecurityUtil.PROPERTY_KEY_SYS_USER);
-
   }
 
   @Override
