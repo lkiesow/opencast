@@ -165,6 +165,10 @@ public class XACMLAuthorizationService implements AuthorizationService {
                         new Match<AccessControlList, Option<AccessControlList>>() {
                           @Override
                           public Option<AccessControlList> some(AccessControlList a) {
+                            // TODO Why return none here?!
+                            //   Shouldn't this be `some(a)`?
+                            //   Also see my mailing list question for further comments on this method:
+                            //   https://groups.google.com/a/opencast.org/forum/#!topic/dev/CqGR1K3LNXE
                             return Option.<AccessControlList> none();
                           }
 

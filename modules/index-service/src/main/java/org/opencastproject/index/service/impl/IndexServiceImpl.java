@@ -767,6 +767,12 @@ public class IndexServiceImpl implements IndexService {
     if (allEventMetadataJson == null)
       throw new IllegalArgumentException("No metadata field in metadata");
 
+    // TODO This returns an empty access control list when none is given in the `metadataJson`.
+    //   Is this sensible? This way, we can never create an event (using this code path)
+    //   that does **not** have an episode ACL.
+    //   An alternative solution to the CAST-566 problem would be to make this optional,
+    //   thus not creating the scheduler message to update the ACL,
+    //   avoiding the race condition alltogether.
     AccessControlList acl = getAccessControlList(metadataJson);
 
     MetadataList metadataList = getMetadataListWithAllEventCatalogUIAdapters();

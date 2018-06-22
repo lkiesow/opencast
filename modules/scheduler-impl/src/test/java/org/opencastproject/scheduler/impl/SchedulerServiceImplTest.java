@@ -297,6 +297,10 @@ public class SchedulerServiceImplTest {
     EasyMock.expect(
             authorizationService.getAcl(EasyMock.anyObject(MediaPackage.class), EasyMock.anyObject(AclScope.class)))
             .andReturn(Option.some(acl)).anyTimes();
+    EasyMock.expect(
+            authorizationService.getActiveAcl(EasyMock.anyObject(MediaPackage.class)))
+            .andReturn(tuple(acl, AclScope.Episode)).anyTimes();
+
 
     orgDirectoryService = EasyMock.createNiceMock(OrganizationDirectoryService.class);
     EasyMock.expect(orgDirectoryService.getOrganizations())
