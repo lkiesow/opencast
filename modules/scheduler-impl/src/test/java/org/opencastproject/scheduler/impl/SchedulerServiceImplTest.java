@@ -295,9 +295,6 @@ public class SchedulerServiceImplTest {
     acl = new AccessControlList(new AccessControlEntry("ROLE_ADMIN", "write", true),
             new AccessControlEntry("ROLE_ADMIN", "read", true), new AccessControlEntry("ROLE_USER", "read", true));
     EasyMock.expect(
-            authorizationService.getAcl(EasyMock.anyObject(MediaPackage.class), EasyMock.anyObject(AclScope.class)))
-            .andReturn(Option.some(acl)).anyTimes();
-    EasyMock.expect(
             authorizationService.getActiveAcl(EasyMock.anyObject(MediaPackage.class)))
             .andReturn(tuple(acl, AclScope.Episode)).anyTimes();
 
