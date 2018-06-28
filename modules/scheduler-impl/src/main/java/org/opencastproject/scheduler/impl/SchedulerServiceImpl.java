@@ -542,8 +542,6 @@ public class SchedulerServiceImpl extends AbstractIndexProducer implements Sched
     }
   }
 
-  // TODO While I am not opposed to thin wrappers in general
-  //   (actually the opposite is true) this one adds no value at all.
   @Override
   public void addEvent(Date startDateTime, Date endDateTime, String captureAgentId, Set<String> userIds,
           MediaPackage mediaPackage, Map<String, String> wfProperties, Map<String, String> caMetadata,
@@ -627,11 +625,6 @@ public class SchedulerServiceImpl extends AbstractIndexProducer implements Sched
 
       if (trxId.isNone()) {
         // Send updates
-        // TODO Wait but why is there an ACL anyway, when we don't enter one?
-        //   Either this does not need to be an optional
-        //   or it should be none when there is nothing!
-        // TODO Check whether that would actually solve the problem
-        //   Does `sendUpdateAddEvent` even honour this setting
         sendUpdateAddEvent(mediaPackageId, some(acl), dublinCore, Opt.some(startDateTime),
                 Opt.some(endDateTime), Opt.some(userIds), Opt.some(captureAgentId), Opt.some(finalCaProperties),
                 Opt.some(optOut));
@@ -658,9 +651,6 @@ public class SchedulerServiceImpl extends AbstractIndexProducer implements Sched
   }
 
 
-  // TODO I haven't looked into it in detail,
-  //   but it seems like this function duplicates a lot of code
-  //   from `addEventInternal` ...
   private Map<String, Period> addMultipleEventInternal(List<Period> periods, String captureAgentId,
           Set<String> userIds, MediaPackage templateMp, Map<String, String> wfProperties,
           Map<String, String> caMetadata, String modificationOrigin, Opt<Boolean> optOutStatus,
