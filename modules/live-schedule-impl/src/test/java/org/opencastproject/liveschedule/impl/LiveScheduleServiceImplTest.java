@@ -892,7 +892,7 @@ public class LiveScheduleServiceImplTest {
     }
 
     @Override
-    public Option<AccessControlList> getAcl(MediaPackage mp, AclScope scope) {
+    public Tuple<AccessControlList, AclScope> getAcl(MediaPackage mp, AclScope scope) {
       return null;
     }
 
