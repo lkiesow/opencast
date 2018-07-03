@@ -1,12 +1,12 @@
-CREATE TABLE SEQUENCE (
+CREATE TABLE sequence (
   SEQ_NAME VARCHAR(50) NOT NULL,
   SEQ_COUNT DECIMAL(38),
   PRIMARY KEY (SEQ_NAME)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-INSERT INTO SEQUENCE(SEQ_NAME, SEQ_COUNT) values ('SEQ_GEN', 0);
-INSERT INTO SEQUENCE(SEQ_NAME, SEQ_COUNT) values ('seq_oc_assets_asset', 0);
-INSERT INTO SEQUENCE(SEQ_NAME, SEQ_COUNT) values ('seq_oc_assets_snapshot', 0);
+INSERT INTO sequence (SEQ_NAME, SEQ_COUNT) values ('SEQ_GEN', 0);
+INSERT INTO sequence (SEQ_NAME, SEQ_COUNT) values ('seq_oc_assets_asset', 0);
+INSERT INTO sequence (SEQ_NAME, SEQ_COUNT) values ('seq_oc_assets_snapshot', 0);
 
 CREATE TABLE oc_bundleinfo (
   id BIGINT(20) NOT NULL,

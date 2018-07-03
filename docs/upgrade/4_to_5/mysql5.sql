@@ -1,5 +1,5 @@
-UPDATE SEQUENCE SET SEQ_NAME = REPLACE(SEQ_NAME, 'seq_mh_assets_asset', 'seq_oc_assets_asset');
-UPDATE SEQUENCE SET SEQ_NAME = REPLACE(SEQ_NAME, 'seq_mh_assets_snapshot', 'seq_oc_assets_snapshot');
+UPDATE sequence SET SEQ_NAME = REPLACE(SEQ_NAME, 'seq_mh_assets_asset', 'seq_oc_assets_asset');
+UPDATE sequence SET SEQ_NAME = REPLACE(SEQ_NAME, 'seq_mh_assets_snapshot', 'seq_oc_assets_snapshot');
 
 RENAME TABLE mh_bundleinfo TO oc_bundleinfo;
 ALTER TABLE oc_bundleinfo ADD CONSTRAINT UNQ_oc_bundleinfo UNIQUE (host, bundle_name, bundle_version);
