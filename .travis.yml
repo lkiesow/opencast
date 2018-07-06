@@ -78,7 +78,7 @@ jobs:
 
     # Test database scripts with MariaDB 5.x
     - stage: quick tests
-      env: name=mariadb
+      env: name=mariadb5
       sudo: false
       addons:
         mariadb: '5'
@@ -90,7 +90,7 @@ jobs:
 
     # Test database scripts with MariaDB 10.x
     - stage: quick tests
-      env: name=mariadb
+      env: name=mariadb10
       sudo: false
       addons:
         mariadb: '10'
