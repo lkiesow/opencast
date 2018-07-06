@@ -80,6 +80,8 @@ jobs:
     - stage: quick tests
       env: name=mariadb5
       sudo: false
+      language: python
+      python: "3.6"
       addons:
         mariadb: '5'
       install:
@@ -93,6 +95,8 @@ jobs:
     - stage: quick tests
       env: name=mariadb10
       sudo: false
+      language: python
+      python: "3.6"
       addons:
         mariadb: '10'
       install:
@@ -106,6 +110,8 @@ jobs:
     - stage: quick tests
       env: name=mysql
       sudo: false
+      language: python
+      python: "3.6"
       services:
         - mysql
       install:
