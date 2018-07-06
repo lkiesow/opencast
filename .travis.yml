@@ -83,7 +83,7 @@ jobs:
       language: python
       python: "3.6"
       addons:
-        mariadb: '5'
+        mariadb: '5.5'
       install:
         - echo "select version()" | mysql -u root
         - echo 'create database opencast;' | mysql -u root
@@ -95,10 +95,8 @@ jobs:
     - stage: quick tests
       env: name=mariadb10
       sudo: false
-      language: python
-      python: "3.6"
       addons:
-        mariadb: '10'
+        mariadb: '10.3'
       install:
         - echo "select version()" | mysql -u root
         - echo 'create database opencast;' | mysql -u root
@@ -110,8 +108,6 @@ jobs:
     - stage: quick tests
       env: name=mysql
       sudo: false
-      language: python
-      python: "3.6"
       services:
         - mysql
       install:
