@@ -86,7 +86,7 @@ jobs:
         - echo 'create database opencast;' | mysql -u root
       script:
         - mysql -u root opencast < docs/scripts/ddl/mysql5.sql
-        - ./docs/upgrade/.test.sh
+        - sh docs/upgrade/.test.sh
 
     # Test database scripts with MySQL
     - stage: quick tests
