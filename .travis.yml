@@ -76,21 +76,6 @@ jobs:
         - (cd docs/guides/user && mkdocs build)
         - (cd docs/guides && grunt)
 
-    # Test database scripts with MariaDB 5.x
-    - stage: quick tests
-      env: name=mariadb5
-      sudo: false
-      language: python
-      python: "3.6"
-      addons:
-        mariadb: '5.5'
-      install:
-        - echo "select version()" | mysql -u root
-        - echo 'create database opencast;' | mysql -u root
-      script:
-        - mysql -u root opencast < docs/scripts/ddl/mysql5.sql
-        - sh docs/upgrade/.test.sh
-
     # Test database scripts with MariaDB 10.x
     - stage: quick tests
       env: name=mariadb10
