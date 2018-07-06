@@ -83,6 +83,7 @@ jobs:
       addons:
         mariadb: '5'
       install:
+        - echo "select version()" | mysql -u root
         - echo 'create database opencast;' | mysql -u root
       script:
         - mysql -u root opencast < docs/scripts/ddl/mysql5.sql
@@ -95,6 +96,7 @@ jobs:
       addons:
         mariadb: '10'
       install:
+        - echo "select version()" | mysql -u root
         - echo 'create database opencast;' | mysql -u root
       script:
         - mysql -u root opencast < docs/scripts/ddl/mysql5.sql
@@ -107,6 +109,7 @@ jobs:
       services:
         - mysql
       install:
+        - echo "select version()" | mysql -u root
         - echo 'create database opencast;' | mysql -u root
       script:
         - mysql -u root opencast < docs/scripts/ddl/mysql5.sql
