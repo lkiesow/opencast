@@ -28,6 +28,7 @@ import org.opencastproject.oaipmh.persistence.OaiPmhDatabaseException;
 import org.opencastproject.oaipmh.persistence.OaiPmhElementEntity;
 import org.opencastproject.oaipmh.persistence.OaiPmhEntity;
 import org.opencastproject.oaipmh.persistence.Query;
+import org.opencastproject.oaipmh.persistence.QueryBuilder;
 import org.opencastproject.oaipmh.persistence.SearchResult;
 import org.opencastproject.oaipmh.persistence.SearchResultElementItem;
 import org.opencastproject.oaipmh.persistence.SearchResultItem;
@@ -221,7 +222,12 @@ public abstract class AbstractOaiPmhDatabase implements OaiPmhDatabase {
   }
 
   @Override
-  public SearchResult search(Query query) {
+  public SearchResult search(QueryBuilder queryBuilder) {
+    return search(queryBuilder, queryBuilder.build().getLimit().getOrElse(-1));
+  }
+
+  private SearchResult search(QueryBuilder queryBuilder, int chunkSize) {
+    Query query = queryBuilder.build();
     EntityManager em = null;
     try {
       em = getEmf().createEntityManager();
@@ -242,24 +248,27 @@ public abstract class AbstractOaiPmhDatabase implements OaiPmhDatabase {
         predicates.add(cb.equal(c.get("series"), p));
       for (Boolean p : query.isDeleted())
         predicates.add(cb.equal(c.get("deleted"), p));
-      if (!query.isSubsequentRequest()) {
-        for (Date p : query.getModifiedAfter())
-          predicates.add(cb.greaterThanOrEqualTo(c.get("modificationDate").as(Date.class), p));
-      } else {
+      if (query.isSubsequentRequest()) {
         for (Date p : query.getModifiedAfter())
           predicates.add(cb.greaterThan(c.get("modificationDate").as(Date.class), p));
+      } else {
+        for (Date p : query.getModifiedAfter())
+          predicates.add(cb.greaterThanOrEqualTo(c.get("modificationDate").as(Date.class), p));
       }
       for (Date p : query.getModifiedBefore())
         predicates.add(cb.lessThanOrEqualTo(c.get("modificationDate").as(Date.class), p));
 
-      q.where(cb.and(predicates.toArray(new Predicate[predicates.size()])));
+      q.where(cb.and(predicates.toArray(new Predicate[0])));
       q.orderBy(cb.asc(c.get("modificationDate")));
 
       TypedQuery<OaiPmhEntity> typedQuery = em.createQuery(q);
-      for (int maxResult : query.getLimit())
-        typedQuery.setMaxResults(maxResult);
-      for (int startPosition : query.getOffset())
+      if (chunkSize > 0) {
+        typedQuery.setMaxResults(chunkSize);
+      }
+      for (int startPosition : query.getOffset()) {
+        logger.warn("I'm pretty sure things break if this is used");
         typedQuery.setFirstResult(startPosition);
+      }
 
       SearchResult result = createSearchResult(typedQuery);
 
@@ -286,6 +295,18 @@ public abstract class AbstractOaiPmhDatabase implements OaiPmhDatabase {
         // Always add item if no set was requested
         if (requestSetSpec == null) {
           filteredItems.add(item);
+        }
+      }
+      if (requestSetSpec != null) {
+        // only continue if we got the amount of results we requested in the first place
+        // otherwise, we have no more results and it does not make any sense to continue
+        if (result.size() == chunkSize) {
+          if (filteredItems.size() < query.getLimit().getOrElse(-1)) {
+            // No results left after filtering. Automatically request the next range to avoid returning empty results.
+            SearchResultItem lastItem = result.getItems().get(result.getItems().size() - 1);
+            QueryBuilder subQuery = queryBuilder.modifiedAfter(lastItem.getModificationDate()).subsequentRequest(true);
+            filteredItems.addAll(search(subQuery, chunkSize).getItems());
+          }
         }
       }
       return new SearchResultImpl(result.getOffset(), result.getLimit(), filteredItems);

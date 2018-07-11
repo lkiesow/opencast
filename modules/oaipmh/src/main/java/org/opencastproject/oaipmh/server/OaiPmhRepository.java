@@ -232,8 +232,7 @@ public abstract class OaiPmhRepository implements ManagedService {
         final SearchResult res = getPersistence()
                 .search(queryRepo(getRepositoryId()).mediaPackageId(p.getIdentifier())
                                                     .setDefinitions(sets)
-                                                    .setSpec(p.getSet().getOrElseNull())
-                                                    .build());
+                                                    .setSpec(p.getSet().getOrElseNull()));
         final List<SearchResultItem> items = res.getItems();
         switch (items.size()) {
           case 0:
@@ -288,7 +287,7 @@ public abstract class OaiPmhRepository implements ManagedService {
 
   private XmlGen handleListMetadataFormats(final Params p) {
     for (String id : p.getIdentifier()) {
-      final SearchResult res = getPersistence().search(queryRepo(getRepositoryId()).mediaPackageId(id).build());
+      final SearchResult res = getPersistence().search(queryRepo(getRepositoryId()).mediaPackageId(id));
       if (res.getItems().size() != 1)
         return createIdDoesNotExistResponse(p);
     }
@@ -531,7 +530,7 @@ public abstract class OaiPmhRepository implements ManagedService {
                             .setSpec(p.getSet().getOrElseNull())
                             .modifiedAfter(from)
                             .modifiedBefore(until)
-                            .limit(getResultLimit()).build());
+                            .limit(getResultLimit()));
           } else {
             // resume query
             result = getSavedQuery(p.getResumptionToken().get()).fold(new Option.Match<ResumableQuery, SearchResult>() {
@@ -545,7 +544,7 @@ public abstract class OaiPmhRepository implements ManagedService {
                                 .modifiedAfter(rq.getLastResult())
                                 .modifiedBefore(rq.getUntil())
                                 .limit(getResultLimit())
-                                .subsequentRequest(true).build());
+                                .subsequentRequest(true));
               }
 
               @Override

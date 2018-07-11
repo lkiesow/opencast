@@ -60,5 +60,5 @@ public interface OaiPmhDatabase {
    *          the query
    * @return a search result
    */
-  SearchResult search(Query q);
+  SearchResult search(QueryBuilder q);
 }

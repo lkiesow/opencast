@@ -46,7 +46,7 @@ import org.opencastproject.oaipmh.harvester.OaiPmhNamespaceContext;
 import org.opencastproject.oaipmh.matterhorn.MatterhornInlinedMetadataProvider;
 import org.opencastproject.oaipmh.persistence.OaiPmhDatabase;
 import org.opencastproject.oaipmh.persistence.OaiPmhDatabaseException;
-import org.opencastproject.oaipmh.persistence.Query;
+import org.opencastproject.oaipmh.persistence.QueryBuilder;
 import org.opencastproject.oaipmh.persistence.SearchResult;
 import org.opencastproject.oaipmh.persistence.SearchResultElementItem;
 import org.opencastproject.oaipmh.persistence.SearchResultItem;
@@ -250,7 +250,7 @@ public class OaiPmhRepositoryTest {
     EasyMock.expect(result.getLimit()).andReturn(RESULT_LIMIT).anyTimes();
     EasyMock.expect(result.getOffset()).andReturn(0L).times(3).andReturn(RESULT_LIMIT).anyTimes();
     EasyMock.expect(result.size()).andReturn((long) items1.size()).times(4).andReturn((long) items2.size()).times(4);
-    EasyMock.expect(persistence.search(EasyMock.<Query>anyObject())).andReturn(result).anyTimes();
+    EasyMock.expect(persistence.search(EasyMock.anyObject(QueryBuilder.class))).andReturn(result).anyTimes();
     EasyMock.replay(persistence);
     EasyMock.replay(result);
     // do testing
@@ -405,7 +405,7 @@ public class OaiPmhRepositoryTest {
       }
 
       @Override
-      public SearchResult search(Query q) {
+      public SearchResult search(QueryBuilder q) {
         return result;
       }
     };
