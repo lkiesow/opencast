@@ -285,6 +285,7 @@ public abstract class AbstractOaiPmhDatabase implements OaiPmhDatabase {
           Map<String, String> setDef = set.getValue();
           for (SearchResultElementItem element : item.getElements()) {
             if (matchSetDef(setSpec, setDef, element)) {
+              // Add item if it matches the requested setSpec
               if (setSpec.equals(requestSetSpec)) {
                 filteredItems.add(item);
               }
@@ -300,14 +301,24 @@ public abstract class AbstractOaiPmhDatabase implements OaiPmhDatabase {
       if (requestSetSpec != null) {
         // only continue if we got the amount of results we requested in the first place
         // otherwise, we have no more results and it does not make any sense to continue
+        logger.debug("result.size={}, chunk.size={}", result.size(), chunkSize);
         if (result.size() == chunkSize) {
-          if (filteredItems.size() < query.getLimit().getOrElse(-1)) {
+          final int limit = query.getLimit().getOrElse(-1);
+          logger.debug("filteredItems.size={}, query.limit={}", filteredItems.size(), limit);
+          if (filteredItems.size() < limit) {
             // No results left after filtering. Automatically request the next range to avoid returning empty results.
-            SearchResultItem lastItem = result.getItems().get(result.getItems().size() - 1);
-            QueryBuilder subQuery = queryBuilder.modifiedAfter(lastItem.getModificationDate()).subsequentRequest(true);
+            Date lastDate = result.getItems().get(result.getItems().size() - 1).getModificationDate();
+            QueryBuilder subQuery = queryBuilder.modifiedAfter(lastDate)
+                                                .limit(limit - filteredItems.size())
+                                                .subsequentRequest(true);
             filteredItems.addAll(search(subQuery, chunkSize).getItems());
           }
         }
+      }
+      if (query.getLimit().isSome() && filteredItems.size() > query.getLimit().get()) {
+        logger.debug("limit items");
+        return new SearchResultImpl(result.getOffset(), query.getLimit().get(),
+                filteredItems.subList(0, query.getLimit().get()));
       }
       return new SearchResultImpl(result.getOffset(), result.getLimit(), filteredItems);
     } finally {

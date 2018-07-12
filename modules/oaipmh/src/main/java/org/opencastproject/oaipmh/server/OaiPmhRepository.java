@@ -540,7 +540,7 @@ public abstract class OaiPmhRepository implements ManagedService {
                 return getPersistence().search(
                         queryRepo(getRepositoryId())
                                 .setDefinitions(sets)
-                                .setSpec(p.getSet().getOrElseNull())
+                                .setSpec(rq.getSet().getOrElseNull())
                                 .modifiedAfter(rq.getLastResult())
                                 .modifiedBefore(rq.getUntil())
                                 .limit(getResultLimit())
