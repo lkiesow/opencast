@@ -288,14 +288,11 @@ public abstract class AbstractOaiPmhDatabase implements OaiPmhDatabase {
         for (Map.Entry<String, Map<String, String>> set: query.getSetDefinition().entrySet()) {
           String setSpec = set.getKey();
           Map<String, String> setDef = set.getValue();
-          for (SearchResultElementItem element : item.getElements()) {
-            if (matchSetDef(setSpec, setDef, element)) {
-              // Add item if it matches the requested setSpec
-              if (setSpec.equals(requestSetSpec)) {
-                filteredItems.add(item);
-              }
-              item.addSetSpec(setSpec);
+          if (matchSetDef(setDef, item.getElements())) {
+            if (setSpec.equals(requestSetSpec)) {
+              filteredItems.add(item);
             }
+            item.addSetSpec(setSpec);
           }
         }
         // Always add item if no set was requested
@@ -341,31 +338,22 @@ public abstract class AbstractOaiPmhDatabase implements OaiPmhDatabase {
 
   }
 
-  private boolean matchSetDef(String setSpec, Map<String, String> setDef, SearchResultElementItem element) {
+  private boolean matchSetDef(Map<String, String> setDef, List<SearchResultElementItem> elements) {
     final String flavor = setDef.get("flavor");
     final String type = setDef.get("type");
-    final String contains = setDef.get("contains");
-    final String containsnot = setDef.get("containsnot");
-    logger.debug("flavor: {}", element.getFlavor());
-    logger.debug("type: {}", element.getType());
-    logger.debug("XML: {}", element.getXml());
-    // Check if type and flavor match our filter rule.
-    // We only include items with matching elements.
-    if (!element.getFlavor().equals(flavor) || !element.getType().equals(type)) {
-      return false;
-    }
+    final boolean resultIfPresent = StringUtils.isNotEmpty(setDef.get("contains"));
+    final String value = resultIfPresent ? setDef.get("contains") : setDef.get("containsnot");
 
-    // Check contains if the field is configured
-    if (StringUtils.isNotEmpty(contains)) {
-      return element.getXml().contains(contains);
+    for (SearchResultElementItem element: elements) {
+      logger.trace("flavor: {}", element.getFlavor());
+      logger.trace("type: {}", element.getType());
+      logger.trace("XML: {}", element.getXml());
+      // Check if type and flavor match our filter rule.
+      if (element.getFlavor().equals(flavor) && element.getType().equals(type) && element.getXml().contains(value)) {
+        return resultIfPresent;
+      }
     }
-
-    // Check containsnot if the field is configured
-    if (StringUtils.isNotEmpty(containsnot)) {
-      return !element.getXml().contains(containsnot);
-    }
-
-    return false;
+    return !resultIfPresent;
   }
 
   /**
