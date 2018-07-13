@@ -223,12 +223,19 @@ public abstract class AbstractOaiPmhDatabase implements OaiPmhDatabase {
 
   @Override
   public SearchResult search(QueryBuilder queryBuilder) {
-    return search(queryBuilder, queryBuilder.build().getLimit().getOrElse(-1));
+    final int chunkSize = queryBuilder.build().getLimit().getOrElse(-1);
+    return search(queryBuilder, chunkSize);
   }
 
   private SearchResult search(QueryBuilder queryBuilder, int chunkSize) {
     Query query = queryBuilder.build();
     EntityManager em = null;
+    final String requestSetSpec = query.getSetSpec().getOrElseNull();
+    final List<SearchResultItem> filteredItems = new ArrayList<>();
+    Date lastDate = new Date();
+    long resultSize;
+    long resultOffset;
+    long resultLimit;
     try {
       em = getEmf().createEntityManager();
       CriteriaBuilder cb = em.getCriteriaBuilder();
@@ -277,8 +284,6 @@ public abstract class AbstractOaiPmhDatabase implements OaiPmhDatabase {
         return new SearchResultImpl(result.getOffset(), result.getLimit(), new ArrayList<>());
       }
 
-      final String requestSetSpec = query.getSetSpec().getOrElseNull();
-      final List<SearchResultItem> filteredItems = new ArrayList<>();
       for (SearchResultItem item : result.getItems()) {
         for (Map.Entry<String, Map<String, String>> set: query.getSetDefinition().entrySet()) {
           String setSpec = set.getKey();
@@ -298,33 +303,42 @@ public abstract class AbstractOaiPmhDatabase implements OaiPmhDatabase {
           filteredItems.add(item);
         }
       }
-      if (requestSetSpec != null) {
-        // only continue if we got the amount of results we requested in the first place
-        // otherwise, we have no more results and it does not make any sense to continue
-        logger.debug("result.size={}, chunk.size={}", result.size(), chunkSize);
-        if (result.size() == chunkSize) {
-          final int limit = query.getLimit().getOrElse(-1);
-          logger.debug("filteredItems.size={}, query.limit={}", filteredItems.size(), limit);
-          if (filteredItems.size() < limit) {
-            // No results left after filtering. Automatically request the next range to avoid returning empty results.
-            Date lastDate = result.getItems().get(result.getItems().size() - 1).getModificationDate();
-            QueryBuilder subQuery = queryBuilder.modifiedAfter(lastDate)
-                                                .limit(limit - filteredItems.size())
-                                                .subsequentRequest(true);
-            filteredItems.addAll(search(subQuery, chunkSize).getItems());
-          }
-        }
+      resultSize = result.size();
+      resultOffset = result.getOffset();
+      resultLimit = result.getLimit();
+      if (requestSetSpec != null && resultSize == chunkSize) {
+        lastDate = result.getItems().get(result.getItems().size() - 1).getModificationDate();
       }
-      if (query.getLimit().isSome() && filteredItems.size() > query.getLimit().get()) {
-        logger.debug("limit items");
-        return new SearchResultImpl(result.getOffset(), query.getLimit().get(),
-                filteredItems.subList(0, query.getLimit().get()));
-      }
-      return new SearchResultImpl(result.getOffset(), result.getLimit(), filteredItems);
     } finally {
       if (em != null)
         em.close();
     }
+
+    if (requestSetSpec != null) {
+      // only continue if we got the amount of results we requested in the first place
+      // otherwise, we have no more results and it does not make any sense to continue
+      logger.debug("result.size={}, chunk.size={}", resultSize, chunkSize);
+      if (resultSize == chunkSize) {
+        final int limit = query.getLimit().getOrElse(-1);
+        logger.debug("filteredItems.size={}, query.limit={}", filteredItems.size(), limit);
+        if (filteredItems.size() < limit) {
+          // No results left after filtering. Automatically request the next range to avoid returning empty results.
+          QueryBuilder subQuery = queryBuilder.modifiedAfter(lastDate)
+                  .limit(limit - filteredItems.size())
+                  .subsequentRequest(true);
+          filteredItems.addAll(search(subQuery, chunkSize).getItems());
+        }
+      }
+    }
+
+    if (query.getLimit().isSome() && filteredItems.size() > query.getLimit().get()) {
+      logger.debug("limit items");
+      return new SearchResultImpl(resultOffset, query.getLimit().get(),
+              filteredItems.subList(0, query.getLimit().get()));
+    }
+    return new SearchResultImpl(resultOffset, resultLimit, filteredItems);
+
+
   }
 
   private boolean matchSetDef(String setSpec, Map<String, String> setDef, SearchResultElementItem element) {
