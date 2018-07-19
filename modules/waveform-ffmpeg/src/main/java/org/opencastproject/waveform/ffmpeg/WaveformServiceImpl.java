@@ -371,10 +371,10 @@ public class WaveformServiceImpl extends AbstractJobProducer implements Waveform
     // create ffmpeg command
     String[] command = new String[] {
       binary,
-      "-nostats",
+      "-nostats", "-nostdin",
       "-i", mediaFile.getAbsolutePath(),
       "-lavfi", createWaveformFilter(track),
-      "-an", "-vn", "-sn", "-y",
+      "-an", "-vn", "-sn",
       waveformFilePath
     };
     logger.debug("Start waveform ffmpeg process: {}", StringUtils.join(command, " "));
