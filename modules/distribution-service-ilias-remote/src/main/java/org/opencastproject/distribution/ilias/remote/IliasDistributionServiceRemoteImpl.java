@@ -1,16 +1,21 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
 package org.opencastproject.distribution.ilias.remote;
@@ -19,8 +24,6 @@ import static java.lang.String.format;
 import static org.opencastproject.util.HttpUtil.param;
 import static org.opencastproject.util.HttpUtil.post;
 import static org.opencastproject.util.JobUtil.jobFromHttpResponse;
-import static org.opencastproject.util.data.Arrays.array;
-import static org.opencastproject.util.data.Arrays.mkString;
 import static org.opencastproject.util.data.functions.Options.join;
 
 import org.opencastproject.distribution.api.DistributionException;
@@ -44,7 +47,6 @@ public class IliasDistributionServiceRemoteImpl extends RemoteBase
   private static final Logger logger = LoggerFactory.getLogger(IliasDistributionServiceRemoteImpl.class);
 
   /** The property to look up and append to REMOTE_SERVICE_TYPE_PREFIX */
-  private static final String PARAM_REMOTE_SERVICE_CHANNEL = "distribution.channel";
   private static final String PARAM_CHANNEL_ID = "channelId";
   private static final String PARAM_MEDIAPACKAGE = "mediapackage";
   private static final String PARAM_ELEMENT_ID = "elementId";
@@ -55,7 +57,7 @@ public class IliasDistributionServiceRemoteImpl extends RemoteBase
   private String distributionChannel;
 
   public IliasDistributionServiceRemoteImpl() {
-    super(mkString(array(JOB_TYPE_PREFIX, "ilias"), "."));
+    super(JOB_TYPE_PREFIX + "ilias");
   }
 
     public String getDistributionType() {
@@ -64,10 +66,11 @@ public class IliasDistributionServiceRemoteImpl extends RemoteBase
 
   /** activates the component */
   protected void activate(ComponentContext cc) {
-    this.distributionChannel = (String) cc.getProperties().get(PARAM_REMOTE_SERVICE_CHANNEL);
-    super.serviceType = mkString(array(JOB_TYPE_PREFIX, this.distributionChannel), ".");
+    this.distributionChannel = (String) cc.getProperties().get(CONFIG_KEY_STORE_TYPE);
+    super.serviceType = JOB_TYPE_PREFIX + this.distributionChannel;
+    logger.info(format("Setting jobtype to %s",super.serviceType));
   }
-  
+
   @Override
   public Job distribute(String channelId, MediaPackage mediaPackage, String elementId) throws DistributionException {
     logger.info(format("Distributing %s to %s@%s", elementId, channelId, distributionChannel));
