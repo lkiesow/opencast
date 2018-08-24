@@ -1,37 +1,25 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
 package org.opencastproject.distribution.ilias;
 
-import java.io.File;
-import java.io.InputStream;
-import java.net.URI;
-
-import javax.servlet.http.HttpServletResponse;
-
-import junit.framework.Assert;
-
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
-import org.apache.http.HttpResponse;
-import org.apache.http.StatusLine;
-import org.easymock.EasyMock;
-import org.easymock.IAnswer;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
 import org.opencastproject.job.api.Job;
 import org.opencastproject.job.api.JobBarrier;
 import org.opencastproject.mediapackage.MediaPackage;
@@ -53,6 +41,22 @@ import org.opencastproject.util.PathSupport;
 import org.opencastproject.util.UrlSupport;
 import org.opencastproject.workspace.api.Workspace;
 
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
+import org.apache.http.HttpResponse;
+import org.apache.http.StatusLine;
+import org.easymock.EasyMock;
+import org.easymock.IAnswer;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+
+import java.io.File;
+import java.net.URI;
+
+import javax.servlet.http.HttpServletResponse;
+
 
 public class IliasDistributionServiceImplTest {
 
@@ -67,10 +71,10 @@ public class IliasDistributionServiceImplTest {
     final File mediaPackageRoot = new File(getClass().getResource("/mediapackage.xml").toURI()).getParentFile();
     try {
       mp = MediaPackageParser.getFromXml(IOUtils.toString(getClass().getResourceAsStream("/mediapackage.xml"), "UTF-8"));
-    }catch (Exception e){
+    } catch (Exception e) {
       e.printStackTrace();
     }
-    System.out.println(mp);
+
     distributionRoot = new File(mediaPackageRoot, "ilias");
     service = new IliasDistributionServiceImpl();
 
@@ -81,7 +85,7 @@ public class IliasDistributionServiceImplTest {
     HttpResponse response = EasyMock.createNiceMock(HttpResponse.class);
     EasyMock.expect(response.getStatusLine()).andReturn(statusLine).anyTimes();
     EasyMock.replay(response);
-    
+
     DefaultOrganization defaultOrganization = new DefaultOrganization();
     User anonymous = new JaxbUser("anonymous","test", defaultOrganization, new JaxbRole(
                 DefaultOrganization.DEFAULT_ORGANIZATION_ANONYMOUS, defaultOrganization));
@@ -110,7 +114,7 @@ public class IliasDistributionServiceImplTest {
     service.setServiceRegistry(serviceRegistry);
     service.distributionDirectory = distributionRoot;
     service.iliasUrl = UrlSupport.DEFAULT_BASE_URL;
-    service.pluginBaseURL="/plugin/";
+    service.pluginBaseURL = "/plugin/";
 
     final Workspace workspace = EasyMock.createNiceMock(Workspace.class);
     service.setWorkspace(workspace);
@@ -130,10 +134,9 @@ public class IliasDistributionServiceImplTest {
   @After
   public void tearDown() throws Exception {
     try {
-      System.out.println(distributionRoot);
       FileUtils.deleteDirectory(distributionRoot);
       ((ServiceRegistryInMemoryImpl) serviceRegistry).dispose();
-    }catch (Exception e){
+    } catch (Exception e) {
       e.printStackTrace();
     }
   }
@@ -176,7 +179,7 @@ public class IliasDistributionServiceImplTest {
     mp.add(MediaPackageElementParser.getFromXml(job3.getPayload()));
     mp.add(MediaPackageElementParser.getFromXml(job4.getPayload()));
 
-    File mpDir = new File(distributionRoot, PathSupport.path( DEFAULT_NOSERIES_DIR, mp.getIdentifier().compact()));
+    File mpDir = new File(distributionRoot, PathSupport.path(DEFAULT_NOSERIES_DIR, mp.getIdentifier().compact()));
     File mediaDir = new File(mpDir, "track-1");
     File metadata1Dir = new File(mpDir, "catalog-1");
     File metadata2Dir = new File(mpDir, "catalog-2");
@@ -239,7 +242,6 @@ public class IliasDistributionServiceImplTest {
     jobBarrier.waitForJobs();
 
     // Remove the distributed elements from the mediapackage
-  
     Assert.assertEquals("done", job6.getPayload());
     Assert.assertFalse(service.getMediaPackageDirectory("ilias", mp).isDirectory());
 

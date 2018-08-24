@@ -24,8 +24,6 @@ import static java.lang.String.format;
 import static org.opencastproject.util.HttpUtil.param;
 import static org.opencastproject.util.HttpUtil.post;
 import static org.opencastproject.util.JobUtil.jobFromHttpResponse;
-import static org.opencastproject.util.data.Arrays.array;
-import static org.opencastproject.util.data.Arrays.mkString;
 import static org.opencastproject.util.data.functions.Options.join;
 
 import org.opencastproject.distribution.api.DistributionException;
@@ -49,7 +47,6 @@ public class IliasDistributionServiceRemoteImpl extends RemoteBase
   private static final Logger logger = LoggerFactory.getLogger(IliasDistributionServiceRemoteImpl.class);
 
   /** The property to look up and append to REMOTE_SERVICE_TYPE_PREFIX */
-  private static final String PARAM_REMOTE_SERVICE_CHANNEL = "distribution.channel";
   private static final String PARAM_CHANNEL_ID = "channelId";
   private static final String PARAM_MEDIAPACKAGE = "mediapackage";
   private static final String PARAM_ELEMENT_ID = "elementId";
@@ -69,8 +66,9 @@ public class IliasDistributionServiceRemoteImpl extends RemoteBase
 
   /** activates the component */
   protected void activate(ComponentContext cc) {
-    this.distributionChannel = (String) cc.getProperties().get(PARAM_REMOTE_SERVICE_CHANNEL);
-    super.serviceType = mkString(array(JOB_TYPE_PREFIX, this.distributionChannel), ".");
+    this.distributionChannel = (String) cc.getProperties().get(CONFIG_KEY_STORE_TYPE);
+    super.serviceType = JOB_TYPE_PREFIX + this.distributionChannel;
+    logger.info(format("Setting jobtype to %s",super.serviceType));
   }
 
   @Override

@@ -1,16 +1,21 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
 package org.opencastproject.workflow.handler;
@@ -44,6 +49,9 @@ import org.opencastproject.workflow.api.WorkflowOperationException;
 import org.opencastproject.workflow.api.WorkflowOperationInstance;
 import org.opencastproject.workflow.api.WorkflowOperationResult;
 import org.opencastproject.workflow.api.WorkflowOperationResult.Action;
+
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.utils.URIUtils;
@@ -292,7 +300,6 @@ public class PublishIliasWorkflowOperationHandler extends AbstractWorkflowOperat
         // Adding media package to the search index
         Job publishJob = null;
         try {
-          System.out.println(mediaPackageForSearch);
           publishJob = iliasDistributionService.distribute(CHANNEL_ID, mediaPackageForSearch, "manifest.xml");
           if (!waitForStatus(publishJob).isSuccess()) {
             throw new WorkflowOperationException("Mediapackage " + mediaPackageForSearch.getIdentifier()
@@ -331,11 +338,11 @@ public class PublishIliasWorkflowOperationHandler extends AbstractWorkflowOperat
    *          the current mediapackage
    * @param jobs
    *          the distribution jobs
-   * @param streamingSubflavor
+   * @param iliasSubflavor
    *          flavor to be applied to elements distributed to streaming
-   * @param streamingElementIds
+   * @param iliasElementIds
    *          identifiers for elements that have been distributed to streaming
-   * @param streamingTargetTags
+   * @param iliasTargetTags
    *          tags to be applied to elements distributed to streaming
    * @return the new mediapackage
    * 
@@ -345,7 +352,7 @@ public class PublishIliasWorkflowOperationHandler extends AbstractWorkflowOperat
    * @throws WorkflowOperationException //FIXME
    */
   protected MediaPackage getMediaPackageForSearchIndex(MediaPackage current, List<Job> jobs,
-          MediaPackageElementFlavor streamingSubflavor, Set<String> streamingElementIds, String[] streamingTargetTags)
+          MediaPackageElementFlavor iliasSubflavor, Set<String> iliasElementIds, String[] iliasTargetTags)
           throws MediaPackageException, NotFoundException, ServiceRegistryException, WorkflowOperationException {
     MediaPackage mp = (MediaPackage) current.clone();
 
@@ -355,7 +362,8 @@ public class PublishIliasWorkflowOperationHandler extends AbstractWorkflowOperat
 
     for (Job entry : jobs) {
       Job job = serviceRegistry.getJob(entry.getId());
-      String sourceElementId = job.getArguments().get(2);
+      Gson gson = new Gson();
+      String sourceElementId = gson.fromJson(job.getArguments().get(2), new TypeToken<String>() { }.getType());
       MediaPackageElement sourceElement = mp.getElementById(sourceElementId);
 
       // If there is no payload, then the item has not been distributed.
@@ -378,16 +386,16 @@ public class PublishIliasWorkflowOperationHandler extends AbstractWorkflowOperat
       distributedElement.setIdentifier(null);
 
       // Adjust the flavor and tags for streaming elements
-      if (streamingElementIds.contains(sourceElementId)) {
-        if (streamingSubflavor != null && streamingElementIds.contains(sourceElementId)) {
+      if (iliasElementIds.contains(sourceElementId)) {
+        if (iliasSubflavor != null && iliasElementIds.contains(sourceElementId)) {
           MediaPackageElementFlavor flavor = sourceElement.getFlavor();
           if (flavor != null) {
             MediaPackageElementFlavor newFlavor = new MediaPackageElementFlavor(flavor.getType(),
-                    streamingSubflavor.getSubtype());
+                    iliasSubflavor.getSubtype());
             distributedElement.setFlavor(newFlavor);
           }
         }
-        for (String tag : streamingTargetTags) {
+        for (String tag : iliasTargetTags) {
           distributedElement.addTag(tag);
         }
       }

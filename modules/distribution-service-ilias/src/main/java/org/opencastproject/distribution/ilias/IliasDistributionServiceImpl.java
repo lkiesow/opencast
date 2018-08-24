@@ -1,16 +1,21 @@
 /**
- *  Copyright 2009, 2010 The Regents of the University of California
- *  Licensed under the Educational Community License, Version 2.0
- *  (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at
+ * Licensed to The Apereo Foundation under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
  *
- *  http://www.osedu.org/licenses/ECL-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an "AS IS"
- *  BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- *  or implied. See the License for the specific language governing
- *  permissions and limitations under the License.
+ * The Apereo Foundation licenses this file to you under the Educational
+ * Community License, Version 2.0 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of the License
+ * at:
+ *
+ *   http://opensource.org/licenses/ecl2.txt
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  *
  */
 package org.opencastproject.distribution.ilias;
@@ -38,6 +43,9 @@ import org.opencastproject.util.NotFoundException;
 import org.opencastproject.util.OsgiUtil;
 import org.opencastproject.util.UrlSupport;
 import org.opencastproject.workspace.api.Workspace;
+
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
@@ -67,14 +75,13 @@ public class IliasDistributionServiceImpl extends AbstractDistributionService im
 
   /** Receipt type */
   public static final String JOB_TYPE = "org.opencastproject.distribution.ilias";
-  
+
   /** Default distribution directory */
   public static final String DEFAULT_DISTRIBUTION_DIR = "opencast" + File.separator + "ilias";
 
-  /** Default directory for mediapackages without a series*/
+  /** Default directory for mediapackages without a series */
   public static final String DEFAULT_NOSERIES_DIR = "noSeriesDefined";
 
-  
   /** Timeout in millis for checking distributed file request */
   private static final long TIMEOUT = 10000L;
 
@@ -87,9 +94,9 @@ public class IliasDistributionServiceImpl extends AbstractDistributionService im
   /** the base url for the ilias */
   protected String iliasUrl = null;
 
-  /** part of the url for the plugin inside the ilias installation*/
+  /** part of the url for the plugin inside the ilias installation */
   protected String pluginBaseURL = null;
-  
+
   /** The remote service registry */
   protected ServiceRegistry serviceRegistry = null;
 
@@ -105,6 +112,9 @@ public class IliasDistributionServiceImpl extends AbstractDistributionService im
   /** The organization directory service */
   protected OrganizationDirectoryService organizationDirectoryService = null;
 
+  /** The Gson Json-Converter to user */
+  private Gson gson = new Gson();
+
   /**
    * Creates a new instance of the download distribution service.
    */
@@ -116,7 +126,7 @@ public class IliasDistributionServiceImpl extends AbstractDistributionService im
    * Activate method for this OSGi service implementation.
    *
    * @param cc
-   *          the OSGi component context 
+   *          the OSGi component context
    */
   @Override
   public void activate(ComponentContext cc) {
@@ -125,39 +135,36 @@ public class IliasDistributionServiceImpl extends AbstractDistributionService im
       throw new IllegalStateException("ILIAS download url must be set (org.opencastproject.ilias.url)");
 
     pluginBaseURL = cc.getBundleContext().getProperty("org.opencastproject.ilias.pluginpath");
-    if (pluginBaseURL== null)
+    if (pluginBaseURL == null)
       throw new IllegalStateException("ILIAS buildpath prefix must be set (org.opencastproject.ilias.pluginpath)");
-    
+
     String ccDistributionDirectory = cc.getBundleContext().getProperty("org.opencastproject.ilias.directory");
     if (ccDistributionDirectory == null)
       throw new IllegalStateException("ILIAS distribution directory must be set (org.opencastproject.ilias.directory)");
     this.distributionDirectory = new File(ccDistributionDirectory);
     logger.info("ILIAS download distribution directory is {}", distributionDirectory);
-      this.distributionChannel = OsgiUtil.getComponentContextProperty(cc, CONFIG_KEY_STORE_TYPE);
+    this.distributionChannel = OsgiUtil.getComponentContextProperty(cc, CONFIG_KEY_STORE_TYPE);
   }
 
   public String getDistributionType() {
-        return this.distributionChannel;
-    }
+    return this.distributionChannel;
+  }
 
   @Override
-  public Job distribute(String channelId, MediaPackage mediapackage, String elementId) throws DistributionException,
-          MediaPackageException {
+  public Job distribute(String channelId, MediaPackage mediapackage, String elementId)
+          throws DistributionException, MediaPackageException {
     return distribute(channelId, mediapackage, elementId, true);
   }
 
-//  @Override
+  // @Override
   public Job distribute(String channelId, MediaPackage mediapackage, String elementId, boolean checkAvailability)
           throws DistributionException, MediaPackageException {
     notNull(mediapackage, "mediapackage");
     notNull(elementId, "elementId");
     notNull(channelId, "channelId");
     try {
-      return serviceRegistry.createJob(
-              JOB_TYPE,
-              Operation.Distribute.toString(),
-              Arrays.asList(channelId, MediaPackageParser.getAsXml(mediapackage), elementId,
-                      Boolean.toString(checkAvailability)));
+      return serviceRegistry.createJob(JOB_TYPE, Operation.Distribute.toString(), Arrays.asList(channelId,
+              MediaPackageParser.getAsXml(mediapackage), gson.toJson(elementId), Boolean.toString(checkAvailability)));
     } catch (ServiceRegistryException e) {
       throw new DistributionException("Unable to create a job", e);
     }
@@ -165,6 +172,7 @@ public class IliasDistributionServiceImpl extends AbstractDistributionService im
 
   /**
    * Distribute a Mediapackage element to the download distribution service.
+   * 
    * @param channelId
    *          The channelID to which the package shall be distributed
    * @param mediapackage
@@ -186,117 +194,115 @@ public class IliasDistributionServiceImpl extends AbstractDistributionService im
 
     final String mediapackageId = mediapackage.getIdentifier().compact();
     final MediaPackageElement element = mediapackage.getElementById(elementId);
-    if ("manifest.xml".equals(elementId)){
+    if ("manifest.xml".equals(elementId)) {
       logger.info("Going to publish manifest, not checking if available in filesystem");
       final String directoryName = distributionDirectory.getAbsolutePath();
-      final String seriesName =  (null != mediapackage.getSeries()) ? mediapackage.getSeries() : DEFAULT_NOSERIES_DIR;
-      String distdir = path(directoryName, seriesName, mediapackage.getIdentifier().compact(),"manifest.xml");
-    	try {
-    		FileUtils.writeStringToFile(new File(distdir), MediaPackageParser.getAsXml(mediapackage), "UTF-8");
-		} catch (IOException e) {
-			throw new DistributionException(e);
-		}    	
-    	logger.info(format("Finished distributing element %s@%s for publication channel %s", elementId, mediapackageId,
+      final String seriesName = (null != mediapackage.getSeries()) ? mediapackage.getSeries() : DEFAULT_NOSERIES_DIR;
+      String distdir = path(directoryName, seriesName, mediapackage.getIdentifier().compact(), "manifest.xml");
+      try {
+        FileUtils.writeStringToFile(new File(distdir), MediaPackageParser.getAsXml(mediapackage), "UTF-8");
+      } catch (IOException e) {
+        throw new DistributionException(e);
+      }
+      logger.info(format("Finished distributing element %s@%s for publication channel %s", elementId, mediapackageId,
               channelId));
-    	return null;
-    } else { 
-	    // Make sure the element exists
-	    if (mediapackage.getElementById(elementId) == null)    	
-	      throw new IllegalStateException(format("No element %s found in mediapackage %s", elementId, mediapackageId));
-	
-	    try {
-	      File source;
-	      try {
-	        source = workspace.get(element.getURI());
-	      } catch (NotFoundException e) {
-	        throw new DistributionException("Unable to find " + element.getURI() + " in the workspace", e);
-	      } catch (IOException e) {
-	        throw new DistributionException("Error loading " + element.getURI() + " from the workspace", e);
-	      }
-	      File destination = getDistributionFile(channelId, mediapackage, element);
-	
-	      // Put the file in place
-	      try {
-	        FileUtils.forceMkdir(destination.getParentFile());
-	      } catch (IOException e) {
-	        throw new DistributionException("Unable to create " + destination.getParentFile(), e);
-	      }
-	      logger.info(format("Distributing %s@%s for publication channel %s to %s", elementId, mediapackageId, channelId,
-	              destination));
-	      logger.debug("SOURCEFILE: " + source.getAbsolutePath());
-	      logger.debug("DESTFILE: " + destination.getAbsolutePath());
-	      try {
-	        FileSupport.link(source, destination, true);
-	      } catch (IOException e) {
-	        throw new DistributionException(format("Unable to copy %s tp %s", source, destination), e);
-	      }
-	
-	      // Create a representation of the distributed file in the mediapackage
-	      MediaPackageElement distributedElement = (MediaPackageElement) element.clone();
-	      try {
-	        distributedElement.setURI(getDistributionUri(channelId, (null != mediapackage.getSeries()) ? mediapackage.getSeries() : DEFAULT_NOSERIES_DIR, mediapackageId, element));
-	      } catch (URISyntaxException e) {
-	        throw new DistributionException("Distributed element produces an invalid URI", e);
-	      }
-	      distributedElement.setIdentifier(null);
-	
-	      logger.info(format("Finished distributing element %s@%s for publication channel %s", elementId, mediapackageId,
-	              channelId));
-	      URI uri = distributedElement.getURI();
-	      long now = 0L;
-	
-	      // Start itbwpdk
-	      // If the distribution channel is ilias player
-	      // and the file is available locally
-	      // do check on file level for existence
-	      logger.debug("Distributionpath: " + distributionDirectory.getAbsolutePath());
-	      logger.debug("DistributionURI: " + uri.toString());
-	      //TODO: this doesn't work properly if channelID is ilias
-	      if ("ilias".equals(channelId) && distributionDirectory.exists()) {
-	
-	        File xelement = null;
-	        String buildpath = "";
-	        boolean calc = false;
-	        logger.debug("URI: {}",uri.toString());
-	        for (String t : uri.toString().substring(iliasUrl.length()+pluginBaseURL.length()).split("/")) {
-	          logger.debug("URI-Part: {}", t);
-	          if (calc) {
-	            buildpath = buildpath + "/" + t;
-	          }
-	          if ("ilias".equals(t)) {
-		           calc = true;
-	          }
+      return null;
+    } else {
+      // Make sure the element exists
+      if (mediapackage.getElementById(elementId) == null)
+        throw new IllegalStateException(format("No element %s found in mediapackage %s", elementId, mediapackageId));
 
-	        }
-	        logger.debug("BP: " + buildpath);
-	        xelement = new File(distributionDirectory.getPath().concat(buildpath));
-	        logger.debug("XELME: " + xelement.getAbsolutePath());
-	        while (checkAvailability) {
-	
-	          if (xelement.exists()) {
-	            logger.debug("Distributed file was created in download directory for ilias, " + xelement.getPath());
-	          break;
-	          }
-	          if (now < TIMEOUT) {
-	            try {
-	              Thread.sleep(INTERVAL);
-	              now += INTERVAL;
-	              continue;
-	            } catch (Exception e) {
-	              throw new RuntimeException(e);
-	            }
-	          }
-	          logger.warn("Distributed file not created in download directory for ilias, " + xelement.getPath());
-	          throw new DistributionException("Distributed file not created, " + xelement.getPath());
-	        }
-	
-	      } else {
-	       logger.warn("Status distributed file {} could not be checked", uri);
-	
-	      }
-	    
+      try {
+        File source;
+        try {
+          source = workspace.get(element.getURI());
+        } catch (NotFoundException e) {
+          throw new DistributionException("Unable to find " + element.getURI() + " in the workspace", e);
+        } catch (IOException e) {
+          throw new DistributionException("Error loading " + element.getURI() + " from the workspace", e);
+        }
+        File destination = getDistributionFile(channelId, mediapackage, element);
 
-	    return distributedElement;
+        // Put the file in place
+        try {
+          FileUtils.forceMkdir(destination.getParentFile());
+        } catch (IOException e) {
+          throw new DistributionException("Unable to create " + destination.getParentFile(), e);
+        }
+        logger.info(format("Distributing %s@%s for publication channel %s to %s", elementId, mediapackageId, channelId,
+                destination));
+        logger.debug("SOURCEFILE: " + source.getAbsolutePath());
+        logger.debug("DESTFILE: " + destination.getAbsolutePath());
+        try {
+          FileSupport.link(source, destination, true);
+        } catch (IOException e) {
+          throw new DistributionException(format("Unable to copy %s tp %s", source, destination), e);
+        }
+
+        // Create a representation of the distributed file in the mediapackage
+        MediaPackageElement distributedElement = (MediaPackageElement) element.clone();
+        try {
+          distributedElement.setURI(getDistributionUri(channelId,
+                  (null != mediapackage.getSeries()) ? mediapackage.getSeries() : DEFAULT_NOSERIES_DIR, mediapackageId,
+                  element));
+        } catch (URISyntaxException e) {
+          throw new DistributionException("Distributed element produces an invalid URI", e);
+        }
+        distributedElement.setIdentifier(null);
+
+        logger.info(format("Finished distributing element %s@%s for publication channel %s", elementId, mediapackageId,
+                channelId));
+        URI uri = distributedElement.getURI();
+        long now = 0L;
+
+        // Start itbwpdk
+        // If the distribution channel is ilias player
+        // and the file is available locally
+        // do check on file level for existence
+        logger.debug("Distributionpath: " + distributionDirectory.getAbsolutePath());
+        logger.debug("DistributionURI: " + uri.toString());
+        // TODO: this doesn't work properly if channelID is ilias
+        if ("ilias".equals(channelId) && distributionDirectory.exists()) {
+          File xelement = null;
+          String buildpath = "";
+          boolean calc = false;
+          logger.debug("URI: {}", uri.toString());
+          for (String t : uri.toString().substring(iliasUrl.length() + pluginBaseURL.length()).split("/")) {
+            logger.debug("URI-Part: {}", t);
+            if (calc) {
+              buildpath = buildpath + "/" + t;
+            }
+            if ("ilias".equals(t)) {
+              calc = true;
+            }
+
+          }
+          logger.debug("BP: " + buildpath);
+          xelement = new File(distributionDirectory.getPath().concat(buildpath));
+          logger.debug("XELME: " + xelement.getAbsolutePath());
+          while (checkAvailability) {
+            if (xelement.exists()) {
+              logger.debug("Distributed file was created in download directory for ilias, " + xelement.getPath());
+              break;
+            }
+            if (now < TIMEOUT) {
+              try {
+                Thread.sleep(INTERVAL);
+                now += INTERVAL;
+                continue;
+              } catch (Exception e) {
+                throw new RuntimeException(e);
+              }
+            }
+            logger.warn("Distributed file not created in download directory for ilias, " + xelement.getPath());
+            throw new DistributionException("Distributed file not created, " + xelement.getPath());
+          }
+
+        } else {
+          logger.warn("Status distributed file {} could not be checked", uri);
+
+        }
+        return distributedElement;
       } catch (Exception e) {
         logger.warn("Error distributing " + element, e);
         if (e instanceof DistributionException) {
@@ -304,7 +310,7 @@ public class IliasDistributionServiceImpl extends AbstractDistributionService im
         } else {
           throw new DistributionException(e);
         }
-	  }
+      }
     }
   }
 
@@ -313,7 +319,7 @@ public class IliasDistributionServiceImpl extends AbstractDistributionService im
     notNull(mediapackage, "mediapackage");
     notNull(channelId, "channelId");
     try {
-      logger.info("Create retract job for {}@{}",new Object[]{mediapackage,channelId});
+      logger.info("Create retract job for {}@{}", new Object[] { mediapackage, channelId });
       return serviceRegistry.createJob(JOB_TYPE, Operation.Retract.toString(),
               Arrays.asList(channelId, MediaPackageParser.getAsXml(mediapackage)));
     } catch (ServiceRegistryException e) {
@@ -334,23 +340,18 @@ public class IliasDistributionServiceImpl extends AbstractDistributionService im
    * @throws org.opencastproject.distribution.api.DistributionException
    *           in case of an error
    */
-  protected String retractElement(String channelId, MediaPackage mediapackage)
-          throws DistributionException {
+  protected String retractElement(String channelId, MediaPackage mediapackage) throws DistributionException {
     notNull(mediapackage, "mediapackage");
     notNull(channelId, "channelId");
-    String mediapackageId = mediapackage.getIdentifier().compact();    
-    try {      
+    String mediapackageId = mediapackage.getIdentifier().compact();
+    try {
       final File mediapackageDir = getMediaPackageDirectory(channelId, mediapackage);
-      logger.debug("MediaPackageDir:"  + mediapackageDir.getAbsolutePath());
-      
+      logger.debug("MediaPack ageDir:" + mediapackageDir.getAbsolutePath());
       FileUtils.deleteDirectory(mediapackageDir);
-      logger.info(format("Finished retracting mediapackage %s for publication channel %s", mediapackageId,
-              channelId));
+      logger.info(format("Finished retracting mediapackage %s for publication channel %s", mediapackageId, channelId));
       return "done";
     } catch (Exception e) {
-      logger.warn(
-              format("Error retracting mediapackage %s for publication channel %s", mediapackageId, channelId),
-              e);
+      logger.warn(format("Error retracting mediapackage %s for publication channel %s", mediapackageId, channelId), e);
       if (e instanceof DistributionException) {
         throw (DistributionException) e;
       } else {
@@ -373,16 +374,16 @@ public class IliasDistributionServiceImpl extends AbstractDistributionService im
       op = Operation.valueOf(operation);
       String channelId = arguments.get(0);
       MediaPackage mediapackage = MediaPackageParser.getFromXml(arguments.get(1));
-      logger.info("Calling {}",op);
+      logger.info("Calling {}", op);
       switch (op) {
         case Distribute:
-          String elementId = arguments.get(2);
+          String elementId = gson.fromJson(arguments.get(2), new TypeToken<String>() {
+          }.getType());
           Boolean checkAvailability = Boolean.parseBoolean(arguments.get(3));
           MediaPackageElement distributedElement = distributeElement(channelId, mediapackage, elementId,
                   checkAvailability);
           return (distributedElement != null) ? MediaPackageElementParser.getAsXml(distributedElement) : null;
         case Retract:
-          
           return retractElement(channelId, mediapackage);
         default:
           throw new IllegalStateException("Don't know how to handle operation '" + operation + "'");
@@ -404,14 +405,13 @@ public class IliasDistributionServiceImpl extends AbstractDistributionService im
   protected File getDistributionFile(String channelId, MediaPackage mp, MediaPackageElement element) {
     final String uriString = element.getURI().toString();
     final String directoryName = distributionDirectory.getAbsolutePath();
-    final String seriesName =  (null != mp.getSeries()) ? mp.getSeries() : DEFAULT_NOSERIES_DIR; 
-    logger.debug("URISTRING: {}",uriString);;
+    final String seriesName = (null != mp.getSeries()) ? mp.getSeries() : DEFAULT_NOSERIES_DIR;
+    logger.debug("URISTRING: {}", uriString);
     if (uriString.startsWith(iliasUrl)) {
       String[] splitUrl = uriString.substring(iliasUrl.length() + pluginBaseURL.length()).split("/");
       if (splitUrl.length < 4) {
-        logger.warn(format(
-                "Malformed URI %s. Must be of format .../{mediapackageId}/{elementId}/{fileName}."
-                        + " Trying URI without channelId", uriString));
+        logger.warn(format("Malformed URI %s. Must be of format .../{mediapackageId}/{elementId}/{fileName}."
+                + " Trying URI without channelId", uriString));
         return new File(path(directoryName, splitUrl[0], splitUrl[1], splitUrl[2]));
       } else {
         return new File(path(directoryName, splitUrl[0], splitUrl[1], splitUrl[2], splitUrl[3]));
@@ -427,7 +427,8 @@ public class IliasDistributionServiceImpl extends AbstractDistributionService im
    * @return the filesystem directory
    */
   protected File getMediaPackageDirectory(String channelId, MediaPackage mp) {
-    return new File(distributionDirectory, path((null != mp.getSeries()) ? mp.getSeries() : DEFAULT_NOSERIES_DIR, mp.getIdentifier().compact()));
+    return new File(distributionDirectory,
+            path((null != mp.getSeries()) ? mp.getSeries() : DEFAULT_NOSERIES_DIR, mp.getIdentifier().compact()));
   }
 
   /**
@@ -441,12 +442,12 @@ public class IliasDistributionServiceImpl extends AbstractDistributionService im
    * @throws URISyntaxException
    *           if the concrete implementation tries to create a malformed uri
    */
-  protected URI getDistributionUri(String channelId, String seriesId, String mediaPackageId, MediaPackageElement element)
-          throws URISyntaxException {
+  protected URI getDistributionUri(String channelId, String seriesId, String mediaPackageId,
+          MediaPackageElement element) throws URISyntaxException {
     String elementId = element.getIdentifier();
     String fileName = FilenameUtils.getName(element.getURI().toString());
-    String destinationURI = UrlSupport.concat(iliasUrl,pluginBaseURL, seriesId, mediaPackageId, elementId, fileName);
-    logger.debug("getDistributionURI {}",destinationURI);
+    String destinationURI = UrlSupport.concat(iliasUrl, pluginBaseURL, seriesId, mediaPackageId, elementId, fileName);
+    logger.debug("getDistributionURI {}", destinationURI);
     return new URI(destinationURI);
   }
 
@@ -456,7 +457,7 @@ public class IliasDistributionServiceImpl extends AbstractDistributionService im
    * @param workspace
    *          the workspace
    */
- public void setWorkspace(Workspace workspace) {
+  public void setWorkspace(Workspace workspace) {
     this.workspace = workspace;
   }
 

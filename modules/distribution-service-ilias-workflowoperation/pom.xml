@@ -12,7 +12,7 @@
 	</parent>
 	<properties>
 		<opencast.basedir>${project.basedir}/../..</opencast.basedir>
-		<checkstyle.skip>true</checkstyle.skip>
+		<checkstyle.skip>false</checkstyle.skip>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -35,6 +35,10 @@
 			<artifactId>opencast-distribution-service-api</artifactId>
 			<version>${project.version}</version>
 		</dependency>
+    <dependency>
+      <groupId>com.google.code.gson</groupId>
+      <artifactId>gson</artifactId>
+    </dependency>
 		<dependency>
 			<groupId>org.osgi</groupId>
 			<artifactId>org.osgi.core</artifactId>
