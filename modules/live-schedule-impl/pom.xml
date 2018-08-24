@@ -7,7 +7,7 @@
   <parent>
     <groupId>org.opencastproject</groupId>
     <artifactId>base</artifactId>
-    <version>5-SNAPSHOT</version>
+    <version>6-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <properties>
@@ -114,6 +114,7 @@
             <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
             <Build-Number>${buildNumber}</Build-Number>
             <Service-Component>
+              OSGI-INF/asset-manager-update-handler.xml,
               OSGI-INF/live-schedule-message-receiver.xml,
               OSGI-INF/live-schedule-service.xml,
               OSGI-INF/scheduler-update-handler.xml

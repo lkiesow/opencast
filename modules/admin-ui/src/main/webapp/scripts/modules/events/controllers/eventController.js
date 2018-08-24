@@ -24,13 +24,13 @@
 angular.module('adminNg.controllers')
 .controller('EventCtrl', [
     '$scope', 'Notifications', 'EventTransactionResource', 'EventMetadataResource', 'EventAssetsResource',
-    'EventCatalogsResource', 'CommentResource', 'EventWorkflowsResource', 'EventWorkflowActionResource', 'EventWorkflowDetailsResource',
-    'ResourcesListResource', 'UserRolesResource', 'EventAccessResource', 'EventGeneralResource',
+    'EventAssetCatalogsResource', 'CommentResource', 'EventWorkflowsResource', 'EventWorkflowActionResource', 'EventWorkflowDetailsResource',
+    'ResourcesListResource', 'UserRolesResource', 'EventAccessResource', 'EventPublicationsResource',
     'OptoutsResource', 'EventParticipationResource', 'EventSchedulingResource', 'NewEventProcessingResource',
     'OptoutSingleResource', 'CaptureAgentsResource', 'ConflictCheckResource', 'Language', 'JsHelper', '$sce', '$timeout', 'EventHelperService',
     'UploadAssetOptions', 'EventUploadAssetResource', 'Table', 'SchedulingHelperService',
-    function ($scope, Notifications, EventTransactionResource, EventMetadataResource, EventAssetsResource, EventCatalogsResource, CommentResource,
-        EventWorkflowsResource, EventWorkflowActionResource, EventWorkflowDetailsResource, ResourcesListResource, UserRolesResource, EventAccessResource, EventGeneralResource,
+    function ($scope, Notifications, EventTransactionResource, EventMetadataResource, EventAssetsResource, EventAssetCatalogsResource, CommentResource,
+        EventWorkflowsResource, EventWorkflowActionResource, EventWorkflowDetailsResource, ResourcesListResource, UserRolesResource, EventAccessResource, EventPublicationsResource,
         OptoutsResource, EventParticipationResource, EventSchedulingResource, NewEventProcessingResource,
         OptoutSingleResource, CaptureAgentsResource, ConflictCheckResource, Language, JsHelper, $sce, $timeout, EventHelperService, UploadAssetOptions,
         EventUploadAssetResource, Table, SchedulingHelperService) {
@@ -229,18 +229,18 @@ angular.module('adminNg.controllers')
             },
             fetchChildResources = function (id) {
 
-                var general = EventGeneralResource.get({ id: id }, function () {
-                    angular.forEach(general.publications, function (publication, index) {
+                var publications = EventPublicationsResource.get({ id: id }, function () {
+                    angular.forEach(publications.publications, function (publication, index) {
                         publication.label = publication.name;
                         publication.order = 999 + index;
                         var now = new Date();
-                        if (publication.id == "engage-live" && 
-                        	(now < new Date(general["start-date"]) || now > new Date(general["end-date"])))
+                        if (publication.id == "engage-live" &&
+                        	(now < new Date(publications["start-date"]) || now > new Date(publications["end-date"])))
                         	publication.enabled = false;
                         else publication.enabled = true;
                     });
                     $scope.publicationChannels = ResourcesListResource.get({ resource: 'PUBLICATION.CHANNELS' }, function() {
-                        angular.forEach(general.publications, function (publication) {
+                        angular.forEach(publications.publications, function (publication) {
                             if(angular.isDefined($scope.publicationChannels[publication.id])) {
                                 var record = JSON.parse($scope.publicationChannels[publication.id]);
                                 if (record.label) publication.label = record.label;
@@ -250,10 +250,10 @@ angular.module('adminNg.controllers')
                                 if (record.order) publication.order = record.order;
                             }
                         });
-                        // we postpone setting $scope.general until this point to avoid UI "flickering" due to publications changing
-                        $scope.general = general;
+                        // we postpone setting $scope.publications until this point to avoid UI "flickering" due to publications changing
+                        $scope.publications = publications;
                     }, function() {
-                        $scope.general = general;
+                        $scope.publications = publications;
                     });
                 });
 
@@ -471,7 +471,11 @@ angular.module('adminNg.controllers')
           $scope.conflicts = [];
           if (me.notificationConflict) {
               Notifications.remove(me.notificationConflict, SCHEDULING_CONTEXT);
-              me.notifictationConflict = undefined;
+              me.notificationConflict = undefined;
+          }
+          if (me.inThePastNotification) {
+              Notifications.remove(me.inThePastNotification, SCHEDULING_CONTEXT);
+              me.inThePastNotification = undefined;
           }
         }
 
@@ -495,17 +499,33 @@ angular.module('adminNg.controllers')
             $scope.checkingConflicts = false;
         };
 
+        this.checkValidity = function () {
+            // check if start is in the past
+            if (SchedulingHelperService.alreadyEnded($scope.source.start, $scope.source.duration)) {
+                me.inThePastNotification = Notifications.add('error', 'CONFLICT_IN_THE_PAST',
+                    SCHEDULING_CONTEXT, -1);
+                $scope.checkingConflicts = false;
+                return false;
+            }
+
+            return true;
+        };
+
         $scope.checkConflicts = function () {
             return new Promise(function(resolve, reject) {
                 $scope.checkingConflicts = true;
                 if (me.readyToPollConflicts()) {
-                    ConflictCheckResource.check($scope.source, me.noConflictsDetected, me.conflictsDetected)
-                        .$promise.then(function() {
-                            resolve();
-                        })
-                        .catch(function(err) {
-                            reject();
-                        });
+                    if (!me.checkValidity()) {
+                      resolve();
+                    } else {
+                        ConflictCheckResource.check($scope.source, me.noConflictsDetected, me.conflictsDetected)
+                            .$promise.then(function() {
+                                resolve();
+                            })
+                            .catch(function(err) {
+                                reject();
+                            });
+                    }
                 } else {
                    $scope.checkingConflicts = false;
                    resolve();
@@ -515,6 +535,10 @@ angular.module('adminNg.controllers')
 
         $scope.saveScheduling = function () {
             if (me.readyToPollConflicts()) {
+                if (!me.checkValidity()) {
+                    return;
+                }
+
                 ConflictCheckResource.check($scope.source, function () {
                     me.clearConflicts();
 
@@ -541,7 +565,16 @@ angular.module('adminNg.controllers')
         $scope.onTemporalValueChange = function(type) {
             SchedulingHelperService.applyTemporalValueChange($scope.source, type, true);
             $scope.saveScheduling();
-        }
+        };
+
+
+        $scope.hasCurrentAgentAccess = function() {
+            return SchedulingHelperService.hasAgentAccess($scope.source.agentId);
+        };
+
+        $scope.currentAgentOrAccess = function(agent, index, array) {
+            return agent.id === $scope.source.agentId || SchedulingHelperService.hasAgentAccess(agent.id);
+        };
 
         /**
          * End Scheduling related resources

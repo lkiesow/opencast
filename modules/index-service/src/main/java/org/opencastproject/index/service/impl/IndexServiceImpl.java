@@ -99,6 +99,7 @@ import org.opencastproject.security.api.UnauthorizedException;
 import org.opencastproject.security.api.User;
 import org.opencastproject.security.api.UserDirectoryService;
 import org.opencastproject.security.util.SecurityContext;
+import org.opencastproject.security.util.SecurityUtil;
 import org.opencastproject.series.api.SeriesException;
 import org.opencastproject.series.api.SeriesService;
 import org.opencastproject.userdirectory.JpaGroupRoleProvider;
@@ -146,6 +147,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -482,6 +484,16 @@ public class IndexServiceImpl implements IndexService {
               String metadata = Streams.asString(item.openStream());
               try {
                 metadataJson = (JSONObject) new JSONParser().parse(metadata);
+                // in case of scheduling: Check if user has access to the CA
+                if (metadataJson.containsKey("source")) {
+                  final JSONObject sourceJson = (JSONObject) metadataJson.get("source");
+                  if (sourceJson.containsKey("metadata")) {
+                    final JSONObject sourceMetadataJson = (JSONObject) sourceJson.get("metadata");
+                    if (sourceMetadataJson.containsKey("device")) {
+                      SecurityUtil.checkAgentAccess(securityService, (String) sourceMetadataJson.get("device"));
+                    }
+                  }
+                }
               } catch (Exception e) {
                 logger.warn("Unable to parse metadata {}", metadata);
                 throw new IllegalArgumentException("Unable to parse metadata");
@@ -818,6 +830,7 @@ public class IndexServiceImpl implements IndexService {
     MetadataCollection eventMetadata = eventHttpServletRequest.getMetadataList().get()
             .getMetadataByAdapter(eventCatalogUIAdapter).get();
 
+    Date currentStartDate = null;
     JSONObject sourceMetadata = (JSONObject) eventHttpServletRequest.getSource().get().get("metadata");
     if (sourceMetadata != null
             && (type.equals(SourceType.SCHEDULE_SINGLE) || type.equals(SourceType.SCHEDULE_MULTIPLE))) {
@@ -828,13 +841,20 @@ public class IndexServiceImpl implements IndexService {
         logger.warn("Unable to parse device {}", sourceMetadata.get("device"));
         throw new IllegalArgumentException("Unable to parse device");
       }
+      if (StringUtils.isNotEmpty((String) sourceMetadata.get("start"))) {
+        currentStartDate = EncodingSchemeUtils.decodeDate((String) sourceMetadata.get("start"));
+      }
     }
 
-    Date currentStartDate = null;
-    MetadataField<?> starttime = eventMetadata.getOutputFields().get(DublinCore.PROPERTY_TEMPORAL.getLocalName());
-    if (starttime != null && starttime.isUpdated() && starttime.getValue().isSome()) {
-      DCMIPeriod period = EncodingSchemeUtils.decodeMandatoryPeriod((DublinCoreValue)starttime.getValue().get());
-      currentStartDate = period.getStart();
+    MetadataField<?> startDate = eventMetadata.getOutputFields().get("startDate");
+    if (startDate != null && startDate.isUpdated() && startDate.getValue().isSome()) {
+      SimpleDateFormat sdf = MetadataField.getSimpleDateFormatter(startDate.getPattern().get());
+      currentStartDate = sdf.parse((String) startDate.getValue().get());
+    } else if (currentStartDate != null) {
+      eventMetadata.removeField(startDate);
+      MetadataField<String> newStartDate = MetadataUtils.copyMetadataField(startDate);
+      newStartDate.setValue(EncodingSchemeUtils.encodeDate(currentStartDate, Precision.Fraction).getValue());
+      eventMetadata.addField(newStartDate);
     }
 
     MetadataField<?> created = eventMetadata.getOutputFields().get(DublinCore.PROPERTY_CREATED.getLocalName());
