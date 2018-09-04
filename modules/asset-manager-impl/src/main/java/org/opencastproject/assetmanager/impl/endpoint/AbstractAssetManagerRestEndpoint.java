@@ -286,6 +286,42 @@ public abstract class AbstractAssetManagerRestEndpoint {
     }
   }
 
+  @GET
+  @Produces(MediaType.APPLICATION_JSON)
+  @Path("{mediaPackageID}/properties.json")
+  @RestQuery(name = "getProperties",
+          description = "Get stored properties from the last snapshot of an episode.",
+          returnDescription = "Properties as JSON",
+          pathParameters = {
+                  @RestParameter(
+                          name = "mediaPackageID",
+                          description = "the media package ID",
+                          isRequired = true,
+                          type = STRING)
+          },
+          reponses = {
+                  @RestResponse(responseCode = SC_OK, description = "Media package returned"),
+                  @RestResponse(responseCode = SC_NOT_FOUND, description = "Not found"),
+                  @RestResponse(responseCode = SC_FORBIDDEN, description = "Not allowed to read media package."),
+                  @RestResponse(responseCode = SC_INTERNAL_SERVER_ERROR, description = "There has been an internal error.")
+          })
+  public Response getProperties(@PathParam("mediaPackageID") final String mediaPackageId) {
+    try {
+      final AQueryBuilder q = getAssetManager().createQuery();
+      final AResult r = q.select(q.snapshot())
+              .where(q.mediaPackageId(mediaPackageId).and(q.version().isLatest()))
+              .run();
+      if (r.getSize() == 1) {
+        return ok(r.getRecords().head2().getSnapshot().get().getMediaPackage());
+      } else if (r.getSize() == 0) {
+        return notFound();
+      }
+      return serverError();
+    } catch (Exception e) {
+      return handleException(e);
+    }
+  }
+
   /** Unify exception handling. */
   public static Response handleException(Exception e) {
     logger.debug("Error calling REST method", e);
