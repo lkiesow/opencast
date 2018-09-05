@@ -37,9 +37,11 @@ import static org.opencastproject.util.doc.rest.RestParameter.Type.STRING;
 
 import org.opencastproject.assetmanager.api.Asset;
 import org.opencastproject.assetmanager.api.AssetManager;
+import org.opencastproject.assetmanager.api.Property;
 import org.opencastproject.assetmanager.api.Version;
 import org.opencastproject.assetmanager.api.query.AQueryBuilder;
 import org.opencastproject.assetmanager.api.query.AResult;
+import org.opencastproject.assetmanager.api.query.ASelectQuery;
 import org.opencastproject.mediapackage.MediaPackageImpl;
 import org.opencastproject.security.api.UnauthorizedException;
 import org.opencastproject.util.MimeTypeUtil;
@@ -50,9 +52,14 @@ import org.opencastproject.util.doc.rest.RestQuery;
 import org.opencastproject.util.doc.rest.RestResponse;
 import org.opencastproject.util.doc.rest.RestService;
 
+import com.google.gson.Gson;
+
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.ws.rs.DELETE;
 import javax.ws.rs.FormParam;
@@ -81,7 +88,10 @@ import javax.ws.rs.core.Response;
     },
     abstractText = "This service indexes and queries available (distributed) episodes.")
 public abstract class AbstractAssetManagerRestEndpoint {
+
   protected static final Logger logger = LoggerFactory.getLogger(AbstractAssetManagerRestEndpoint.class);
+
+  private final Gson gson = new Gson();
 
   public abstract AssetManager getAssetManager();
 
@@ -298,6 +308,12 @@ public abstract class AbstractAssetManagerRestEndpoint {
                           description = "the media package ID",
                           isRequired = true,
                           type = STRING)
+          }, restParameters = {
+                  @RestParameter(
+                          name = "namespace",
+                          description = "property namespace",
+                          isRequired = false,
+                          type = STRING)
           },
           reponses = {
                   @RestResponse(responseCode = SC_OK, description = "Media package returned"),
@@ -305,18 +321,40 @@ public abstract class AbstractAssetManagerRestEndpoint {
                   @RestResponse(responseCode = SC_FORBIDDEN, description = "Not allowed to read media package."),
                   @RestResponse(responseCode = SC_INTERNAL_SERVER_ERROR, description = "There has been an internal error.")
           })
-  public Response getProperties(@PathParam("mediaPackageID") final String mediaPackageId) {
+  public Response getProperties(@PathParam("mediaPackageID") final String mediaPackageId,
+          @PathParam("namespace") final String namespace) {
     try {
-      final AQueryBuilder q = getAssetManager().createQuery();
-      final AResult r = q.select(q.snapshot())
-              .where(q.mediaPackageId(mediaPackageId).and(q.version().isLatest()))
-              .run();
-      if (r.getSize() == 1) {
-        return ok(r.getRecords().head2().getSnapshot().get().getMediaPackage());
-      } else if (r.getSize() == 0) {
-        return notFound();
+      final AQueryBuilder queryBuilder = getAssetManager().createQuery();
+      final ASelectQuery query;
+      if (StringUtils.isEmpty(namespace)) {
+        query = queryBuilder.select(queryBuilder.properties());
+      } else {
+        query = queryBuilder.select(queryBuilder.propertiesOf(namespace));
       }
-      return serverError();
+      final AResult result = query.where(queryBuilder.mediaPackageId(mediaPackageId)).run();
+
+      // we expect exactly one result when specifying a media package id
+      if (result.getSize() < 1) {
+        return notFound();
+      } else if (result.getSize() > 1) {
+        return serverError();
+      }
+
+      // handle no properties
+      if (result.getRecords().head().isNone()) {
+        logger.debug("No properties for media package {} (namespace: '{}')", mediaPackageId, namespace);
+        return ok("{}");
+      }
+
+      // build map from properties
+      Map<String, String[]> properties = new HashMap<>();
+      for (final Property property : result.getRecords().head().get().getProperties()) {
+        final String key = property.getId().getNamespace() + "." + property.getId().getName();
+        final String type = property.getValue().getType().getClass().getSimpleName();
+        final String value = property.getValue().get().toString();
+        properties.put(key, new String[] {type, value});
+      }
+      return ok(gson.toJson(properties));
     } catch (Exception e) {
       return handleException(e);
     }
