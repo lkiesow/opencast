@@ -100,6 +100,11 @@
     </dependency>
     <dependency>
       <groupId>org.opencastproject</groupId>
+      <artifactId>opencast-distribution-workflowoperation</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.opencastproject</groupId>
       <artifactId>opencast-event-comment</artifactId>
       <version>${project.version}</version>
       <scope>provided</scope>
@@ -157,6 +162,11 @@
     <dependency>
       <groupId>org.opencastproject</groupId>
       <artifactId>opencast-common-jpa-impl</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.opencastproject</groupId>
+      <artifactId>opencast-composer-service-api</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
@@ -300,20 +310,6 @@
             <artifactId>exec-maven-plugin</artifactId>
             <executions>
               <execution>
-                <id>npm clean</id>
-                <goals>
-                  <goal>exec</goal>
-                </goals>
-                <phase>pre-clean</phase>
-                <configuration>
-                  <executable>npm</executable>
-                  <arguments>
-                    <argument>cache</argument>
-                    <argument>verify</argument>
-                  </arguments>
-                </configuration>
-              </execution>
-              <execution>
                 <id>npm install</id>
                 <goals>
                   <goal>exec</goal>
@@ -371,15 +367,6 @@
                 </configuration>
               </execution>
               <execution>
-                <id>npm clean</id>
-                <goals>
-                  <goal>npm</goal>
-                </goals>
-                <configuration>
-                  <arguments>cache verify</arguments>
-                </configuration>
-              </execution>
-              <execution>
                 <id>npm install</id>
                 <goals>
                   <goal>npm</goal>
@@ -406,8 +393,29 @@
   <build>
     <plugins>
       <plugin>
-        <groupId>de.empulse.eclipselink</groupId>
-        <artifactId>staticweave-maven-plugin</artifactId>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-resources-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>copy-grunt</id>
+            <phase>compile</phase>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>${basedir}/target/classes/webapp/</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>./target/grunt/webapp</directory>
+                  <includes>
+                    <include>**</include>
+                  </includes>
+                  <filtering>false</filtering>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>org.apache.felix</groupId>
@@ -417,8 +425,6 @@
           <instructions>
             <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
             <Build-Number>${buildNumber}</Build-Number>
-            <Private-Package>webapp.*</Private-Package>
-            <Include-Resource>{maven-resources}, target/grunt</Include-Resource>
             <Http-Alias>/admin-ng</Http-Alias>
             <Http-Classpath>/webapp</Http-Classpath>
             <Http-Welcome>index.html</Http-Welcome>
@@ -430,6 +436,7 @@
               *
             </Import-Package>
             <Private-Package>
+              webapp.*,
               org.opencastproject.adminui.util,
               org.opencastproject.adminui.exception
             </Private-Package>

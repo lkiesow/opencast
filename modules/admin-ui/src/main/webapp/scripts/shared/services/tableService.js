@@ -142,7 +142,11 @@ angular.module('adminNg.services')
             var p = me.pagination, oldPageSize = p.limit;
 
             p.limit = pageSize;
-            p.offset = 0;
+            if (!p.resume) {
+                p.offset = 0;
+            }
+            p.resume = false;
+            Storage.put('pagination', me.resource, 'resume', p.resume);
 
             me.updatePagination();
 
@@ -190,6 +194,10 @@ angular.module('adminNg.services')
 
                 if (angular.isDefined(pagination.offset)) {
                     me.pagination.offset = pagination.offset;
+                }
+
+                if (angular.isDefined(pagination.resume)) {
+                    me.pagination.resume = pagination.resume;
                 }
             }
 
@@ -261,6 +269,11 @@ angular.module('adminNg.services')
          * Retrieve data from the defined API with the given filter values.
          */
         this.fetch = function (reset) {
+
+            if(me.lastRequest && !me.lastRequest.$resolved) {
+                me.lastRequest.$cancelRequest();
+            }
+
             if (angular.isUndefined(me.apiService)) {
                 return;
             }
@@ -306,39 +319,41 @@ angular.module('adminNg.services')
             query.offset = me.pagination.offset * me.pagination.limit;
 
             (function(resource){
-              me.apiService.query(query).$promise.then(function (data) {
-                if(resource != me.resource) {
-                  return;
-                }
 
-                var selected = [];
-                angular.forEach(me.rows, function (row) {
-                    if (row.selected) {
-                        selected.push(row.id);
+                me.lastRequest = me.apiService.query(query);
+                me.lastRequest.$promise.then(function (data) {
+                    if(resource != me.resource) {
+                      return;
                     }
-                });
-                angular.forEach(data.rows, function (row) {
-                    if (selected.indexOf(row.id) > -1) {
-                        row.selected = true;
-                    }
-                });
-                if (angular.isDefined(me.postProcessRow)) {
-                    angular.forEach(data.rows, function(row) {
-                        me.postProcessRow(row);
+
+                    var selected = [];
+                    angular.forEach(me.rows, function (row) {
+                        if (row.selected) {
+                            selected.push(row.id);
+                        }
                     });
-                }
-                me.rows = data.rows;
-                me.loading = false;
-                me.pagination.totalItems = data.total;
+                    angular.forEach(data.rows, function (row) {
+                        if (selected.indexOf(row.id) > -1) {
+                            row.selected = true;
+                        }
+                    });
+                    if (angular.isDefined(me.postProcessRow)) {
+                        angular.forEach(data.rows, function(row) {
+                            me.postProcessRow(row);
+                        });
+                    }
+                    me.rows = data.rows;
+                    me.loading = false;
+                    me.pagination.totalItems = data.total;
 
-                // If the current offset is not 0 and we have no result, we move to the first page
-                if (me.pagination.offset !== 0 && data.count === 0) {
-                    me.goToPage(0);
-                }
+                    // If the current offset is not 0 and we have no result, we move to the first page
+                    if (me.pagination.offset !== 0 && data.count === 0) {
+                        me.goToPage(0);
+                    }
 
-                me.updatePagination();
-                me.updateAllSelected();
-              });
+                    me.updatePagination();
+                    me.updateAllSelected();
+                });
             })(me.resource);
 
             if (me.refreshScheduler.on) {

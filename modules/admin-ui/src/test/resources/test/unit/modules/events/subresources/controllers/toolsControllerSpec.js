@@ -1,5 +1,5 @@
 describe('Tools Edit controller', function () {
-    var $scope, $controller, $parentScope, $location, $window, $httpBackend, Notifications;
+    var $scope, $controller, $parentScope, $location, $httpBackend, Notifications;
 
     beforeEach(module('adminNg'));
     beforeEach(module(function ($provide) {
@@ -15,10 +15,6 @@ describe('Tools Edit controller', function () {
                 }
             }
         });
-
-        $window = { location: { reload: jasmine.createSpy() } };
-
-        $provide.value('$window', $window);
     }));
 
     beforeEach(inject(function ($rootScope, _$controller_, _$location_, _$httpBackend_, _Notifications_) {
@@ -30,13 +26,13 @@ describe('Tools Edit controller', function () {
         $parentScope = $rootScope.$new();
         $scope = $parentScope.$new();
 
-        $controller('ToolsCtrl', {$scope: $scope});
+        $controller('ToolsCtrl', { $scope: $scope });
     }));
 
     beforeEach(function () {
         jasmine.getJSONFixtures().fixturesPath = 'base/app/GET';
         $httpBackend.whenGET('/admin-ng/tools/5681/editor.json')
-            .respond(JSON.stringify(getJSONFixture('admin-ng/tools/40518/editor.json')));
+            .respond(JSON.stringify(getJSONFixture('admin-ng/tools/c3a4f68d-14d4-47e2-8981-8eb2fb300d3a/editor.json')));
     });
 
     it('instantiates', function () {

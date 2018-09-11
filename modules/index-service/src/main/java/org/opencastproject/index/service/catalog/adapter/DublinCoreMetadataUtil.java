@@ -102,31 +102,25 @@ public final class DublinCoreMetadataUtil {
   }
 
   /**
-   * Set the value of an iterable string, comma separated
+   * Set the value of an iterable string (each element as an separate entry)
    *
-   * @param dc
-   *          The dublin core catalog to add the iterable string value to (or remove it if empty)
-   * @param field
-   *          The {@link MetadataField} with the value to update.
-   * @param ename
-   *          The {@link EName} of the property in the {@link DublinCoreCatalog} to update.
+   * @param dc    The dublin core catalog to add the iterable string values to (or remove it if empty)
+   * @param field The {@link MetadataField} with the values to update.
+   * @param ename The {@link EName} of the property in the {@link DublinCoreCatalog} to update.
    */
   private static void setIterableString(DublinCoreCatalog dc, MetadataField<?> field, final EName ename) {
     if (field.getValue().isSome()) {
-      String valueString;
+      dc.remove(ename);
       if (field.getValue().get() instanceof String) {
-        valueString = (String) field.getValue().get();
+        String valueString = (String) field.getValue().get();
+        dc.set(ename, valueString);
       } else {
         @SuppressWarnings("unchecked")
         Iterable<String> valueIterable = (Iterable<String>) field.getValue().get();
-        valueString = StringUtils.join(valueIterable.iterator(), ",");
-      }
-
-      if (StringUtils.isBlank(StringUtils.trimToEmpty(valueString))) {
-        // The value of the iterative string is empty so we will remove it.
-        dc.remove(ename);
-      } else {
-        dc.set(ename, valueString);
+        for (String valueString : valueIterable) {
+          if (StringUtils.isNotBlank(valueString))
+            dc.add(ename, valueString);
+        }
       }
     }
   }

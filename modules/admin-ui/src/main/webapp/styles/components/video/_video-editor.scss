@@ -32,9 +32,9 @@ $track-label-width: (100% - $right-margin) - $track-options-width;
 
 // Colour
 $segment-normal: #71b1f3;
-$segment-selected: darken($segment-normal, 18%);
+$segment-selected: saturate(darken($segment-normal, 25%), 5%);
 $segment-deleted: #f35952;
-$segment-deleted-selected: darken($segment-deleted, 18%);
+$segment-deleted-selected: saturate(darken($segment-deleted, 25%), 5%);
 
 .video-timeline {
     background: #fff;
@@ -759,4 +759,61 @@ $segment-deleted-selected: darken($segment-deleted, 18%);
 .segments-area {
     border-radius: 4px;
     border: $thin-border-stroke $main-border-color;
+}
+
+// Thumbnail styles
+// ----------------------------------------
+.editor-thumbnail {
+
+  .content-wrapper  {
+    display: flex;
+  }
+
+  form {
+    display: inline;
+    margin-left: 6px;
+  }
+
+  .controls {
+    position: relative;
+    padding-right: 20px;
+    margin: 20px 0 20px 0;
+    color: $medium-prim-color;
+    font-size: 12px;
+
+    .description {
+      line-height: 20px;
+      margin-bottom: 20px;
+    }
+  }
+
+  .thumbnail-canvas {
+    margin: 20px;
+    width: 320px;
+    height: 180px;
+    min-width: 320px;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-origin: border-box;
+    border: $thin-border-stroke $main-border-color;
+    text-align: center;
+  }
+
+  .thumbnail-canvas>div {
+    background-color: rgba( $black, .4 );
+    width: 320px;
+    height: 180px;
+    display: table-cell;
+    vertical-align: middle;
+    color: $off-white;
+  }
+
+  .spinner, .error {
+    font-size: 3em;
+  }
+
+  .hidden {
+    display: none;
+  }
 }

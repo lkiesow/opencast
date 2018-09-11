@@ -42,7 +42,7 @@ install:
      tesseract-ocr-deu
      unzip
   - mkdir -p ~/.m2 ~/bin
-  - wget -q https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-64bit-static.tar.xz
+  - wget -q https://pkg.opencast.org/bin/ffmpeg-release-64bit-static.tar.xz
   - tar xf ffmpeg-release-64bit-static.tar.xz
   - mv ffmpeg-*/ff* ~/bin/
   - >
@@ -58,7 +58,8 @@ jobs:
     # - Ensure no tabs are used
     # - Ensure there are no trailing spaces
     # - Run markdownlint
-    - stage: test documentation
+    - stage: quick tests
+      env: name=documentation
       sudo: false
       language: python
       python: "3.6"
@@ -75,6 +76,32 @@ jobs:
         - (cd docs/guides/user && mkdocs build)
         - (cd docs/guides && grunt)
 
+    # Test database scripts with MariaDB 10.x
+    - stage: quick tests
+      env: name=mariadb10
+      sudo: false
+      addons:
+        mariadb: '10.3'
+      install:
+        - echo "select version()" | mysql -u root
+        - echo 'create database opencast;' | mysql -u root
+      script:
+        - mysql -u root opencast < docs/scripts/ddl/mysql5.sql
+        - sh docs/upgrade/.test.sh
+
+    # Test database scripts with MySQL
+    - stage: quick tests
+      env: name=mysql
+      sudo: false
+      services:
+        - mysql
+      install:
+        - echo "select version()" | mysql -u root
+        - echo 'create database opencast;' | mysql -u root
+      script:
+        - mysql -u root opencast < docs/scripts/ddl/mysql5.sql
+        - ./docs/upgrade/.test.sh
+
     # Make a build excluding the assembly steps
     - stage: build
       env: name=build
@@ -82,13 +109,20 @@ jobs:
         - mvn clean install -Pnone
 
     # Make a simple build to generate all Opencast artifacts while excluding as many checks as possible since we do a
-    # proper test in parallel anyway. Then run `mvn site` to generate Javadocs.
+    # proper test in parallel anyway. Then run `mvn site` to generate Javadocs. We exclude checkstyle and tests since
+    # they are run separately. For now, we also exclude pmd and cpd since we are not doing anything with their report.
     - stage: build
       env: name=site
       before_script:
-        - mvn install -DskipTests=true -Dcheckstyle.skip=true -Pnone
+        - mvn install -DskipTests=true -Dcheckstyle.skip=true -P "none,!frontend"
       script:
-        - mvn site -Pnone -Dcheckstyle.skip=true
+        - >
+           mvn site -Daggregate=true site:stage "-DstagingDirectory=$(pwd)/site" \
+             -P "none,!frontend" \
+             -DskipTests=true \
+             -Dcheckstyle.skip=true \
+             -Dpmd.skip=true \
+             -Dcpd.skip=true
 
     # Deploy translation keys to Crowdin if we are on develop or one of the release branches
     - stage: deployment

@@ -22,7 +22,6 @@
 package org.opencastproject.ingest.impl;
 
 import static org.apache.commons.lang3.StringUtils.isBlank;
-import static org.opencastproject.security.api.SecurityConstants.GLOBAL_CAPTURE_AGENT_ROLE;
 import static org.opencastproject.util.JobUtil.waitForJob;
 import static org.opencastproject.util.data.Monadics.mlist;
 import static org.opencastproject.util.data.Option.none;
@@ -59,10 +58,8 @@ import org.opencastproject.scheduler.api.SchedulerException;
 import org.opencastproject.scheduler.api.SchedulerService;
 import org.opencastproject.security.api.AccessControlEntry;
 import org.opencastproject.security.api.AccessControlList;
-import org.opencastproject.security.api.AclScope;
 import org.opencastproject.security.api.AuthorizationService;
 import org.opencastproject.security.api.OrganizationDirectoryService;
-import org.opencastproject.security.api.Permissions;
 import org.opencastproject.security.api.SecurityService;
 import org.opencastproject.security.api.TrustedHttpClient;
 import org.opencastproject.security.api.UnauthorizedException;
@@ -185,10 +182,10 @@ public class IngestServiceImpl extends AbstractJobProducer implements IngestServ
   public static final String INGEST_CATALOG_FROM_URI = "uri-catalog";
 
   /** The approximate load placed on the system by ingesting a file */
-  public static final float DEFAULT_INGEST_FILE_JOB_LOAD = 1.0f;
+  public static final float DEFAULT_INGEST_FILE_JOB_LOAD = 0.2f;
 
   /** The approximate load placed on the system by ingesting a zip file */
-  public static final float DEFAULT_INGEST_ZIP_JOB_LOAD = 1.0f;
+  public static final float DEFAULT_INGEST_ZIP_JOB_LOAD = 0.2f;
 
   /** The key to look for in the service configuration file to override the {@link DEFAULT_INGEST_FILE_JOB_LOAD} */
   public static final String FILE_JOB_LOAD_KEY = "job.load.ingest.file";
@@ -1135,9 +1132,6 @@ public class IngestServiceImpl extends AbstractJobProducer implements IngestServ
       // Merge scheduled mediapackage with ingested
       mp = mergeScheduledMediaPackage(mp);
 
-      // Set public ACL if empty
-      setPublicAclIfEmpty(mp);
-
       ingestStatistics.successful();
       if (workflowDef != null) {
         logger.info("Starting new workflow with ingested mediapackage '{}' using the specified template '{}'",
@@ -1277,17 +1271,6 @@ public class IngestServiceImpl extends AbstractJobProducer implements IngestServ
     }
   }
 
-  private void setPublicAclIfEmpty(MediaPackage mp) {
-    AccessControlList activeAcl = authorizationService.getActiveAcl(mp).getA();
-    if (activeAcl.getEntries().size() == 0) {
-      String anonymousRole = securityService.getOrganization().getAnonymousRole();
-      activeAcl = new AccessControlList(
-              new AccessControlEntry(anonymousRole, Permissions.Action.READ.toString(), true),
-              new AccessControlEntry(GLOBAL_CAPTURE_AGENT_ROLE, Permissions.Action.WRITE.toString(), true));
-      authorizationService.setAcl(mp, AclScope.Series, activeAcl);
-    }
-  }
-
   private Map<String, String> mergeWorkflowConfiguration(Map<String, String> properties, String mediaPackageId) {
     if (isBlank(mediaPackageId) || schedulerService == null)
       return properties;
@@ -1337,18 +1320,19 @@ public class IngestServiceImpl extends AbstractJobProducer implements IngestServ
       mergeMediaPackageMetadata(mp, scheduledMp);
       return mp;
     } catch (NotFoundException e) {
-      logger.debug("No scheduler mediapackage found with id {}, skip merging", mp.getIdentifier().compact());
+      logger.debug("No scheduler mediapackage found with id {}, skip merging", mp.getIdentifier());
       return mp;
     } catch (Exception e) {
-      logger.error("Unable to get event mediapackage from scheduler event {}", mp.getIdentifier().compact(), e);
-      throw new IngestException(e);
+      throw new IngestException(String.format("Unable to get event media package from scheduler event %s",
+              mp.getIdentifier()), e);
     }
   }
 
   private void mergeMediaPackageElements(MediaPackage mp, MediaPackage scheduledMp) {
     for (MediaPackageElement element : scheduledMp.getElements()) {
       // Asset manager media package may have a publication element (for live) if retract live has not run yet
-      if (!MediaPackageElement.Type.Publication.equals(element.getElementType())
+      if (element.getFlavor() != null
+              && !MediaPackageElement.Type.Publication.equals(element.getElementType())
               && mp.getElementsByFlavor(element.getFlavor()).length > 0) {
         logger.info("Ignore scheduled element '{}', there is already an ingested element with flavor '{}'", element,
                 element.getFlavor());
@@ -1809,29 +1793,4 @@ public class IngestServiceImpl extends AbstractJobProducer implements IngestServ
       }
     };
   }
-
-  /**
-   * Private utility to update and optionally fail job, called from a finally block.
-   *
-   * @param job
-   *          to be updated, may be null
-   * @throws IngestException
-   *           when unable to update ingest job
-   */
-  private void finallyUpdateJob(Job job) throws IngestException {
-    if (job == null) {
-      logger.debug("Not updating null job.");
-      return;
-    }
-
-    if (!Job.Status.FINISHED.equals(job.getStatus()))
-      job.setStatus(Job.Status.FAILED);
-
-    try {
-      serviceRegistry.updateJob(job);
-    } catch (Exception e) {
-      throw new IngestException("Unable to update ingest job", e);
-    }
-  }
-
 }

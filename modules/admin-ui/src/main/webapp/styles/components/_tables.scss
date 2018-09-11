@@ -196,6 +196,10 @@
         }
     }
 
+    td.highlighted-cell {
+        font-weight: bold;
+    }
+
     td {
         padding: $col-padding;
         color: $medium-prim-color;
@@ -212,13 +216,11 @@
 
             &.remove {
                 @include build-icon(auto, auto, remove-icon, 17px, 17px);
-                //@include fa-icon($fa-var-play-circle-o, before, block, 0, 0, inherit, 22px, normal, inherit);
             }
 
             &.play {
                 color: $color-silver;
                 @include build-icon(auto, auto, play-icon, 17px, 17px);
-                //@include fa-icon($fa-var-play-circle-o, before, block, 0, 0, inherit, 22px, normal, inherit);
 
                 &.on {
                    color: $primary-color-green;
@@ -245,8 +247,29 @@
                 margin-right: 15px;
             }
 
-            &.preview {
-                @include build-icon(auto, auto, preview-icon, 18px, 13px);
+            &.comments {
+                @include fa-icon($fa-var-comment-o, before, block, -3px 0 0 0, 0, inherit, 20px, normal,
+                                 inherit);
+            }
+
+            &.comments-open {
+                @include fa-icon($fa-var-comment, before, block, -3px 0 0 0, 0, inherit, 20px, normal, inherit);
+            }
+
+            &.cut {
+                @include fa-icon($fa-var-scissors, before, inline-block, 2px 0 0 0, 0, inherit, 18px, normal, inherit);
+
+                .badge {
+                  position: relative;
+                  margin-right: -9px;
+                  left: -8px;
+                  bottom: 8px;
+                  width: 6px;
+                  height: 6px;
+                  display: inline-block;
+                  border-radius:100%;
+                  background-color: $red;
+                }
             }
 
             &.edit {
@@ -280,6 +303,10 @@
             }
         }
 
+        &.nowrap {
+            white-space: nowrap;
+        }
+
         // For action row that only has one button
         &.single-btn > a {
             margin-left: 10px;
@@ -300,23 +327,23 @@
             vertical-align: top;
         }
 
-        span[data-status=offline]:before {
+        span[data-status="AGENTS.STATUS.OFFLINE"]:before {
             background: black;
         }
 
-        span[data-status=idle]:before {
+        span[data-status="AGENTS.STATUS.IDLE"]:before {
             background: $green;
         }
 
-        span[data-status="shutting_down"]:before,span[data-status=unknown]:before {
+        span[data-status="AGENTS.STATUS.SHUTTING_DOWN"]:before,span[data-status="AGENTS.STATUS.UNKNOWN"]:before {
             background: $yellow;
         }
 
-        span[data-status="capturing"]:before,span[data-status="uploading"]:before {
+        span[data-status="AGENTS.STATUS.CAPTURING"]:before,span[data-status="AGENTS.STATUS.UPLOADING"]:before {
             background: $l-blue;
         }
 
-        span[data-status="error"]:before {
+        span[data-status="AGENTS.STATUS.ERROR"]:before {
             background: $red;
         }
 

@@ -40,6 +40,7 @@ import org.slf4j.LoggerFactory;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 
@@ -50,9 +51,9 @@ public final class EventUtils {
   public static final Map<String, String> PUBLICATION_CHANNELS = new HashMap<String, String>();
 
   static {
-    PUBLICATION_CHANNELS.put(EngagePublicationChannel.CHANNEL_ID, "EVENTS.EVENTS.DETAILS.GENERAL.ENGAGE");
-    PUBLICATION_CHANNELS.put("youtube", "EVENTS.EVENTS.DETAILS.GENERAL.YOUTUBE");
-    PUBLICATION_CHANNELS.put("engage-live", "EVENTS.EVENTS.DETAILS.GENERAL.ENGAGE_LIVE");
+    PUBLICATION_CHANNELS.put(EngagePublicationChannel.CHANNEL_ID, "EVENTS.EVENTS.DETAILS.PUBLICATIONS.ENGAGE");
+    PUBLICATION_CHANNELS.put("youtube", "EVENTS.EVENTS.DETAILS.PUBLICATIONS.YOUTUBE");
+    PUBLICATION_CHANNELS.put("engage-live", "EVENTS.EVENTS.DETAILS.PUBLICATIONS.ENGAGE_LIVE");
   }
 
   private EventUtils() {
@@ -130,16 +131,16 @@ public final class EventUtils {
     if (metadata.getOutputFields().containsKey(DublinCore.PROPERTY_CREATOR.getLocalName())) {
       MetadataField<?> presenters = metadata.getOutputFields().get(DublinCore.PROPERTY_CREATOR.getLocalName());
       metadata.removeField(presenters);
-      MetadataField<String> newPresenters = MetadataUtils.copyMetadataField(presenters);
-      newPresenters.setValue(StringUtils.join(event.getPresenters(), ", "));
+      MetadataField<List<String>> newPresenters = MetadataUtils.copyMetadataField(presenters);
+      newPresenters.setValue(event.getPresenters());
       metadata.addField(newPresenters);
     }
 
     if (metadata.getOutputFields().containsKey(DublinCore.PROPERTY_CONTRIBUTOR.getLocalName())) {
       MetadataField<?> contributors = metadata.getOutputFields().get(DublinCore.PROPERTY_CONTRIBUTOR.getLocalName());
       metadata.removeField(contributors);
-      MetadataField<String> newContributors = MetadataUtils.copyMetadataField(contributors);
-      newContributors.setValue(StringUtils.join(event.getContributors(), ", "));
+      MetadataField<List<String>> newContributors = MetadataUtils.copyMetadataField(contributors);
+      newContributors.setValue(event.getContributors());
       metadata.addField(newContributors);
     }
 
