@@ -129,6 +129,7 @@
     <module>modules/live-schedule-impl</module>
     <module>modules/logging-workflowoperation</module>
     <module>modules/lti</module>
+    <module>modules/mattermost-notification-workflowoperation</module>
     <module>modules/message-broker-api</module>
     <module>modules/message-broker-impl</module>
     <module>modules/messages</module>
@@ -932,6 +933,21 @@
         <groupId>org.springframework.security</groupId>
         <artifactId>spring-security-ldap</artifactId>
         <version>3.1.4.RELEASE</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.velocity</groupId>
+        <artifactId>velocity</artifactId>
+        <version>1.7</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.santuario</groupId>
+        <artifactId>xmlsec</artifactId>
+        <version>2.1.2</version>
+      </dependency>
+      <dependency>
+        <groupId>org.owasp.esapi</groupId>
+        <artifactId>esapi</artifactId>
+        <version>2.1.0.1</version>
       </dependency>
       <dependency>
         <groupId>org.opensaml</groupId>

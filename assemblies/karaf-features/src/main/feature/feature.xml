@@ -216,6 +216,7 @@
     <bundle start-level="82">mvn:org.opencastproject/opencast-live-schedule-api/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-live-schedule-impl/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-lti/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-mattermost-notification-workflowoperation/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-messages/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-metadata/${project.version}</bundle>
     <bundle start-level="85">mvn:org.opencastproject/opencast-migration/${project.version}</bundle>
@@ -328,6 +329,7 @@
     <bundle start-level="82">mvn:org.opencastproject/opencast-live-schedule-api/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-live-schedule-impl/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-lti/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-mattermost-notification-workflowoperation/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-messages/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-metadata/${project.version}</bundle>
     <bundle start-level="85">mvn:org.opencastproject/opencast-migration/${project.version}</bundle>
@@ -451,6 +453,7 @@
     <bundle start-level="82">mvn:org.opencastproject/opencast-live-schedule-api/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-live-schedule-impl/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-lti/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-mattermost-notification-workflowoperation/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-messages/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-metadata/${project.version}</bundle>
     <bundle start-level="85">mvn:org.opencastproject/opencast-migration/${project.version}</bundle>
@@ -619,6 +622,7 @@
     <bundle start-level="82">mvn:org.opencastproject/opencast-live-schedule-api/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-live-schedule-impl/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-lti/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-mattermost-notification-workflowoperation/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-messages/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-metadata/${project.version}</bundle>
     <bundle start-level="85">mvn:org.opencastproject/opencast-migration/${project.version}</bundle>
@@ -737,7 +741,9 @@
   </feature>
 
   <feature name="opencast-security-cas" version="0.0.0">
-    <bundle start-level="82">mvn:org.apache.xml/com.springsource.org.apache.xml.security/1.4.2</bundle>
+    <bundle start-level="82">mvn:org.apache.velocity/velocity/1.7</bundle>
+    <bundle start-level="82">mvn:org.apache.santuario/xmlsec/2.1.2</bundle>
+    <bundle start-level="82">mvn:org.bouncycastle/bcprov-jdk15on/1.51</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-security-cas-client-wrapper/${project.version}</bundle>
     <bundle start-level="82">mvn:org.springframework.security/spring-security-core/3.1.4.RELEASE</bundle>
     <bundle start-level="82">mvn:org.springframework.security/spring-security-web/3.1.4.RELEASE</bundle>
