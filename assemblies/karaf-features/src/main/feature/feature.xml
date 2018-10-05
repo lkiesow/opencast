@@ -2,7 +2,7 @@
 <features name="opencast-${project.version}" xmlns="http://karaf.apache.org/xmlns/features/v1.3.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://karaf.apache.org/xmlns/features/v1.3.0 http://karaf.apache.org/xmlns/features/v1.3.0">
 
   <feature name="query-dsl" version="${project.version}">
-    <bundle>mvn:com.google.guava/guava/18.0</bundle>
+    <bundle>mvn:com.google.guava/guava/${guava.version}</bundle>
     <bundle>mvn:joda-time/joda-time/2.10</bundle>
     <bundle>mvn:com.mysema.commons/mysema-commons-lang/0.2.4</bundle>
     <bundle>mvn:com.mysema.querydsl/querydsl-core/3.6.5</bundle>
