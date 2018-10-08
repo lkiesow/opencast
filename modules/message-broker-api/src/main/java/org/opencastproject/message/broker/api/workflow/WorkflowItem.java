@@ -22,7 +22,6 @@
 package org.opencastproject.message.broker.api.workflow;
 
 import org.opencastproject.message.broker.api.MessageItem;
-import org.opencastproject.workflow.api.WorkflowDefinition;
 import org.opencastproject.workflow.api.WorkflowInstance;
 import org.opencastproject.workflow.api.WorkflowParser;
 import org.opencastproject.workflow.api.WorkflowParsingException;
@@ -43,7 +42,6 @@ public class WorkflowItem implements MessageItem, Serializable {
   private final String id;
 
   private final String workflowDefinitionId;
-  private final String workflowDefinition;
 
   private final long workflowInstanceId;
   private final String workflowInstance;
@@ -51,17 +49,8 @@ public class WorkflowItem implements MessageItem, Serializable {
   private final Type type;
 
   public enum Type {
-    AddDefinition, DeleteDefinition, UpdateInstance, DeleteInstance
+    DeleteInstance, UpdateInstance
   };
-
-  /**
-   * @param workflowDefinition
-   *          The workflow definition to add.
-   * @return Builds a {@link WorkflowItem} for adding a workflow definition.
-   */
-  public static WorkflowItem addDefinition(WorkflowDefinition workflowDefinition) {
-    return new WorkflowItem(workflowDefinition);
-  }
 
   /**
    * @param workflowInstance
@@ -84,35 +73,6 @@ public class WorkflowItem implements MessageItem, Serializable {
   }
 
   /**
-   * @param workflowDefinitionId
-   *          The unique id of the workflow definition to delete.
-   * @return Builds {@link WorkflowItem} for deleting a workflow definition.
-   */
-  public static WorkflowItem deleteDefinition(String workflowDefinitionId) {
-    return new WorkflowItem(workflowDefinitionId);
-  }
-
-  /**
-   * Constructor to build an add workflow definition {@link WorkflowItem}.
-   *
-   * @param workflowDefinition
-   *          The workflow definition to add.
-   */
-  public WorkflowItem(WorkflowDefinition workflowDefinition) {
-    this.id = workflowDefinition.getId();
-    this.workflowDefinitionId = null;
-    try {
-      this.workflowDefinition = WorkflowParser.toXml(workflowDefinition);
-    } catch (WorkflowParsingException e) {
-      throw new IllegalStateException(
-              String.format("Not able to serialize the given workflow definition %s.", workflowDefinition), e);
-    }
-    this.workflowInstanceId = -1;
-    this.workflowInstance = null;
-    this.type = Type.AddDefinition;
-  }
-
-  /**
    * Constructor to build an update workflow instance {@link WorkflowItem}.
    *
    * @param workflowInstance
@@ -121,7 +81,6 @@ public class WorkflowItem implements MessageItem, Serializable {
   public WorkflowItem(WorkflowInstance workflowInstance) {
     this.id = workflowInstance.getMediaPackage().getIdentifier().compact();
     this.workflowDefinitionId = null;
-    this.workflowDefinition = null;
     this.workflowInstanceId = -1;
     try {
       this.workflowInstance = WorkflowParser.toXml(workflowInstance);
@@ -135,21 +94,6 @@ public class WorkflowItem implements MessageItem, Serializable {
   /**
    * Constructor to build a delete workflow {@link WorkflowItem}.
    *
-   * @param workflowDefinitionId
-   *          The id of the workflow definition to delete.
-   */
-  public WorkflowItem(String workflowDefinitionId) {
-    this.id = workflowDefinitionId;
-    this.workflowDefinitionId = workflowDefinitionId;
-    this.workflowDefinition = null;
-    this.workflowInstanceId = -1;
-    this.workflowInstance = null;
-    this.type = Type.DeleteDefinition;
-  }
-
-  /**
-   * Constructor to build a delete workflow {@link WorkflowItem}.
-   *
    * @param workflowInstanceId
    *          The id of the workflow instance to delete.
    * @param workflowInstance
@@ -158,7 +102,6 @@ public class WorkflowItem implements MessageItem, Serializable {
   public WorkflowItem(long workflowInstanceId, WorkflowInstance workflowInstance) {
     this.id = workflowInstance.getMediaPackage().getIdentifier().compact();
     this.workflowDefinitionId = null;
-    this.workflowDefinition = null;
     this.workflowInstanceId = workflowInstanceId;
     try {
       this.workflowInstance = WorkflowParser.toXml(workflowInstance);
@@ -176,15 +119,6 @@ public class WorkflowItem implements MessageItem, Serializable {
 
   public String getWorkflowDefinitionId() {
     return workflowDefinitionId;
-  }
-
-  public WorkflowDefinition getWorkflowDefinition() {
-    try {
-      return WorkflowParser.parseWorkflowDefinition(workflowDefinition);
-    } catch (WorkflowParsingException e) {
-      throw new IllegalStateException(
-              String.format("Not able to serialize the workflow definition %s.", workflowDefinition), e);
-    }
   }
 
   public long getWorkflowInstanceId() {

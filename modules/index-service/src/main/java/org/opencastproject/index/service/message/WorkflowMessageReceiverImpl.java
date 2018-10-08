@@ -71,6 +71,7 @@ public class WorkflowMessageReceiverImpl extends BaseMessageReceiverImpl<Workflo
 
   @Override
   protected void execute(WorkflowItem workflowItem) {
+    logger.error("received workflow item of type '{}'", workflowItem.getType());
     String organization = getSecurityService().getOrganization().getId();
     User user = getSecurityService().getUser();
     String eventId = null;
@@ -150,12 +151,6 @@ public class WorkflowMessageReceiverImpl extends BaseMessageReceiverImpl<Workflo
           logger.error("Error deleting the Workflow instance entry {} from the search index: {}", eventId,
                   ExceptionUtils.getStackTrace(e));
         }
-        return;
-      case AddDefinition:
-        // TODO: Update the index with it as soon as the definition are part of it
-        return;
-      case DeleteDefinition:
-        // TODO: Update the index with it as soon as the definition are part of it
         return;
       default:
         throw new IllegalArgumentException("Unhandled type of WorkflowItem");

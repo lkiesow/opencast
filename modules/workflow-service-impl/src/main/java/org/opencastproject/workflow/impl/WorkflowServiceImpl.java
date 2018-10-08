@@ -519,8 +519,6 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
       throw new IllegalStateException("A workflow definition with ID '" + id + "' is already registered.");
     }
     workflowDefinitionScanner.putWorkflowDefinition(id, workflow);
-    messageSender.sendObjectMessage(WorkflowItem.WORKFLOW_QUEUE, MessageSender.DestinationType.Queue,
-            WorkflowItem.addDefinition(workflow));
   }
 
   /**
@@ -532,8 +530,6 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
   public void unregisterWorkflowDefinition(String workflowDefinitionId) throws NotFoundException,
           WorkflowDatabaseException {
     boolean deleted = workflowDefinitionScanner.removeWorkflowDefinition(workflowDefinitionId) != null;
-    messageSender.sendObjectMessage(WorkflowItem.WORKFLOW_QUEUE, MessageSender.DestinationType.Queue,
-            WorkflowItem.deleteDefinition(workflowDefinitionId));
     if (deleted)
       throw new NotFoundException("Workflow definition not found");
   }
