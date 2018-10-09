@@ -27,6 +27,8 @@ import org.opencastproject.mediapackage.MediaPackageParser;
 import org.opencastproject.message.broker.api.MessageItem;
 import org.opencastproject.metadata.dublincore.DublinCoreCatalog;
 import org.opencastproject.metadata.dublincore.DublinCoreXmlFormat;
+import org.opencastproject.security.api.AccessControlList;
+import org.opencastproject.security.api.AccessControlParser;
 import org.opencastproject.workflow.api.WorkflowInstance;
 
 import org.xml.sax.SAXException;
@@ -53,6 +55,7 @@ public class WorkflowItem implements MessageItem, Serializable {
   private final String episodeDublincoreCatalog;
   private final String mediaPackage;
   private final String state;
+  private final String accessControlListJSON;
 
   private final Type type;
 
@@ -67,8 +70,9 @@ public class WorkflowItem implements MessageItem, Serializable {
    *          The episode dublincore catalog used for metadata updates
    * @return Builds {@link WorkflowItem} for updating a workflow instance.
    */
-  public static WorkflowItem updateInstance(WorkflowInstance workflowInstance, String dublincoreXml) {
-    return new WorkflowItem(workflowInstance, dublincoreXml);
+  public static WorkflowItem updateInstance(WorkflowInstance workflowInstance, String dublincoreXml,
+          AccessControlList accessControlList) {
+    return new WorkflowItem(workflowInstance, dublincoreXml, accessControlList);
   }
 
   /**
@@ -88,13 +92,14 @@ public class WorkflowItem implements MessageItem, Serializable {
    * @param workflowInstance
    *          The workflow instance to update.
    */
-  public WorkflowItem(WorkflowInstance workflowInstance, String dublincoreXml) {
+  public WorkflowItem(WorkflowInstance workflowInstance, String dublincoreXml, AccessControlList accessControlList) {
     this.id = workflowInstance.getMediaPackage().getIdentifier().compact();
     this.workflowDefinitionId = workflowInstance.getTemplate();
     this.workflowInstanceId = workflowInstance.getId();
     this.episodeDublincoreCatalog = dublincoreXml;
     this.mediaPackage = MediaPackageParser.getAsXml(workflowInstance.getMediaPackage());
     this.state = workflowInstance.getState().toString();
+    this.accessControlListJSON = AccessControlParser.toJsonSilent(accessControlList);
     this.type = Type.UpdateInstance;
   }
 
@@ -114,6 +119,7 @@ public class WorkflowItem implements MessageItem, Serializable {
     this.episodeDublincoreCatalog = null;
     this.mediaPackage = null;
     this.state = null;
+    this.accessControlListJSON = null;
     this.type = Type.DeleteInstance;
   }
 
@@ -158,5 +164,9 @@ public class WorkflowItem implements MessageItem, Serializable {
 
   public WorkflowInstance.WorkflowState getState() {
     return WorkflowInstance.WorkflowState.valueOf(state);
+  }
+
+  public String getAccessControlListJSON() {
+    return accessControlListJSON;
   }
 }

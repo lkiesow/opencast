@@ -1421,11 +1421,13 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
         }
       }
 
+      final AccessControlList accessControlList = authorizationService.getActiveAcl(updatedMediaPackage).getA();
+
       // Update both workflow and workflow job
       try {
         job = serviceRegistry.updateJob(job);
         messageSender.sendObjectMessage(WorkflowItem.WORKFLOW_QUEUE, MessageSender.DestinationType.Queue,
-                WorkflowItem.updateInstance(workflowInstance, dcXml));
+                WorkflowItem.updateInstance(workflowInstance, dcXml, accessControlList));
         index(workflowInstance);
       } catch (ServiceRegistryException e) {
         logger.error(
@@ -2471,6 +2473,7 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
           }
         }
         final String finalDcXml = dcXml;
+        final AccessControlList accessControlList = authorizationService.getActiveAcl(instance.getMediaPackage()).getA();
 
         SecurityUtil.runAs(securityService, organization,
                 SecurityUtil.createSystemUser(componentContext, organization), new Effect0() {
@@ -2478,7 +2481,7 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
                   public void run() {
                     // Send message to update index item
                     messageSender.sendObjectMessage(destinationId, MessageSender.DestinationType.Queue,
-                            WorkflowItem.updateInstance(instance, finalDcXml));
+                            WorkflowItem.updateInstance(instance, finalDcXml, accessControlList));
                   }
                 });
         if ((current % responseInterval == 0) || (current == total)) {

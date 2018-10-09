@@ -34,19 +34,18 @@ import org.opencastproject.mediapackage.MediaPackage;
 import org.opencastproject.message.broker.api.MessageSender;
 import org.opencastproject.message.broker.api.workflow.WorkflowItem;
 import org.opencastproject.metadata.dublincore.DublinCoreCatalog;
-import org.opencastproject.security.api.AccessControlList;
 import org.opencastproject.security.api.AccessControlParser;
-import org.opencastproject.security.api.AclScope;
+import org.opencastproject.security.api.AccessControlParsingException;
 import org.opencastproject.security.api.AuthorizationService;
 import org.opencastproject.security.api.User;
 import org.opencastproject.util.NotFoundException;
 import org.opencastproject.util.data.Option;
-import org.opencastproject.util.data.Tuple;
 import org.opencastproject.workspace.api.Workspace;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.List;
 
 public class WorkflowMessageReceiverImpl extends BaseMessageReceiverImpl<WorkflowItem> {
@@ -116,14 +115,18 @@ public class WorkflowMessageReceiverImpl extends BaseMessageReceiverImpl<Workflo
       event.setWorkflowState(workflowItem.getState());
 
       if (!workflowItem.getState().isTerminated()) {
-        Tuple<AccessControlList, AclScope> activeAcl = authorizationService.getActiveAcl(mp);
+        String aclJSON = workflowItem.getAccessControlListJSON();
         List<ManagedAcl> acls = aclServiceFactory.serviceFor(getSecurityService().getOrganization()).getAcls();
-        Option<ManagedAcl> managedAcl = AccessInformationUtil.matchAcls(acls, activeAcl.getA());
-
-        if (managedAcl.isSome()) {
-          event.setManagedAcl(managedAcl.get().getName());
+        try {
+          Option<ManagedAcl> managedAcl = AccessInformationUtil.matchAcls(acls, AccessControlParser.parseAcl(aclJSON));
+          if (managedAcl.isSome()) {
+            event.setManagedAcl(managedAcl.get().getName());
+          }
+        } catch (IOException | AccessControlParsingException e) {
+          logger.error("Could not parse ACL", e);
         }
-        event.setAccessPolicy(AccessControlParser.toJsonSilent(activeAcl.getA()));
+
+        event.setAccessPolicy(aclJSON);
 
         DublinCoreCatalog dcCatalog = workflowItem.getEpisodeDublincoreCatalog();
         if (dcCatalog != null) {
@@ -146,7 +149,7 @@ public class WorkflowMessageReceiverImpl extends BaseMessageReceiverImpl<Workflo
     // Persist the scheduling event
     try {
       getSearchIndex().addOrUpdate(event);
-      logger.debug("Workflow instance {} updated in the search index", event.getIdentifier());
+      logger.debug("Workflow instance {} updated in the search index", eventId);
     } catch (SearchIndexException e) {
       logger.error("Error retrieving the recording event from the search index", e);
     }
