@@ -21,12 +21,20 @@
 
 package org.opencastproject.message.broker.api.workflow;
 
+import org.opencastproject.mediapackage.MediaPackage;
+import org.opencastproject.mediapackage.MediaPackageException;
+import org.opencastproject.mediapackage.MediaPackageParser;
 import org.opencastproject.message.broker.api.MessageItem;
+import org.opencastproject.metadata.dublincore.DublinCoreCatalog;
+import org.opencastproject.metadata.dublincore.DublinCoreXmlFormat;
 import org.opencastproject.workflow.api.WorkflowInstance;
-import org.opencastproject.workflow.api.WorkflowParser;
-import org.opencastproject.workflow.api.WorkflowParsingException;
 
+import org.xml.sax.SAXException;
+
+import java.io.IOException;
 import java.io.Serializable;
+
+import javax.xml.parsers.ParserConfigurationException;
 
 /**
  * {@link Serializable} class that represents all of the possible messages sent through a WorkflowService queue.
@@ -40,11 +48,11 @@ public class WorkflowItem implements MessageItem, Serializable {
   public static final String WORKFLOW_QUEUE = WORKFLOW_QUEUE_PREFIX + "QUEUE";
 
   private final String id;
-
   private final String workflowDefinitionId;
-
   private final long workflowInstanceId;
-  private final String workflowInstance;
+  private final String episodeDublincoreCatalog;
+  private final String mediaPackage;
+  private final String state;
 
   private final Type type;
 
@@ -55,10 +63,12 @@ public class WorkflowItem implements MessageItem, Serializable {
   /**
    * @param workflowInstance
    *          The workflow instance to update.
+   * @param dublincoreXml
+   *          The episode dublincore catalog used for metadata updates
    * @return Builds {@link WorkflowItem} for updating a workflow instance.
    */
-  public static WorkflowItem updateInstance(WorkflowInstance workflowInstance) {
-    return new WorkflowItem(workflowInstance);
+  public static WorkflowItem updateInstance(WorkflowInstance workflowInstance, String dublincoreXml) {
+    return new WorkflowItem(workflowInstance, dublincoreXml);
   }
 
   /**
@@ -78,16 +88,13 @@ public class WorkflowItem implements MessageItem, Serializable {
    * @param workflowInstance
    *          The workflow instance to update.
    */
-  public WorkflowItem(WorkflowInstance workflowInstance) {
+  public WorkflowItem(WorkflowInstance workflowInstance, String dublincoreXml) {
     this.id = workflowInstance.getMediaPackage().getIdentifier().compact();
-    this.workflowDefinitionId = null;
-    this.workflowInstanceId = -1;
-    try {
-      this.workflowInstance = WorkflowParser.toXml(workflowInstance);
-    } catch (WorkflowParsingException e) {
-      throw new IllegalStateException(
-              String.format("Not able to serialize the given workflow instance %s.", workflowInstance), e);
-    }
+    this.workflowDefinitionId = workflowInstance.getTemplate();
+    this.workflowInstanceId = workflowInstance.getId();
+    this.episodeDublincoreCatalog = dublincoreXml;
+    this.mediaPackage = MediaPackageParser.getAsXml(workflowInstance.getMediaPackage());
+    this.state = workflowInstance.getState().toString();
     this.type = Type.UpdateInstance;
   }
 
@@ -100,15 +107,13 @@ public class WorkflowItem implements MessageItem, Serializable {
    *          The workflow instance to update.
    */
   public WorkflowItem(long workflowInstanceId, WorkflowInstance workflowInstance) {
+    // We just need the media package id and workflow id
     this.id = workflowInstance.getMediaPackage().getIdentifier().compact();
-    this.workflowDefinitionId = null;
     this.workflowInstanceId = workflowInstanceId;
-    try {
-      this.workflowInstance = WorkflowParser.toXml(workflowInstance);
-    } catch (WorkflowParsingException e) {
-      throw new IllegalStateException(
-              String.format("Not able to serialize the given workflow instance %s.", workflowInstance), e);
-    }
+    this.workflowDefinitionId = null;
+    this.episodeDublincoreCatalog = null;
+    this.mediaPackage = null;
+    this.state = null;
     this.type = Type.DeleteInstance;
   }
 
@@ -125,16 +130,33 @@ public class WorkflowItem implements MessageItem, Serializable {
     return workflowInstanceId;
   }
 
-  public WorkflowInstance getWorkflowInstance() {
-    try {
-      return workflowInstance == null ? null : WorkflowParser.parseWorkflowInstance(workflowInstance);
-    } catch (WorkflowParsingException e) {
-      throw new IllegalStateException("Not able to parse the workflow instance.", e);
-    }
-  }
-
   public Type getType() {
     return type;
   }
 
+  public DublinCoreCatalog getEpisodeDublincoreCatalog() {
+    if (episodeDublincoreCatalog == null) {
+      return null;
+    }
+    try {
+      return DublinCoreXmlFormat.read(episodeDublincoreCatalog);
+    } catch (IOException | ParserConfigurationException | SAXException e) {
+      throw new IllegalStateException("Unable to parse dublincore catalog", e);
+    }
+  }
+
+  public MediaPackage getMediaPackage() {
+    if (mediaPackage == null) {
+      return null;
+    }
+    try {
+      return MediaPackageParser.getFromXml(mediaPackage);
+    } catch (MediaPackageException e) {
+      throw new IllegalStateException("Could not parse media package XML", e);
+    }
+  }
+
+  public WorkflowInstance.WorkflowState getState() {
+    return WorkflowInstance.WorkflowState.valueOf(state);
+  }
 }

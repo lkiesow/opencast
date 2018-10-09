@@ -38,8 +38,10 @@ import org.opencastproject.index.IndexProducer;
 import org.opencastproject.job.api.Job;
 import org.opencastproject.job.api.Job.Status;
 import org.opencastproject.job.api.JobProducer;
+import org.opencastproject.mediapackage.Catalog;
 import org.opencastproject.mediapackage.MediaPackage;
 import org.opencastproject.mediapackage.MediaPackageElement;
+import org.opencastproject.mediapackage.MediaPackageElements;
 import org.opencastproject.mediapackage.MediaPackageException;
 import org.opencastproject.mediapackage.MediaPackageParser;
 import org.opencastproject.mediapackage.MediaPackageSupport;
@@ -119,6 +121,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -1407,11 +1411,21 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
         throw new WorkflowDatabaseException(e);
       }
 
+      // get metadata for index update
+      String dcXml = null;
+      for (Catalog catalog: updatedMediaPackage.getCatalogs(MediaPackageElements.EPISODE)) {
+        try (InputStream in = workspace.read(catalog.getURI())) {
+          dcXml = IOUtils.toString(in, StandardCharsets.UTF_8);
+        } catch (Exception e) {
+          logger.warn("Unable to load dublin core catalog for event '{}'", updatedMediaPackage.getIdentifier(), e);
+        }
+      }
+
       // Update both workflow and workflow job
       try {
         job = serviceRegistry.updateJob(job);
         messageSender.sendObjectMessage(WorkflowItem.WORKFLOW_QUEUE, MessageSender.DestinationType.Queue,
-                WorkflowItem.updateInstance(workflowInstance));
+                WorkflowItem.updateInstance(workflowInstance, dcXml));
         index(workflowInstance);
       } catch (ServiceRegistryException e) {
         logger.error(
@@ -2445,13 +2459,26 @@ public class WorkflowServiceImpl extends AbstractIndexProducer implements Workfl
           continue;
         }
         Organization organization = instance.getOrganization();
+
+        // get metadata for index update
+        String dcXml = null;
+        for (Catalog catalog: instance.getMediaPackage().getCatalogs(MediaPackageElements.EPISODE)) {
+          try (InputStream in = workspace.read(catalog.getURI())) {
+            dcXml = IOUtils.toString(in, StandardCharsets.UTF_8);
+          } catch (Exception e) {
+            logger.warn("Unable to load dublin core catalog for event '{}'",
+                    instance.getMediaPackage().getIdentifier(), e);
+          }
+        }
+        final String finalDcXml = dcXml;
+
         SecurityUtil.runAs(securityService, organization,
                 SecurityUtil.createSystemUser(componentContext, organization), new Effect0() {
                   @Override
                   public void run() {
                     // Send message to update index item
                     messageSender.sendObjectMessage(destinationId, MessageSender.DestinationType.Queue,
-                            WorkflowItem.updateInstance(instance));
+                            WorkflowItem.updateInstance(instance, finalDcXml));
                   }
                 });
         if ((current % responseInterval == 0) || (current == total)) {
