@@ -77,6 +77,7 @@ import org.opencastproject.index.service.api.IndexService;
 import org.opencastproject.index.service.api.IndexService.Source;
 import org.opencastproject.index.service.catalog.adapter.MetadataList;
 import org.opencastproject.index.service.catalog.adapter.MetadataList.Locked;
+import org.opencastproject.index.service.catalog.adapter.MetadataUtils;
 import org.opencastproject.index.service.exception.IndexServiceException;
 import org.opencastproject.index.service.impl.index.event.Event;
 import org.opencastproject.index.service.impl.index.event.EventIndexSchema;
@@ -105,6 +106,7 @@ import org.opencastproject.mediapackage.track.VideoStreamImpl;
 import org.opencastproject.metadata.dublincore.DublinCore;
 import org.opencastproject.metadata.dublincore.EventCatalogUIAdapter;
 import org.opencastproject.metadata.dublincore.MetadataCollection;
+import org.opencastproject.metadata.dublincore.MetadataField;
 import org.opencastproject.rest.BulkOperationResult;
 import org.opencastproject.rest.RestConstants;
 import org.opencastproject.scheduler.api.Recording;
@@ -247,6 +249,8 @@ public abstract class AbstractEventEndpoint {
 
   public abstract JobEndpoint getJobService();
 
+  public abstract SeriesEndpoint getSeriesService();
+
   public abstract AclService getAclService();
 
   public abstract EventCommentService getEventCommentService();
@@ -268,6 +272,8 @@ public abstract class AbstractEventEndpoint {
   public abstract UrlSigningService getUrlSigningService();
 
   public abstract Boolean signWithClientIP();
+
+  public abstract Boolean getOnlySeriesWithWriteAccessEventModal();
 
   /** Default server URL */
   protected String serverUrl = "http://localhost:8080";
@@ -1111,8 +1117,19 @@ public abstract class AbstractEventEndpoint {
     for (EventCatalogUIAdapter catalogUIAdapter : catalogUIAdapters) {
       metadataList.add(catalogUIAdapter, catalogUIAdapter.getFields(mediaPackage));
     }
-    metadataList.add(getIndexService().getCommonEventCatalogUIAdapter(),
-            EventUtils.getEventMetadata(optEvent.get(), getIndexService().getCommonEventCatalogUIAdapter()));
+
+    MetadataCollection mc = EventUtils.getEventMetadata(optEvent.get(), getIndexService().getCommonEventCatalogUIAdapter());
+    if (getOnlySeriesWithWriteAccessEventModal()) {
+      MetadataField<?> series = mc.getOutputFields().get(DublinCore.PROPERTY_IS_PART_OF.getLocalName());
+      mc.removeField(series);
+      Map<String, String> seriesAccessEventModal = getSeriesService().getUserSeriesByAccess(true);
+      Opt<Map<String, String>> map = Opt.some(seriesAccessEventModal);
+      MetadataField<String> newSeries = MetadataUtils.copyMetadataField(series);
+      newSeries.setCollection(map);
+      newSeries.setValue(optEvent.get().getSeriesId());
+      mc.addField(newSeries);
+    }
+    metadataList.add(getIndexService().getCommonEventCatalogUIAdapter(), mc);
 
     final String wfState = optEvent.get().getWorkflowState();
     if (wfState != null && WorkflowUtil.isActive(WorkflowInstance.WorkflowState.valueOf(wfState)))
@@ -2018,6 +2035,24 @@ public abstract class AbstractEventEndpoint {
         collection.removeField(collection.getOutputFields().get("startTime"));
       if (collection.getOutputFields().containsKey("location"))
         collection.removeField(collection.getOutputFields().get("location"));
+
+      if (collection.getOutputFields().containsKey(DublinCore.PROPERTY_PUBLISHER.getLocalName())) {
+        MetadataField<String> publisher = (MetadataField<String>) collection.getOutputFields().get(DublinCore.PROPERTY_PUBLISHER.getLocalName());
+        Map<String, String> users = new HashMap<String, String>();
+        if (!publisher.getCollection().isNone()) {
+          users = publisher.getCollection().get();
+        }
+        String loggedInUser = getSecurityService().getUser().getName();
+        if (!users.containsKey(loggedInUser)) {
+          users.put(loggedInUser, loggedInUser);
+        }
+        publisher.setValue(loggedInUser);
+      }
+
+      Map<String, String> seriesAccessEventModal = getSeriesService().getUserSeriesByAccess(getOnlySeriesWithWriteAccessEventModal());
+      Opt<Map<String, String>> map = Opt.some(seriesAccessEventModal);
+      collection.getOutputFields().get(DublinCore.PROPERTY_IS_PART_OF.getLocalName()).setCollection(map);
+
       metadataList.add(getIndexService().getCommonEventCatalogUIAdapter(), collection);
     }
     return okJson(metadataList.toJSON());
@@ -2252,6 +2287,8 @@ public abstract class AbstractEventEndpoint {
         query.withOptedOut(Boolean.parseBoolean(filters.get(name)));
       if (EventListQuery.FILTER_REVIEW_STATUS_NAME.equals(name))
         query.withReviewStatus(filters.get(name));
+      if (EventListQuery.FILTER_PUBLISHER_NAME.equals(name))
+        query.withPublisher(filters.get(name));
       if (EventListQuery.FILTER_COMMENTS_NAME.equals(name)) {
         switch (Comments.valueOf(filters.get(name))) {
           case NONE:

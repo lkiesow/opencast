@@ -18,6 +18,7 @@
  * the License.
  *
  */
+
 paella.addPlugin(function() {
   return class logIn extends paella.VideoOverlayButtonPlugin {
     constructor() {
@@ -28,6 +29,7 @@ paella.addPlugin(function() {
       return 'es.upv.paella.opencast.logIn';
     }
     getSubclass() { return 'logIn'; }
+    getIconClass() { return 'icon-user'; }
     getAlignment() { return 'right'; }
     getIndex() {return 10;}
     getDefaultToolTip() { return base.dictionary.translate('Log in'); }

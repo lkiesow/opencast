@@ -191,6 +191,8 @@
       "VIDEO_CUT_SAVED": "Ang editing na impormasyon ay nai-save",
       "VIDEO_CUT_PROCESSING": "Ang video ay ipinoproseso…",
       "THUMBNAIL_CHANGE_FAILED": "Failed to change thumbnail.",
+      "VIDEO_SOURCE_TRACKS_INVALID": "You have selected no video tracks to process",
+      "VIDEO_TOO_MANY_AUDIOS": "You cannot have more than one audio stream on a single video stream",
       "SERVER_UNRESPONSIVE": "Oops! Ang server ay tila hindi sumasagot. Pakiusap muli ulitin mamaya.",
       "SERVICE_UNAVAILABLE": "Oops! Ang server ay tila hindi sumasagot. pakiusap muling ulitin mamaya.",
       "ACTIVE_TRANSACTION": "Ang kaganapan na ito ay hindi maaaring baguhin habang mayroong isang workflow o transaksyon na aktibo."
@@ -832,6 +834,7 @@
                "SOURCE": "Ang pinagmulan",
                "CREATED": "Ang nalikha",
                "CREATED_BY": "Likha ni",
+               "PUBLISHER": "Publisher",
                "LICENSE": "Lisensya",
                "CONTRIBUTORS": "Kontribyutor(mga)",
                "RIGHTS": "Mga Karapatan",
@@ -1248,7 +1251,7 @@
          },
          "DETAILS": {
             "NEWCAPTION": "Lumikha ng gumagamit",
-            "EDITCAPTION": "Baguhin ang gumagamit",
+            "EDITCAPTION": "User details - {{username}}",
             "TABS": {
                "USER": "Ang Gumagamit",
                "ROLES": "Mga tungkulin",
@@ -1292,7 +1295,7 @@
          },
          "DETAILS": {
             "NEWCAPTION": "Lumikha ng grupo",
-            "EDITCAPTION": "Baguhin ang grupo",
+            "EDITCAPTION": "Group details - {{name}}",
             "TABS": {
                "GROUP": "Grupo",
                "ROLES": "Mga tungkulin",
@@ -1373,7 +1376,7 @@
             }
          },
          "DETAILS": {
-            "HEADER": "Mga Detalye ng Patakaran sa pag-access - {{resourceId}}",
+            "HEADER": "Access policy details  - {{name}}",
             "TABS": {
                "SUMMARY": "Kabuuan",
                "METADATA": "Ang metadata",
@@ -1556,7 +1559,7 @@
          },
          "DETAILS": {
             "NEWCAPTION": "Lumikha ng tema",
-            "EDITCAPTION": "I-edit ang tema",
+            "EDITCAPTION": "Theme details - {{name}}",
             "GENERAL": {
                "CAPTION": "Pangkaraniwan",
                "NAME": "Ang pangalan",
@@ -1729,7 +1732,8 @@
          "METADATA": "Ang metadata",
          "THUMBNAIL": "Thumbnail",
          "COMMENTS": "Ang mga kumento",
-         "SEGMENTS": "Ang mga bahagi"
+         "SEGMENTS": "Ang mga bahagi",
+         "TRACKS": "Tracks"
       },
       "ACTIONS": {
          "SPLIT": "Ang hatiin",
@@ -1782,6 +1786,36 @@
             "DEFAULT": "You are currently using the default thumbnail.",
             "SNAPSHOT": "The current thumbnail has been extracted from the video.",
             "UPLOAD": "You are currently using an uploaded thumbnail."
+         }
+      },
+      "TRACKS": {
+         "DESCRIPTION": "You can unselect tracks to exclude them from further processing. Please note that you need to (re-)publish the event to actually apply the changes.",
+         "NOTIFICATION": {
+            "NO_VIDEO_TRACK_SELECTED": "You must enable at least one video track",
+            "NO_AUDIO_TRACK_SELECTED": "You must enable at least one audio track"
+         },
+         "TRACK": {
+            "HEADER": "Track"
+         },
+         "VIDEO": {
+            "HEADER": "Video track",
+            "NOT_AVAILABLE": "No video tracks available",
+            "NO_PREVIEW_AVAILABLE": "No preview image found",
+            "NO_TRACK_SELECTED": "No video track selected",
+            "TOOLTIPS": {
+               "HIDE": "This video track is currently enabled. Click to disable",
+               "UNHIDE": "This video track is currently disabled. Click to enable."
+            }
+         },
+         "AUDIO": {
+            "HEADER": "Audio track",
+            "NOT_AVAILABLE": "No audio tracks available",
+            "NO_PREVIEW_AVAILABLE": "No preview image found",
+            "NO_TRACK_SELECTED": "No audio track selected",
+            "TOOLTIPS": {
+               "HIDE": "This audio track is currently enabled. Click to disable",
+               "UNHIDE": "This audio track is currently disabled. Click to enable"
+            }
          }
       },
       "PLAYER": {
@@ -1861,6 +1895,9 @@
          },
          "CREATOR": {
             "LABEL": "Ang lumikha"
+         },
+         "PUBLISHER": {
+            "LABEL": "Publisher"
          },
          "HOSTNAME": {
             "LABEL": "Ang pangan ng host"

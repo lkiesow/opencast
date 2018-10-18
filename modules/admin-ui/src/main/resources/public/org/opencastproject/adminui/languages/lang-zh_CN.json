@@ -191,6 +191,8 @@
       "VIDEO_CUT_SAVED": "视频剪辑已保存",
       "VIDEO_CUT_PROCESSING": "视频正在处理中......",
       "THUMBNAIL_CHANGE_FAILED": "Failed to change thumbnail.",
+      "VIDEO_SOURCE_TRACKS_INVALID": "You have selected no video tracks to process",
+      "VIDEO_TOO_MANY_AUDIOS": "You cannot have more than one audio stream on a single video stream",
       "SERVER_UNRESPONSIVE": "服务器没有回应，请稍后再试。",
       "SERVICE_UNAVAILABLE": "服务没有回应，请稍后再试。",
       "ACTIVE_TRANSACTION": "当前事件处于某个活动事务中因此无法编辑"
@@ -832,6 +834,7 @@
                "SOURCE": "来源",
                "CREATED": "创建",
                "CREATED_BY": "创建者",
+               "PUBLISHER": "Publisher",
                "LICENSE": "许可证",
                "CONTRIBUTORS": "贡献者",
                "RIGHTS": "权利",
@@ -1248,7 +1251,7 @@
          },
          "DETAILS": {
             "NEWCAPTION": "创建用户",
-            "EDITCAPTION": "编辑用户",
+            "EDITCAPTION": "User details - {{username}}",
             "TABS": {
                "USER": "用户",
                "ROLES": "角色",
@@ -1292,7 +1295,7 @@
          },
          "DETAILS": {
             "NEWCAPTION": "建立群组",
-            "EDITCAPTION": "编辑群组",
+            "EDITCAPTION": "Group details - {{name}}",
             "TABS": {
                "GROUP": "群组",
                "ROLES": "角色",
@@ -1373,7 +1376,7 @@
             }
          },
          "DETAILS": {
-            "HEADER": "访问策略详情  - {{resourceId}}",
+            "HEADER": "Access policy details  - {{name}}",
             "TABS": {
                "SUMMARY": "常规",
                "METADATA": "元数据",
@@ -1556,7 +1559,7 @@
          },
          "DETAILS": {
             "NEWCAPTION": "创建主题",
-            "EDITCAPTION": "编辑主题",
+            "EDITCAPTION": "Theme details - {{name}}",
             "GENERAL": {
                "CAPTION": "常规",
                "NAME": "姓名",
@@ -1729,7 +1732,8 @@
          "METADATA": "元数据",
          "THUMBNAIL": "Thumbnail",
          "COMMENTS": "评注",
-         "SEGMENTS": "Segments"
+         "SEGMENTS": "Segments",
+         "TRACKS": "Tracks"
       },
       "ACTIONS": {
          "SPLIT": "分割",
@@ -1782,6 +1786,36 @@
             "DEFAULT": "You are currently using the default thumbnail.",
             "SNAPSHOT": "The current thumbnail has been extracted from the video.",
             "UPLOAD": "You are currently using an uploaded thumbnail."
+         }
+      },
+      "TRACKS": {
+         "DESCRIPTION": "You can unselect tracks to exclude them from further processing. Please note that you need to (re-)publish the event to actually apply the changes.",
+         "NOTIFICATION": {
+            "NO_VIDEO_TRACK_SELECTED": "You must enable at least one video track",
+            "NO_AUDIO_TRACK_SELECTED": "You must enable at least one audio track"
+         },
+         "TRACK": {
+            "HEADER": "Track"
+         },
+         "VIDEO": {
+            "HEADER": "Video track",
+            "NOT_AVAILABLE": "No video tracks available",
+            "NO_PREVIEW_AVAILABLE": "No preview image found",
+            "NO_TRACK_SELECTED": "No video track selected",
+            "TOOLTIPS": {
+               "HIDE": "This video track is currently enabled. Click to disable",
+               "UNHIDE": "This video track is currently disabled. Click to enable."
+            }
+         },
+         "AUDIO": {
+            "HEADER": "Audio track",
+            "NOT_AVAILABLE": "No audio tracks available",
+            "NO_PREVIEW_AVAILABLE": "No preview image found",
+            "NO_TRACK_SELECTED": "No audio track selected",
+            "TOOLTIPS": {
+               "HIDE": "This audio track is currently enabled. Click to disable",
+               "UNHIDE": "This audio track is currently disabled. Click to enable"
+            }
          }
       },
       "PLAYER": {
@@ -1861,6 +1895,9 @@
          },
          "CREATOR": {
             "LABEL": "创建者"
+         },
+         "PUBLISHER": {
+            "LABEL": "Publisher"
          },
          "HOSTNAME": {
             "LABEL": "主机名"

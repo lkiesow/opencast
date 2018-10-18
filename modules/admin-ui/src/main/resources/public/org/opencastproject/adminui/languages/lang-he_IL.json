@@ -64,13 +64,13 @@
          "NAME": "שם"
       },
       "ACTIONS": {
-         "CONFIRMATION": "Confirmation"
+         "CONFIRMATION": "אישור"
       },
       "WARNINGS": {
-         "SERIES_HAS_EVENTS": "This series does contain events. Deleting the series will not delete the events."
+         "SERIES_HAS_EVENTS": "סדרה זו מכילה אירועים. מחיקת הסדרה לא תמחק אירועים אלו."
       },
       "ERRORS": {
-         "SERIES_HAS_EVENTS": "This series cannot be deleted as it still contains events."
+         "SERIES_HAS_EVENTS": "לא ניתן למחוק סדרה זו מכיוון שהיא עדיין מכילה אירועים."
       }
    },
    "MEDIAMODULE": "מודול מדיה",
@@ -81,7 +81,7 @@
       "USERS_GUIDE": "מדריך משתמש",
       "DOCUMENTATION": "תיעוד",
       "REST_DOC": "תיעוד ממשק תוכנה (REST API)",
-      "HOTKEY_CHEAT_SHEET": "Keyboard Shortcuts"
+      "HOTKEY_CHEAT_SHEET": "מקשי קיצור במקלדת"
    },
    "NOTIFICATIONS": {
       "ACL_ADDED": "מדיניות הגישה נוצרה",
@@ -127,7 +127,7 @@
       "SERIES_NOT_UPDATED_ALL": "לא ניתן לשמור אף אחד מהסדרות",
       "EVENTS_DELETED": "הארוע נמחק",
       "EVENTS_NOT_DELETED": "לא ניתן למחוק את הארוע\\ים",
-      "EVENTS_NOT_DELETED_NOT_AUTHORIZED": "The event could not be deleted, because you don't have the permission to do so.",
+      "EVENTS_NOT_DELETED_NOT_AUTHORIZED": "האירוע לא ניתן למחיקה, מכיוון שאין לך את ההרשאות לבצע פעולה זו.",
       "SERIES_DELETED": "הסדרה נמחקה",
       "SERIES_NOT_DELETED": "לא ניתן היה למחוק את הסידרה",
       "USER_BLACKLIST_CREATED": "הרשימה השחורה נוצרה",
@@ -138,7 +138,7 @@
       "USER_BLACKLIST_NOT_DELETED": "לא ניתן למחוק את הרשימה השחורה",
       "LOCATION_DELETED": "המיקום נמחק",
       "LOCATION_NOT_DELETED": "לא ניתן למחוק את המיקום",
-      "LOCATION_NOT_DELETED_NOT_AUTHORIZED": "The location could not be deleted, because you don't have the permission to do so.",
+      "LOCATION_NOT_DELETED_NOT_AUTHORIZED": "המיקום לא ניתן למחיקה, מכיוון שאין לך את ההרשאות לבצע פעולה זו.",
       "LOCATION_BLACKLIST_CREATED": "הרשימה השחורה נוצרה",
       "LOCATION_BLACKLIST_NOT_CREATED": "הרשימה השחורה לא יכולה להיווצר",
       "LOCATION_BLACKLIST_SAVED": "הרשימה השחורה נשמרה",
@@ -158,7 +158,7 @@
       "CONFLICT_BULK_DETECTED": "התנגשות בתזמון: שינוי האירועים יוצר התנגשויות. אנא שנה את המיקום, תאריכים או שעות.",
       "CONFLICT_ALREADY_ENDED": "שגיאה בתזמון: האירוע כבר נגמר.",
       "CONFLICT_END_BEFORE_START": "שגיאה בתזמון: תזמון הסיום חייב להיות אחרי תזמון ההתחלה.",
-      "CONFLICT_IN_THE_PAST": "The schedule could not be updated: You cannot schedule an event to be in the past.",
+      "CONFLICT_IN_THE_PAST": "לא היתה אפשרות לעדכן את לוח הזמנים: לא ניתן לתזמן אירוע בעבר.",
       "INVALID_ACL_RULES": "חוקים חייבים להכיל תפקיד חוקי ו/או הרשאות קריאה/כתיבה.",
       "MISSING_ACL_RULES": "לפחות תפקיד אחד עם הרשאות קריאה וכתיבה נדרש!",
       "SAVED_ACL_RULES": "חוקי הגישה נשמרו.",
@@ -174,12 +174,12 @@
       "THEME_NAME_ALREADY_TAKEN": "שם זה נמצא כבר בשימוש",
       "THEME_NAME_EMPTY": "השם אינו יכול להשאר ריק",
       "BUMPER_UPLOAD_ERROR": "שגיאה בזמן האלעת מדיה",
-      "BUMPER_REQUIRED": "You must upload a bumper",
+      "BUMPER_REQUIRED": "חובה להעלות קדימון",
       "TRAILER_UPLOAD_ERROR": "שגיאה בזמן האלעת מדיה",
       "TITLE_UPLOAD_ERROR": "שגיאה בזמן האלעת מדיה",
       "LICENSE_UPLOAD_ERROR": "שגיאה בזמן האלעת מדיה",
       "WATERMARK_UPLOAD_ERROR": "שגיאה בזמן האלעת מדיה",
-      "WATERMARK_REQUIRED": "You must upload a watermark",
+      "WATERMARK_REQUIRED": "חובה להעלות סימן מים",
       "THEME_UPLOAD_STARTED": "המדיה מועלת…",
       "THEME_CREATED": "ערכת הנושא נוצרה",
       "THEME_NOT_CREATED": "לא ניתן ליצור את ערכת הנושא",
@@ -190,7 +190,9 @@
       "VIDEO_CUT_NOT_SAVED": "לא היתה אפשרות לשמור את המידע העריכה",
       "VIDEO_CUT_SAVED": "מידע העריכה נשמר",
       "VIDEO_CUT_PROCESSING": "מעבד את הוידאו…",
-      "THUMBNAIL_CHANGE_FAILED": "Failed to change thumbnail.",
+      "THUMBNAIL_CHANGE_FAILED": "החלפת תמונה ממוזערת נכשלה.",
+      "VIDEO_SOURCE_TRACKS_INVALID": "You have selected no video tracks to process",
+      "VIDEO_TOO_MANY_AUDIOS": "You cannot have more than one audio stream on a single video stream",
       "SERVER_UNRESPONSIVE": ". אופס! נראה שהשרת לא מגיב. נא נסה שוב מאוחר יותר.",
       "SERVICE_UNAVAILABLE": ". אופס! נראה שהשרת לא מגיב. נא נסה שוב מאוחר יותר.",
       "ACTIVE_TRANSACTION": "לא ניתן לערוך את האירוע הזה בזמן שהוא עובר עיבוד."
@@ -583,8 +585,8 @@
                "READY_FOR_RECORDING": "מוכן להקלטה",
                "OPTED_OUT": "נבחר להוצאה",
                "CUSTOM": "מותאם אישית",
-               "ENGAGE": "לעסוק",
-               "ENGAGE_LIVE": "שיחה חיה",
+               "ENGAGE": "צפייה",
+               "ENGAGE_LIVE": "צפייה חיה",
                "EXTERNAL_API": "פרסום API חיצוני",
                "YOUTUBE": "יוטיוב",
                "OAIPMH": "OAI-PMH",
@@ -832,6 +834,7 @@
                "SOURCE": "מקור",
                "CREATED": "נוצר",
                "CREATED_BY": "נוצר על-ידי",
+               "PUBLISHER": "Publisher",
                "LICENSE": "רישיון",
                "CONTRIBUTORS": "תורמ(ים)",
                "RIGHTS": "זכויות",
@@ -1248,7 +1251,7 @@
          },
          "DETAILS": {
             "NEWCAPTION": "צור משתמש",
-            "EDITCAPTION": "Edit User",
+            "EDITCAPTION": "User details - {{username}}",
             "TABS": {
                "USER": "משתמש",
                "ROLES": "תפקידים",
@@ -1292,7 +1295,7 @@
          },
          "DETAILS": {
             "NEWCAPTION": "צור קבוצה",
-            "EDITCAPTION": "ערוך קבוצה",
+            "EDITCAPTION": "Group details - {{name}}",
             "TABS": {
                "GROUP": "קבוצה",
                "ROLES": "תפקידים",
@@ -1373,7 +1376,7 @@
             }
          },
          "DETAILS": {
-            "HEADER": "פרטי מדיניות גישה - {{resourceId}}",
+            "HEADER": "Access policy details  - {{name}}",
             "TABS": {
                "SUMMARY": "סיכום",
                "METADATA": "מטא-נתונים",
@@ -1556,7 +1559,7 @@
          },
          "DETAILS": {
             "NEWCAPTION": "יצירת ערכת נושא",
-            "EDITCAPTION": "עריכת ערכת נושא",
+            "EDITCAPTION": "Theme details - {{name}}",
             "GENERAL": {
                "CAPTION": "כללי",
                "NAME": "שם",
@@ -1729,7 +1732,8 @@
          "METADATA": "מטא-נתונים",
          "THUMBNAIL": "Thumbnail",
          "COMMENTS": "הערות",
-         "SEGMENTS": "מקטעים"
+         "SEGMENTS": "מקטעים",
+         "TRACKS": "Tracks"
       },
       "ACTIONS": {
          "SPLIT": "פצל",
@@ -1782,6 +1786,36 @@
             "DEFAULT": "You are currently using the default thumbnail.",
             "SNAPSHOT": "The current thumbnail has been extracted from the video.",
             "UPLOAD": "You are currently using an uploaded thumbnail."
+         }
+      },
+      "TRACKS": {
+         "DESCRIPTION": "You can unselect tracks to exclude them from further processing. Please note that you need to (re-)publish the event to actually apply the changes.",
+         "NOTIFICATION": {
+            "NO_VIDEO_TRACK_SELECTED": "You must enable at least one video track",
+            "NO_AUDIO_TRACK_SELECTED": "You must enable at least one audio track"
+         },
+         "TRACK": {
+            "HEADER": "Track"
+         },
+         "VIDEO": {
+            "HEADER": "Video track",
+            "NOT_AVAILABLE": "No video tracks available",
+            "NO_PREVIEW_AVAILABLE": "No preview image found",
+            "NO_TRACK_SELECTED": "No video track selected",
+            "TOOLTIPS": {
+               "HIDE": "This video track is currently enabled. Click to disable",
+               "UNHIDE": "This video track is currently disabled. Click to enable."
+            }
+         },
+         "AUDIO": {
+            "HEADER": "Audio track",
+            "NOT_AVAILABLE": "No audio tracks available",
+            "NO_PREVIEW_AVAILABLE": "No preview image found",
+            "NO_TRACK_SELECTED": "No audio track selected",
+            "TOOLTIPS": {
+               "HIDE": "This audio track is currently enabled. Click to disable",
+               "UNHIDE": "This audio track is currently disabled. Click to enable"
+            }
          }
       },
       "PLAYER": {
@@ -1861,6 +1895,9 @@
          },
          "CREATOR": {
             "LABEL": "יוצר"
+         },
+         "PUBLISHER": {
+            "LABEL": "Publisher"
          },
          "HOSTNAME": {
             "LABEL": "שם מחשב מארח"

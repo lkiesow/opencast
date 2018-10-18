@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.opencastproject</groupId>
   <artifactId>base</artifactId>
-  <version>6-SNAPSHOT</version>
+  <version>7-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>opencast</name>
   <description>Opencast is a media capture, processing, management and distribution system</description>
@@ -24,17 +24,20 @@
     <httpcomponents-httpcore.version>4.4.10</httpcomponents-httpcore.version>
     <httpcomponents-httpclient.version>4.5.6</httpcomponents-httpclient.version>
     <aws.version>1.11.49_1</aws.version>
+    <guava.version>23.0</guava.version>
     <jmeter.version>2.4</jmeter.version>
     <osgi.compendium.version>5.0.0</osgi.compendium.version>
     <osgi.core.version>5.0.0</osgi.core.version>
     <osgi.enterprise.version>5.0.0</osgi.enterprise.version>
-    <karaf.version>4.0.10</karaf.version>
-    <pax.web.version>4.3.4</pax.web.version>
-    <cxf.version>3.1.12</cxf.version>
+    <karaf.version>4.1.6</karaf.version>
+    <pax.web.version>6.0.11</pax.web.version>
+    <cxf.version>3.2.6</cxf.version>
     <jackson.version>2.9.4</jackson.version>
     <functional.version>1.4.2</functional.version>
     <jdk.version>1.8</jdk.version>
     <mina.version>2.0.19</mina.version>
+    <node.version>v8.12.0</node.version>
+    <npm.version>6.4.1</npm.version>
   </properties>
   <modules>
     <module>modules/admin-ui</module>
@@ -47,6 +50,7 @@
     <module>modules/asset-manager-api</module>
     <module>modules/asset-manager-impl</module>
     <module>modules/asset-manager-workflowoperation</module>
+    <module>modules/asset-manager-storage-aws</module>
     <module>modules/asset-manager-storage-fs</module>
     <module>modules/asset-manager-util</module>
     <module>modules/authorization-manager</module>
@@ -729,7 +733,7 @@
       <dependency>
         <groupId>com.google.guava</groupId>
         <artifactId>guava</artifactId>
-        <version>18.0</version>
+        <version>${guava.version}</version>
       </dependency>
       <dependency>
         <groupId>net.fortuna.ical4j</groupId>
@@ -1469,6 +1473,28 @@
       <email>christian.greweling@uni-osnabrueck.de</email>
       <organization>ELAN e.V., University of Osnabrueck</organization>
       <organizationUrl>http://www.virtuos.uos.de/</organizationUrl>
+      <roles>
+        <role>developer</role>
+      </roles>
+      <timezone>+1</timezone>
+    </developer>
+    <developer>
+      <id>kihler</id>
+      <name>Katrin Ihler</name>
+      <email>kihler@uni-osnabrueck.de</email>
+      <organization>ELAN e.V., University of Osnabrueck</organization>
+      <organizationUrl>http://www.virtuos.uos.de/</organizationUrl>
+      <roles>
+        <role>developer</role>
+      </roles>
+      <timezone>+1</timezone>
+    </developer>
+    <developer>
+      <id>mtneug</id>
+      <name>Matthias Neugebauer</name>
+      <email>matthias.neugebauer@uni-muenster.de</email>
+      <organization>University of Muenster</organization>
+      <organizationUrl>https://www.uni-muenster.de/</organizationUrl>
       <roles>
         <role>developer</role>
       </roles>
