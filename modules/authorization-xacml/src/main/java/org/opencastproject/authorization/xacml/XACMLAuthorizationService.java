@@ -97,7 +97,7 @@ public class XACMLAuthorizationService implements AuthorizationService, ManagedS
     final String mode = StringUtils.defaultIfBlank(properties.get(CONFIG_MERGE_MODE).toString(),
             MergeMode.OVERRIDE.toString());
     try {
-      mergeMode = MergeMode.valueOf(mode);
+      mergeMode = MergeMode.valueOf(mode.toUpperCase());
     } catch (IllegalArgumentException e) {
       logger.warn("Invalid value set for ACL merge mode, defaulting to {}", MergeMode.OVERRIDE);
       mergeMode = MergeMode.OVERRIDE;
