@@ -39,6 +39,9 @@ import org.opencastproject.util.doc.rest.RestQuery;
 import org.opencastproject.util.doc.rest.RestResponse;
 import org.opencastproject.util.doc.rest.RestService;
 
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+
 import org.osgi.service.component.ComponentContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -125,10 +128,13 @@ public class IliasDistributionRestService extends AbstractJobProducerEndpoint {
                      @RestResponse(responseCode = SC_OK,
                                    description = "An XML representation of the distribution job") })
   public Response distribute(@FormParam("mediapackage") String mediaPackageXml,
-                             @FormParam("elementId") String elementId,
+                             @FormParam("elementId") String jsonElementId,
                              @FormParam("channelId") String channelId)
           throws Exception {
     try {
+      Gson gson = new Gson();
+      final String elementId = gson.fromJson(jsonElementId, new TypeToken<String>() {
+      }.getType());
       final MediaPackage mediapackage = MediaPackageParser.getFromXml(mediaPackageXml);
       final Job job = service.distribute(channelId, mediapackage, elementId);
       return ok(new JaxbJob(job));
