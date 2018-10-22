@@ -21,8 +21,11 @@
 
 package org.opencastproject.security.api;
 
+import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 
 import javax.xml.bind.annotation.XmlAccessType;
@@ -73,6 +76,38 @@ public final class AccessControlList {
   @Override
   public String toString() {
     return entries.toString();
+  }
+
+  public AccessControlList merge(AccessControlList acl) {
+    HashSet<String> roles = new HashSet<String>();
+    ArrayList<AccessControlEntry> newEntries = new ArrayList<AccessControlEntry>(acl.getEntries());
+    // Get list of new roles
+    for (AccessControlEntry entry : newEntries) {
+      roles.add(entry.getRole());
+    }
+    // Apply old rules if no new rules for a role exist
+    for (AccessControlEntry entry : this.entries) {
+      if (!roles.contains(entry.getRole())) {
+        newEntries.add(entry);
+      }
+    }
+    this.entries = newEntries;
+    return this;
+  }
+
+  public AccessControlList mergeActions(AccessControlList acl) {
+    HashMap<SimpleEntry<String, String>, AccessControlEntry> rules = new HashMap<SimpleEntry<String, String>, AccessControlEntry>();
+    SimpleEntry<String, String> key;
+    for (AccessControlEntry entry : this.entries) {
+      key = new SimpleEntry<String, String>(entry.getRole(), entry.getAction());
+      rules.put(key, entry);
+    }
+    for (AccessControlEntry entry : acl.getEntries()) {
+      key = new SimpleEntry<String, String>(entry.getRole(), entry.getAction());
+      rules.put(key, entry);
+    }
+    this.entries = new ArrayList<AccessControlEntry>(rules.values());
+    return this;
   }
 
 }
