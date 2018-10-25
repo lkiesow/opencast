@@ -173,18 +173,16 @@ public class RestPublisher implements RestConstants {
     jsonProvider.setNamespaceMap(NAMESPACE_MAP);
 
     providers.add(jsonProvider);
-    providers.add(new ExceptionMapper<NotFoundException>() {
-      @Override
-      public Response toResponse(NotFoundException e) {
-        return Response.status(404).entity(fourOhFour).type(MediaType.TEXT_PLAIN).build();
-      }
-    });
-    providers.add(new ExceptionMapper<UnauthorizedException>() {
-      @Override
-      public Response toResponse(UnauthorizedException e) {
-        return Response.status(HttpStatus.SC_UNAUTHORIZED).entity("unauthorized").type(MediaType.TEXT_PLAIN).build();
-      };
-    });
+    providers.add((ExceptionMapper<NotFoundException>) e -> Response
+            .status(404)
+            .entity(fourOhFour)
+            .type(MediaType.TEXT_PLAIN)
+            .build());
+    providers.add((ExceptionMapper<UnauthorizedException>) e -> Response
+            .status(HttpStatus.SC_UNAUTHORIZED)
+            .entity("unauthorized")
+            .type(MediaType.TEXT_PLAIN)
+            .build());
 
     try {
       jaxRsTracker = new JaxRsServiceTracker();
@@ -460,6 +458,7 @@ public class RestPublisher implements RestConstants {
      */
     StaticResourceBundleTracker(BundleContext context) {
       super(context, Bundle.ACTIVE, null);
+      logger.error("StaticResourceBundleTracker {}", context);
     }
 
     /**
@@ -469,6 +468,7 @@ public class RestPublisher implements RestConstants {
      */
     @Override
     public Object addingBundle(Bundle bundle, BundleEvent event) {
+      logger.error("{}#addingBundle", this);
       String classpath = bundle.getHeaders().get(RestConstants.HTTP_CLASSPATH);
       String alias = bundle.getHeaders().get(RestConstants.HTTP_ALIAS);
       String welcomeFile = bundle.getHeaders().get(RestConstants.HTTP_WELCOME);
@@ -485,10 +485,37 @@ public class RestPublisher implements RestConstants {
         // We use the newly added bundle's context to register this service, so when that bundle shuts down, it brings
         // down this servlet with it
         logger.debug("Registering servlet with alias {}", alias);
+        logger.error("Registering service {}", Servlet.class.getName());
         componentContext.getBundleContext().registerService(Servlet.class.getName(), servlet, props);
       }
 
       return super.addingBundle(bundle, event);
+    }
+
+    @Override
+    public void modifiedBundle(Bundle bundle, BundleEvent event, Object object) {
+      logger.error("{}#modifiedBundle", this);
+      String classpath = bundle.getHeaders().get(RestConstants.HTTP_CLASSPATH);
+      String alias = bundle.getHeaders().get(RestConstants.HTTP_ALIAS);
+      if (classpath != null && alias != null) {
+        ServiceReference servletReference = bundle.getBundleContext().getServiceReference(Servlet.class.getName());
+        logger.error("servletReference = {}", servletReference);
+      }
+
+      super.modifiedBundle(bundle, event, object);
+    }
+
+    @Override
+    public void removedBundle(Bundle bundle, BundleEvent event, Object object) {
+      logger.error("{}#removedBundle", this);
+      String classpath = bundle.getHeaders().get(RestConstants.HTTP_CLASSPATH);
+      String alias = bundle.getHeaders().get(RestConstants.HTTP_ALIAS);
+      if (classpath != null && alias != null) {
+        ServiceReference servletReference = bundle.getBundleContext().getServiceReference(Servlet.class.getName());
+        logger.error("servletReference = {}", servletReference);
+      }
+
+      super.removedBundle(bundle, event, object);
     }
   }
 
