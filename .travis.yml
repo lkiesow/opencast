@@ -75,15 +75,18 @@ jobs:
         - >
           ( cd docs/guides/admin &&
             mkdocs build > mkdocs.log 2>&1 &&
-            ! grep WARNING mkdocs.log )
+            ! grep 'WARNING.*Documentation file' mkdocs.log &&
+            cat mkdocs.log )
         - >
           ( cd docs/guides/user &&
             mkdocs build > mkdocs.log 2>&1 &&
-            ! grep WARNING mkdocs.log )
+            ! grep 'WARNING.*Documentation file' mkdocs.log &&
+            cat mkdocs.log )
         - >
           ( cd docs/guides/developer &&
             mkdocs build > mkdocs.log 2>&1 &&
-            ! grep WARNING mkdocs.log )
+            ! grep 'WARNING.*Documentation file' mkdocs.log &&
+            cat mkdocs.log )
         - (cd docs/guides && grunt)
 
     # Test database scripts with MariaDB 10.x
