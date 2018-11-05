@@ -1586,26 +1586,77 @@ public class SchedulerServiceImpl extends AbstractIndexProducer implements Sched
     return Util.calculatePeriods(start, end, duration, rrule, tz);
   }
 
+  private Stream<ARecord> getScheduledEventRecords(Opt<String> captureAgentId, Opt<String> seriesId, Opt<Date> cutoff) {
+    AQueryBuilder query = assetManager.createQuery();
+    Props p = new Props(query);
+    Predicate predicate = withOrganization(query)
+            .and(withOwner(query))
+            .and(query.hasPropertiesOf(p.namespace()))
+            .and(p.optOut().eq(false))
+            .and(withVersion(query))
+            .and(p.end().ge(DateTime.now().minusHours(1).toDate()));
+    if (captureAgentId.isSome()) {
+      predicate = predicate.and(p.agent().eq(captureAgentId.get()));
+    }
+    if (seriesId.isSome()) {
+      predicate = predicate.and(query.seriesId().eq(seriesId.get()));
+    }
+    if (cutoff.isSome()) {
+      predicate = predicate.and(p.start().le(cutoff.get()));
+    }
+    ASelectQuery select = query.select(query.snapshot(), p.agent().target(), p.start().target(), p.end().target(),
+            query.propertiesOf(CA_NAMESPACE)).where(predicate);
+    return select.run().getRecords();
+  }
+
+  public List<Map<String, String>> getScheduleData(Opt<String> captureAgentId, Opt<String> seriesId, Opt<Date> cutoff)
+          throws SchedulerException {
+    try {
+      for (ARecord record : getScheduledEventRecords(captureAgentId, seriesId, cutoff)) {
+        String mediaPackageId = record.getMediaPackageId();
+        Map<String, String> agentMetadata = record.getProperties()
+                .filter(filterByNamespace._2(CA_NAMESPACE))
+                .group(toKey, toValue);
+
+        // If the even properties are empty, skip the event
+        if (agentMetadata.isEmpty()) {
+          logger.warn("Properties for event '{}' can't be found, event is not recorded", record.getMediaPackageId());
+          continue;
+        }
+
+        Date start = record.getProperties().apply(Properties.getDate(START_DATE_CONFIG));
+        Date end = record.getProperties().apply(Properties.getDate(END_DATE_CONFIG));
+        Date lastModified = record.getSnapshot().get().getArchivalDate();
+
+        // Add the entry to the calendar, skip it with a warning if adding fails
+        try {
+          cal.addEvent(optMp.get(), catalogOpt.get(), agentId, start, end, lastModified, toPropertyString(caMetadata));
+        } catch (Exception e) {
+          logger.warn("Error adding event '{}' to calendar, event is not recorded", record.getMediaPackageId(), e);
+        }
+      }
+
+      // Only validate calendars with events. Without any events, the iCalendar won't validate
+      if (cal.getCalendar().getComponents().size() > 0) {
+        try {
+          cal.getCalendar().validate();
+        } catch (ValidationException e) {
+          logger.warn("Recording calendar could not be validated (returning it anyways): {}", getStackTrace(e));
+        }
+      }
+
+      return cal.getCalendar().toString();
+
+    } catch (Exception e) {
+      throw new SchedulerException(e);
+    }
+  }
+
   @Override
   public String getCalendar(Opt<String> captureAgentId, Opt<String> seriesId, Opt<Date> cutoff)
           throws SchedulerException {
     try {
-      AQueryBuilder query = assetManager.createQuery();
-      Props p = new Props(query);
-      Predicate predicate = withOrganization(query).and(withOwner(query)).and(query.hasPropertiesOf(p.namespace())).and(p.optOut().eq(false))
-              .and(withVersion(query)).and(p.end().ge(DateTime.now().minusHours(1).toDate()));
-      for (String agentId : captureAgentId) {
-        predicate = predicate.and(p.agent().eq(agentId));
-      }
-      for (String series : seriesId) {
-        predicate = predicate.and(query.seriesId().eq(series));
-      }
-      for (Date d : cutoff) {
-        predicate = predicate.and(p.start().le(d));
-      }
-      ASelectQuery select = query.select(query.snapshot(), p.agent().target(), p.start().target(), p.end().target(),
-              query.propertiesOf(CA_NAMESPACE)).where(predicate);
-      Stream<ARecord> records = select.run().getRecords();
+      Stream<ARecord> records = getScheduledEventRecords(captureAgentId, seriesId, cutoff);
 
       CalendarGenerator cal = new CalendarGenerator(seriesService);
       for (ARecord record : records) {
@@ -1634,6 +1685,7 @@ public class SchedulerServiceImpl extends AbstractIndexProducer implements Sched
 
         String agentId = record.getProperties().apply(Properties.getString(AGENT_CONFIG));
         Date start = record.getProperties().apply(Properties.getDate(START_DATE_CONFIG));
+        start.getTime()
         Date end = record.getProperties().apply(Properties.getDate(END_DATE_CONFIG));
         Date lastModified = record.getSnapshot().get().getArchivalDate();
 
