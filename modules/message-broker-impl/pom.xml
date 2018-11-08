@@ -94,7 +94,6 @@
               !com.thoughtworks.*,
               !javax.ejb.*,
               !javax.jmdns,
-              !javax.management.*,
               !junit.framework,
               !org.apache.activeio.*,
               !org.apache.axis.*,
@@ -129,7 +128,8 @@
               *
             </Import-Package>
             <Embed-Dependency>
-              activemq-client;inline=true
+              activemq-client;inline=true,
+              geronimo-jms_1.1_spec;inline=true
             </Embed-Dependency>
             <Private-Package>
               org.opencastproject.message.broker.endpoint
@@ -138,7 +138,6 @@
               org.opencastproject.message.broker.impl;version=${project.version}
             </Export-Package>
             <_exportcontents>
-              javax.jms,
               javax.transaction,
               javax.transaction.xa
             </_exportcontents>
