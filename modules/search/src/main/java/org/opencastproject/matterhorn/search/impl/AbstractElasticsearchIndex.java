@@ -54,8 +54,10 @@ import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.client.Client;
+import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.indices.IndexAlreadyExistsException;
 import org.elasticsearch.node.Node;
@@ -71,6 +73,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -282,28 +285,36 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
 
     this.index = index;
     this.indexVersion = version;
+    Settings settings;
 
     // Configure and start Elasticsearch
     synchronized (this) {
+
+      // Prepare the configuration of the elastic search node
+      settings = loadSettings(index, indexSettingsPath);
       if (elasticSearch == null) {
         logger.info("Starting local Elasticsearch node");
-
-        // Prepare the configuration of the elastic search node
-        Settings settings = loadSettings(index, indexSettingsPath);
 
         // Configure and start the elastic search node. In a testing scenario,
         // the node is being created locally.
         NodeBuilder nodeBuilder = NodeBuilder.nodeBuilder().settings(settings);
         elasticSearch = nodeBuilder.local(TestUtils.isTest()).build();
-        elasticSearch.start();
+        //elasticSearch.start();
         logger.info("Elasticsearch node is up and running");
       }
     }
 
     // Create the client
     synchronized (elasticSearch) {
-      nodeClient = elasticSearch.client();
-      elasticSearchClients.add(nodeClient);
+      //nodeClient = elasticSearch.client();
+      //elasticSearchClients.add(nodeClient);^
+      Settings settings1 = ImmutableSettings.builder()
+              .put("client.transport.sniff", true)
+              .put("cluster.name","elasticsearch")
+              .build();
+      nodeClient = new TransportClient(settings)
+              .addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName("127.0.0.1"), 9300));
+
     }
 
     // Create the index
