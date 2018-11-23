@@ -28,11 +28,10 @@ import org.opencastproject.matterhorn.search.SearchIndex;
 import org.opencastproject.matterhorn.search.SearchIndexException;
 import org.opencastproject.matterhorn.search.SearchQuery;
 import org.opencastproject.matterhorn.search.SearchQuery.Order;
-import org.opencastproject.util.OsgiUtil;
 import org.opencastproject.util.PathSupport;
-import org.opencastproject.util.data.Option;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
@@ -94,6 +93,9 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
   /** The Elasticsearch config directory key */
   public static final String ELASTICSEARCH_CONFIG_DIR_KEY = "org.opencastproject.elasticsearch.config.dir";
 
+  /** Configuration key defining if Opencast tries running an internal Elasticsearch node */
+  public static final String ELASTICSEARCH_INTERNAL_SERVER_KEY = "org.opencastproject.elasticsearch.internal.server";
+
   /** Identifier of the root entry */
   private static final String ROOT_ID = "root";
 
@@ -107,13 +109,13 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
   private static Node elasticSearch = null;
 
   /** List of clients to the local node */
-  private static List<Client> elasticSearchClients = new ArrayList<Client>();
+  private static List<Client> elasticSearchClients = new ArrayList<>();
 
   /** Client for talking to elastic search */
   private Client nodeClient = null;
 
   /** List of sites with prepared index */
-  private final List<String> preparedIndices = new ArrayList<String>();
+  private final List<String> preparedIndices = new ArrayList<>();
 
   /** The version number */
   private int indexVersion = -1;
@@ -121,13 +123,16 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
   /** The path to the index settings */
   protected String indexSettingsPath;
 
+  /** If Opencast should try starting an internal Elasticsearch node */
+  private boolean launchInternalServer;
+
   /**
    * Returns an array of document types for the index. For every one of these, the corresponding document type
    * definition will be loaded.
    *
    * @return the document types
    */
-  public abstract String[] getDocumenTypes();
+  public abstract String[] getDocumentTypes();
 
   /**
    * OSGi callback to activate this component instance.
@@ -138,11 +143,18 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
    *           if the search index cannot be initialized
    */
   public void activate(ComponentContext ctx) throws ComponentException {
-    Option<String> indexSettingsPathOption = OsgiUtil.getOptContextProperty(ctx, ELASTICSEARCH_CONFIG_DIR_KEY);
-    if (indexSettingsPathOption.isNone())
-      throw new ComponentException("Configuration for key '" + ELASTICSEARCH_CONFIG_DIR_KEY + "' missing");
+    indexSettingsPath = StringUtils.trimToNull(ctx.getBundleContext().getProperty(ELASTICSEARCH_CONFIG_DIR_KEY));
+    if (indexSettingsPath == null) {
+      final String etc = StringUtils.trimToNull(ctx.getBundleContext().getProperty("karaf.etc"));
+      if (etc == null) {
+        throw new ComponentException("Configuration for key '" + ELASTICSEARCH_CONFIG_DIR_KEY + "' missing");
+      }
+      indexSettingsPath = etc + "/index";
+    }
 
-    indexSettingsPath = indexSettingsPathOption.get();
+    // Check if we need to launch an internal Elasticsearch node
+    String startServer = StringUtils.trimToNull(ctx.getBundleContext().getProperty(ELASTICSEARCH_INTERNAL_SERVER_KEY));
+    launchInternalServer = startServer == null || BooleanUtils.toBoolean(startServer);
   }
 
   /**
@@ -176,7 +188,7 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
         if (!delete.isAcknowledged())
           logger.error("Index '{}' could not be deleted", getIndexName());
       } else {
-        logger.error("Cannot clear not existing index '{}'", getIndexName());
+        logger.error("Cannot clear non-existing index '{}'", getIndexName());
       }
     } catch (Throwable t) {
       throw new IOException("Cannot clear index", t);
@@ -280,8 +292,9 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
    *           if the index identifier is blank.
    */
   protected void init(String index, int version) throws IOException, IllegalArgumentException, SearchIndexException {
-    if (StringUtils.isBlank(index))
-      throw new IllegalArgumentException("Search index identifier must not be null");
+    if (StringUtils.isBlank(index)) {
+      throw new IllegalArgumentException("Search index identifier must be set");
+    }
 
     this.index = index;
     this.indexVersion = version;
@@ -350,7 +363,7 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
   }
 
   /**
-   * Prepares Elasticsearch index to store data for the types (or mappings) as returned by {@link #getDocumenTypes()}.
+   * Prepares Elasticsearch index to store data for the types (or mappings) as returned by {@link #getDocumentTypes()}.
    *
    * @param idx
    *          the index name
@@ -378,7 +391,7 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
     }
 
     // Store the correct mapping
-    for (String type : getDocumenTypes()) {
+    for (String type : getDocumentTypes()) {
       PutMappingRequest siteMappingRequest = new PutMappingRequest(idx);
       siteMappingRequest.source(getIndexTypeDefinition(idx, type));
       siteMappingRequest.type(type);
