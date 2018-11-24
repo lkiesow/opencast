@@ -31,7 +31,6 @@ import org.opencastproject.matterhorn.search.SearchQuery.Order;
 import org.opencastproject.util.PathSupport;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
@@ -93,8 +92,11 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
   /** The Elasticsearch config directory key */
   public static final String ELASTICSEARCH_CONFIG_DIR_KEY = "org.opencastproject.elasticsearch.config.dir";
 
-  /** Configuration key defining if Opencast tries running an internal Elasticsearch node */
-  public static final String ELASTICSEARCH_INTERNAL_SERVER_KEY = "org.opencastproject.elasticsearch.internal.server";
+  /** Configuration key defining the address of an external Elasticsearch server */
+  public static final String ELASTICSEARCH_SERVER_ADDRESS_KEY = "org.opencastproject.elasticsearch.server.address";
+
+  /** Configuration key defining the port of an external Elasticsearch server */
+  public static final String ELASTICSEARCH_SERVER_PORT_KEY = "org.opencastproject.elasticsearch.server.port";
 
   /** Identifier of the root entry */
   private static final String ROOT_ID = "root";
@@ -123,8 +125,14 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
   /** The path to the index settings */
   protected String indexSettingsPath;
 
-  /** If Opencast should try starting an internal Elasticsearch node */
-  private boolean launchInternalServer;
+  /**
+   * Address of an external Elasticsearch server to connect to.
+   * Opencast will not try to launch an internal server if this is defined.
+   **/
+  private String externalServerAddress = null;
+
+  /** Port of an external Elasticsearch server to connect to */
+  private int externalServerPort = 9300;
 
   /**
    * Returns an array of document types for the index. For every one of these, the corresponding document type
@@ -152,9 +160,13 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
       indexSettingsPath = etc + "/index";
     }
 
-    // Check if we need to launch an internal Elasticsearch node
-    String startServer = StringUtils.trimToNull(ctx.getBundleContext().getProperty(ELASTICSEARCH_INTERNAL_SERVER_KEY));
-    launchInternalServer = startServer == null || BooleanUtils.toBoolean(startServer);
+    // Address of an external Elasticsearch node.
+    // It's fine if this is not set. Opencast will then launch its own node.
+    externalServerAddress = StringUtils.trimToNull(ctx.getBundleContext().getProperty(ELASTICSEARCH_SERVER_ADDRESS_KEY));
+
+    // Silently fall back to port 9300
+    externalServerPort = Integer.parseInt(StringUtils.defaultIfBlank(
+            ctx.getBundleContext().getProperty(ELASTICSEARCH_SERVER_PORT_KEY), "9300"));
   }
 
   /**
@@ -298,36 +310,36 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
 
     this.index = index;
     this.indexVersion = version;
-    Settings settings;
 
     // Configure and start Elasticsearch
-    synchronized (this) {
+    synchronized (AbstractElasticsearchIndex.class) {
 
       // Prepare the configuration of the elastic search node
-      settings = loadSettings(index, indexSettingsPath);
-      if (elasticSearch == null) {
+      Settings settings = loadSettings(index, indexSettingsPath);
+      if (elasticSearch == null && externalServerAddress == null) {
         logger.info("Starting local Elasticsearch node");
 
         // Configure and start the elastic search node. In a testing scenario,
         // the node is being created locally.
         NodeBuilder nodeBuilder = NodeBuilder.nodeBuilder().settings(settings);
         elasticSearch = nodeBuilder.local(TestUtils.isTest()).build();
-        //elasticSearch.start();
+        elasticSearch.start();
         logger.info("Elasticsearch node is up and running");
       }
-    }
 
-    // Create the client
-    synchronized (elasticSearch) {
-      //nodeClient = elasticSearch.client();
-      //elasticSearchClients.add(nodeClient);^
-      Settings settings1 = ImmutableSettings.builder()
-              .put("client.transport.sniff", true)
-              .put("cluster.name","elasticsearch")
-              .build();
-      nodeClient = new TransportClient(settings)
-              .addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName("127.0.0.1"), 9300));
-
+      // Create the client
+      if (nodeClient == null) {
+        if (elasticSearch == null) {
+          // configure external Elasticsearch
+          nodeClient = new TransportClient(settings)
+                  .addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName(externalServerAddress),
+                          externalServerPort));
+        } else {
+          // configure internal Elasticsearch
+          nodeClient = elasticSearch.client();
+        }
+        elasticSearchClients.add(nodeClient);
+      }
     }
 
     // Create the index
@@ -344,12 +356,9 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
     try {
       if (nodeClient != null) {
         nodeClient.close();
-        synchronized (elasticSearch) {
+        synchronized (AbstractElasticsearchIndex.class) {
           elasticSearchClients.remove(nodeClient);
-        }
-
-        synchronized (this) {
-          if (elasticSearchClients.isEmpty()) {
+          if (elasticSearchClients.isEmpty() && elasticSearch != null) {
             logger.info("Stopping local Elasticsearch node");
             elasticSearch.stop();
             elasticSearch.close();
@@ -377,14 +386,18 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
 
     // Make sure the site index exists
     try {
-      logger.debug("Trying to create index for '{}'", idx);
-      CreateIndexRequest indexCreateRequest = new CreateIndexRequest(idx);
-      String settings = getIndexSettings(idx);
-      if (settings != null)
-        indexCreateRequest.settings(settings);
-      CreateIndexResponse siteidxResponse = nodeClient.admin().indices().create(indexCreateRequest).actionGet();
-      if (!siteidxResponse.isAcknowledged()) {
-        throw new SearchIndexException("Unable to create index for '" + idx + "'");
+      IndicesExistsResponse indicesExistsResponse = nodeClient.admin().indices()
+              .exists(new IndicesExistsRequest(idx)).actionGet();
+      if (!indicesExistsResponse.isExists()) {
+        logger.debug("Trying to create index for '{}'", idx);
+        CreateIndexRequest indexCreateRequest = new CreateIndexRequest(idx);
+        String settings = getIndexSettings(idx);
+        if (settings != null)
+          indexCreateRequest.settings(settings);
+        CreateIndexResponse siteidxResponse = nodeClient.admin().indices().create(indexCreateRequest).actionGet();
+        if (!siteidxResponse.isAcknowledged()) {
+          throw new SearchIndexException("Unable to create index for '" + idx + "'");
+        }
       }
     } catch (IndexAlreadyExistsException e) {
       logger.info("Detected existing index '{}'", idx);
