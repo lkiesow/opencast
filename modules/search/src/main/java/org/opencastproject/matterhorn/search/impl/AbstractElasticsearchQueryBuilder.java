@@ -22,20 +22,13 @@
 package org.opencastproject.matterhorn.search.impl;
 
 import static org.opencastproject.matterhorn.search.impl.IndexSchema.TEXT;
-import static org.opencastproject.matterhorn.search.impl.IndexSchema.TEXT_FUZZY;
 
 import org.opencastproject.matterhorn.search.SearchQuery;
 import org.opencastproject.util.DateTimeSupport;
 
 import org.apache.commons.lang3.StringUtils;
-import org.elasticsearch.ElasticsearchException;
-import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.FilterBuilder;
-import org.elasticsearch.index.query.FilterBuilders;
-import org.elasticsearch.index.query.FuzzyLikeThisQueryBuilder;
 import org.elasticsearch.index.query.MatchAllQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
@@ -55,7 +48,7 @@ import java.util.Set;
 /**
  * Opencast implementation of the elastic search query builder.
  */
-public abstract class AbstractElasticsearchQueryBuilder<T extends SearchQuery> implements QueryBuilder {
+public abstract class AbstractElasticsearchQueryBuilder<T extends SearchQuery> extends QueryBuilder {
 
   /** Term queries on fields */
   private Map<String, Set<Object>> searchTerms = null;
@@ -114,7 +107,7 @@ public abstract class AbstractElasticsearchQueryBuilder<T extends SearchQuery> i
   /**
    * {@inheritDoc}
    *
-   * @see org.elasticsearch.index.query.BaseQueryBuilder#doXContent(org.elasticsearch.common.xcontent.XContentBuilder,
+   * @see org.elasticsearch.index.query.QueryBuilder#doXContent(org.elasticsearch.common.xcontent.XContentBuilder,
    *      org.elasticsearch.common.xcontent.ToXContent.Params)
    */
   public abstract void buildQuery(T query);
@@ -164,20 +157,22 @@ public abstract class AbstractElasticsearchQueryBuilder<T extends SearchQuery> i
 
     // Text
     if (text != null) {
-      QueryStringQueryBuilder queryBuilder = QueryBuilders.queryString(text).field(TEXT);
+      QueryStringQueryBuilder queryBuilder = QueryBuilders.queryStringQuery(text).field(TEXT);
       booleanQuery.must(queryBuilder);
       this.queryBuilder = booleanQuery;
     }
 
     // Fuzzy text
+    /*
     if (fuzzyText != null) {
       FuzzyLikeThisQueryBuilder fuzzyQueryBuilder = QueryBuilders.fuzzyLikeThisQuery(TEXT_FUZZY).likeText(fuzzyText);
       booleanQuery.must(fuzzyQueryBuilder);
       this.queryBuilder = booleanQuery;
     }
+    */
 
     QueryBuilder unfilteredQuery = queryBuilder;
-    List<FilterBuilder> filters = new ArrayList<FilterBuilder>();
+    List<QueryBuilder> filters = new ArrayList<>();
 
     // Add filtering for AND terms
     if (groups != null) {
@@ -189,27 +184,27 @@ public abstract class AbstractElasticsearchQueryBuilder<T extends SearchQuery> i
     // Non-Empty fields
     if (nonEmptyFields != null) {
       for (String field : nonEmptyFields) {
-        filters.add(FilterBuilders.existsFilter(field));
+        filters.add(QueryBuilders.existsQuery(field));
       }
     }
 
     // Empty fields
     if (emptyFields != null) {
       for (String field : emptyFields) {
-        filters.add(FilterBuilders.missingFilter(field));
+        filters.add(QueryBuilders.missingQuery(field));
       }
     }
 
     // Filter expressions
     if (filter != null) {
-      filters.add(FilterBuilders.termFilter(IndexSchema.TEXT, filter));
+      filters.add(QueryBuilders.termQuery(IndexSchema.TEXT, filter));
     }
 
     // Apply the filters
     if (filters.size() == 1) {
       this.queryBuilder = QueryBuilders.filteredQuery(unfilteredQuery, filters.get(0));
     } else if (filters.size() > 1) {
-      FilterBuilder andFilter = FilterBuilders.andFilter(filters.toArray(new FilterBuilder[filters.size()]));
+      QueryBuilder andFilter = QueryBuilders.andQuery(filters.toArray(new QueryBuilder[0]));
       this.queryBuilder = QueryBuilders.filteredQuery(unfilteredQuery, andFilter);
     }
 
@@ -232,12 +227,8 @@ public abstract class AbstractElasticsearchQueryBuilder<T extends SearchQuery> i
 
     // Make sure the data structures are set up accordingly
     if (searchTerms == null)
-      searchTerms = new HashMap<String, Set<Object>>();
-    Set<Object> termValues = searchTerms.get(fieldName);
-    if (termValues == null) {
-      termValues = new HashSet<Object>();
-      searchTerms.put(fieldName, termValues);
-    }
+      searchTerms = new HashMap<>();
+    Set<Object> termValues = searchTerms.computeIfAbsent(fieldName, k -> new HashSet<>());
 
     // Add the term
     termValues.add(fieldValue);
@@ -276,7 +267,7 @@ public abstract class AbstractElasticsearchQueryBuilder<T extends SearchQuery> i
 
     // Make sure the data structures are set up accordingly
     if (dateRanges == null)
-      dateRanges = new HashSet<DateRange>();
+      dateRanges = new HashSet<>();
 
     // Add the term
     DateRange dateRange = new DateRange(fieldName, startDate, endDate);
@@ -300,12 +291,8 @@ public abstract class AbstractElasticsearchQueryBuilder<T extends SearchQuery> i
 
     // Make sure the data structures are set up accordingly
     if (negativeSearchTerms == null)
-      negativeSearchTerms = new HashMap<String, Set<Object>>();
-    Set<Object> termValues = negativeSearchTerms.get(fieldName);
-    if (termValues == null) {
-      termValues = new HashSet<Object>();
-      negativeSearchTerms.put(fieldName, termValues);
-    }
+      negativeSearchTerms = new HashMap<>();
+    Set<Object> termValues = negativeSearchTerms.computeIfAbsent(fieldName, k -> new HashSet<>());
 
     // Add the term
     termValues.add(fieldValue);
@@ -335,7 +322,7 @@ public abstract class AbstractElasticsearchQueryBuilder<T extends SearchQuery> i
    */
   protected void andEmpty(String fieldName) {
     if (emptyFields == null)
-      emptyFields = new HashSet<String>();
+      emptyFields = new HashSet<>();
     emptyFields.add(StringUtils.trim(fieldName));
   }
 
@@ -347,7 +334,7 @@ public abstract class AbstractElasticsearchQueryBuilder<T extends SearchQuery> i
    */
   protected void andNotEmpty(String fieldName) {
     if (nonEmptyFields == null)
-      nonEmptyFields = new HashSet<String>();
+      nonEmptyFields = new HashSet<>();
     nonEmptyFields.add(StringUtils.trim(fieldName));
   }
 
@@ -360,26 +347,6 @@ public abstract class AbstractElasticsearchQueryBuilder<T extends SearchQuery> i
   @Override
   public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
     return queryBuilder.toXContent(builder, params);
-  }
-
-  /**
-   * {@inheritDoc}
-   *
-   * @see org.elasticsearch.index.query.QueryBuilder#buildAsBytes()
-   */
-  @Override
-  public BytesReference buildAsBytes() throws ElasticsearchException {
-    return queryBuilder.buildAsBytes();
-  }
-
-  /**
-   * {@inheritDoc}
-   *
-   * @see org.elasticsearch.index.query.QueryBuilder#buildAsBytes(org.elasticsearch.common.xcontent.XContentType)
-   */
-  @Override
-  public BytesReference buildAsBytes(XContentType contentType) {
-    return queryBuilder.buildAsBytes(contentType);
   }
 
   /**
@@ -481,10 +448,10 @@ public abstract class AbstractElasticsearchQueryBuilder<T extends SearchQuery> i
      *
      * @return the filter builder
      */
-    List<FilterBuilder> getFilterBuilders() {
-      List<FilterBuilder> filters = new ArrayList<FilterBuilder>(values.length);
+    List<QueryBuilder> getFilterBuilders() {
+      List<QueryBuilder> filters = new ArrayList<>(values.length);
       for (Object v : values) {
-        filters.add(FilterBuilders.termFilter(field, v.toString()));
+        filters.add(QueryBuilders.termQuery(field, v.toString()));
       }
       return filters;
     }
@@ -496,10 +463,8 @@ public abstract class AbstractElasticsearchQueryBuilder<T extends SearchQuery> i
      */
     @Override
     public boolean equals(Object obj) {
-      if (obj instanceof DateRange) {
-        return ((DateRange) obj).field.equals(field);
-      }
-      return false;
+      return obj instanceof DateRange
+              && ((DateRange) obj).field.equals(field);
     }
 
     /**
