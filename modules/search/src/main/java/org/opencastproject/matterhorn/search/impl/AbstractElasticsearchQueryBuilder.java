@@ -349,6 +349,12 @@ public abstract class AbstractElasticsearchQueryBuilder<T extends SearchQuery> e
     return queryBuilder.toXContent(builder, params);
   }
 
+  @Override
+  protected void doXContent(XContentBuilder xContentBuilder, Params params) throws IOException {
+    // We do not need to implement this since this is basically just a wrapper around the internally used query builder.
+    throw new RuntimeException("Not implemented");
+  }
+
   /**
    * Utility class to hold date range specifications and turn them into elastic search queries.
    */
