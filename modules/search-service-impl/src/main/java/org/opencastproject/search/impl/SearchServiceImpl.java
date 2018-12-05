@@ -364,10 +364,6 @@ public final class SearchServiceImpl extends AbstractJobProducer implements Sear
     if (mediaPackage == null) {
       throw new IllegalArgumentException("Unable to add a null mediapackage");
     }
-    if (!currentUser.hasRole(orgAdminRole) && !currentUser.hasRole(GLOBAL_ADMIN_ROLE)
-            && !authorizationService.hasPermission(mediaPackage, Permissions.Action.WRITE.toString())) {
-      throw new UnauthorizedException(currentUser, Permissions.Action.WRITE.toString());
-    }
     logger.debug("Attempting to add mediapackage {} to search index", mediaPackage.getIdentifier());
     AccessControlList acl = authorizationService.getActiveAcl(mediaPackage).getA();
 
