@@ -115,7 +115,7 @@ public class UIRolesRoleProvider implements RoleProvider {
     return roles.stream()
       .filter((role) -> like(role, query))
       .skip(offset)
-      .limit(limit > 0 ? limit : roles.size())
+      .limit(limit <= 0 ? limit : roles.size())
       .map((role) -> toRole(role, organization))
       .iterator();
   }
