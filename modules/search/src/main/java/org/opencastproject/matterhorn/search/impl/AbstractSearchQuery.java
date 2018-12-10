@@ -32,6 +32,7 @@ import org.opencastproject.matterhorn.search.SearchTerms.Quantifier;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -45,7 +46,7 @@ import java.util.Stack;
 public class AbstractSearchQuery implements SearchQuery {
 
   /** The document types */
-  protected List<String> types = new ArrayList<String>();
+  protected List<String> types = new ArrayList<>();
 
   /** The list of fields to return */
   protected List<String> fields = null;
@@ -101,9 +102,7 @@ public class AbstractSearchQuery implements SearchQuery {
    */
   @Override
   public SearchQuery withTypes(String... types) {
-    for (String type : types) {
-      this.types.add(type);
-    }
+    this.types.addAll(Arrays.asList(types));
     return this;
   }
 
@@ -114,7 +113,7 @@ public class AbstractSearchQuery implements SearchQuery {
    */
   @Override
   public String[] getTypes() {
-    return types.toArray(new String[types.size()]);
+    return types.toArray(new String[0]);
   }
 
   /**
@@ -123,7 +122,7 @@ public class AbstractSearchQuery implements SearchQuery {
   @Override
   public AbstractSearchQuery withField(String field) {
     if (fields == null)
-      fields = new ArrayList<String>();
+      fields = new ArrayList<>();
     fields.add(field);
     return this;
   }
@@ -146,7 +145,7 @@ public class AbstractSearchQuery implements SearchQuery {
   public String[] getFields() {
     if (fields == null)
       return new String[] {};
-    return fields.toArray(new String[fields.size()]);
+    return fields.toArray(new String[0]);
   }
 
   /**
@@ -237,7 +236,7 @@ public class AbstractSearchQuery implements SearchQuery {
   public String getQueryString() {
     if (text == null)
       return null;
-    StringBuffer query = new StringBuffer();
+    StringBuilder query = new StringBuilder();
     for (SearchTerms<String> s : text) {
       for (String t : s.getTerms()) {
         if (query.length() == 0)

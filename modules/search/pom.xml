@@ -207,6 +207,18 @@
       <groupId>joda-time</groupId>
       <artifactId>joda-time</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.joda</groupId>
+      <artifactId>joda-convert</artifactId>
+      <version>1.2</version>
+    </dependency>
+    <dependency>
+      <groupId>com.twitter</groupId>
+      <artifactId>jsr166e</artifactId>
+      <version>1.1.0</version>
+    </dependency>
+
+
 
     <!-- thirdparty -->
     <dependency>
@@ -251,7 +263,6 @@
             <Import-Package>
               !com.github.mustachejava*,
               !com.google.protobuf,
-              !com.twitter.jsr166e,
               !groovy.lang,
               !org.antlr.*,
               !org.apache.log4j.*,
@@ -268,6 +279,7 @@
               *
             </Import-Package>
             <Export-Package>
+              org.elasticsearch.*,
               org.opencastproject.matterhorn.search.impl;version=${project.version}
             </Export-Package>
             <Embed-Dependency>
@@ -282,6 +294,9 @@
               jackson-dataformat-smile,
               jackson-dataformat-yaml,
               jna,
+              joda-time,
+              joda-convert,
+              jsr166e,
               jts,
               lucene-analyzers-common,
               lucene-codecs,
@@ -306,7 +321,6 @@
               com.spatial4j.*;version=0.4,
               com.vividsolutions.*,
               org.apache.lucene.*,
-              org.elasticsearch.*,
               org.tartarus.snowball
             </_exportcontents>
           </instructions>

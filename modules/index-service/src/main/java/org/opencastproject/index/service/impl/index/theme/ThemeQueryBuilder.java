@@ -62,7 +62,7 @@ public class ThemeQueryBuilder extends AbstractElasticsearchQueryBuilder<ThemeSe
 
     // theme identifier
     if (query.getIdentifiers().length > 0) {
-      and(ThemeIndexSchema.UID, query.getIdentifiers(), true);
+      and(ThemeIndexSchema.ID, query.getIdentifiers(), true);
     }
 
     if (query.getCreator() != null) {
@@ -140,7 +140,7 @@ public class ThemeQueryBuilder extends AbstractElasticsearchQueryBuilder<ThemeSe
     // Text
     if (query.getTerms() != null) {
       for (SearchTerms<String> terms : query.getTerms()) {
-        StringBuffer queryText = new StringBuffer();
+        StringBuilder queryText = new StringBuilder();
         for (String term : terms.getTerms()) {
           if (queryText.length() > 0)
             queryText.append(" ");
