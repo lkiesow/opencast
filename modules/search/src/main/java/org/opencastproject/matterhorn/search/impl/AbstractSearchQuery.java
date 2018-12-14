@@ -81,7 +81,7 @@ public class AbstractSearchQuery implements SearchQuery {
   /**
    * Creates a search query that is executed on all document types.
    */
-  public AbstractSearchQuery() {
+  protected AbstractSearchQuery() {
     // Nothing to be done atm.
   }
 
@@ -210,12 +210,34 @@ public class AbstractSearchQuery implements SearchQuery {
 
     // Make sure the collection is initialized
     if (this.text == null)
-      this.text = new ArrayList<SearchTerms<String>>();
+      this.text = new ArrayList<>();
 
     // Add the text to the search terms
     clearExpectations();
     this.fuzzySearch = wildcardSearch;
-    with(this.text, quantifier, text);
+
+    // Handle any quantifier
+    if (text.length == 1 || Any.equals(quantifier)) {
+      SearchTerms<String> terms = null;
+
+      // Check if there is a default terms collection
+      for (SearchTerms<String> t : this.text) {
+        if (Quantifier.Any.equals(t.getQuantifier())) {
+          terms = t;
+          break;
+        }
+      }
+
+      // Has there been a default terms collection?
+      if (terms == null) {
+        terms = new SearchTermsImpl<>(Quantifier.Any, text);
+        this.text.add(terms);
+      }
+
+    // All quantifier
+    } else {
+      this.text.add(new SearchTermsImpl<>(quantifier, text));
+    }
     return this;
   }
 
@@ -325,102 +347,6 @@ public class AbstractSearchQuery implements SearchQuery {
     if (expectation != null)
       throw new IllegalStateException("Query configuration expects " + expectation.getClass().getName());
     stack.clear();
-  }
-
-  /**
-   * This method is called if a certain type of object is expected by someone. If this is not the case (e. g. query
-   * configuration is in good shape, then someone tries to "finish" a configuration part) we throw an
-   * <code>IllegalStateException</code>.
-   *
-   * @throws IllegalStateException
-   *           if no or a different object is expected
-   */
-  protected void ensureExpectation(Class<?> c) throws IllegalStateException {
-    if (expectation == null)
-      throw new IllegalStateException("Malformed query configuration. No " + c.getClass().getName()
-              + " is expected at this time");
-    if (!expectation.getCanonicalName().equals(c.getCanonicalName()))
-      throw new IllegalStateException("Malformed query configuration. Something of type " + c.getClass().getName()
-              + " is expected at this time");
-    expectation = null;
-  }
-
-  /**
-   * Make sure that an object of type <code>c</code> is on the stack, throw an <code>IllegalStateException</code>
-   * otherwise.
-   *
-   * @throws IllegalStateException
-   *           if no object of type <code>c</code> was found on the stack
-   */
-  protected void ensureConfigurationObject(Class<?> c) throws IllegalStateException {
-    for (Object o : stack) {
-      if (c.isAssignableFrom(o.getClass()))
-        return;
-    }
-    throw new IllegalStateException("Malformed query configuration. No " + c.getClass().getName()
-            + " is expected at this time");
-  }
-
-  /**
-   * Make sure that an array of type <code>c</code> is on the stack, throw an <code>IllegalStateException</code>
-   * otherwise.
-   *
-   * @throws IllegalStateException
-   *           if no array of type <code>c</code> was found on the stack
-   */
-  protected void ensureConfigurationArray(Class<?> c) throws IllegalStateException {
-    for (Object o : stack) {
-      if (o.getClass().isArray() && c.isAssignableFrom(o.getClass().getComponentType()))
-        return;
-    }
-    throw new IllegalStateException("Malformed query configuration. No " + c.getClass().getName()
-            + " is expected at this time");
-  }
-
-  /**
-   * Utility method to add the given values to the list of search terms using the specified quantifier.
-   *
-   * @param searchTerms
-   *          the terms
-   * @param quantifier
-   *          the quantifier
-   * @param values
-   *          the values
-   * @return the extended search terms
-   */
-  protected <T extends Object> SearchTerms<T> with(List<SearchTerms<T>> searchTerms, Quantifier quantifier, T... values) {
-    SearchTerms<T> terms = null;
-
-    // Handle any quantifier
-    if (values.length == 1 || Any.equals(quantifier)) {
-
-      // Check if there is a default terms collection
-      for (SearchTerms<T> t : searchTerms) {
-        if (Quantifier.Any.equals(t.getQuantifier())) {
-          terms = t;
-          break;
-        }
-      }
-
-      // Has there been a default terms collection?
-      if (terms == null) {
-        terms = new SearchTermsImpl<T>(Quantifier.Any, values);
-        searchTerms.add(terms);
-      }
-
-      // Add the text
-      for (T v : values) {
-        terms.add(v);
-      }
-    }
-
-    // All quantifier
-    else {
-      terms = new SearchTermsImpl<T>(quantifier, values);
-      searchTerms.add(terms);
-    }
-
-    return terms;
   }
 
 }
