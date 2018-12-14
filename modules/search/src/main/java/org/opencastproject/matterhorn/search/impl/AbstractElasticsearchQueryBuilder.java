@@ -22,6 +22,7 @@
 package org.opencastproject.matterhorn.search.impl;
 
 import static org.opencastproject.matterhorn.search.impl.IndexSchema.TEXT;
+import static org.opencastproject.matterhorn.search.impl.IndexSchema.TEXT_FUZZY;
 
 import org.opencastproject.matterhorn.search.SearchQuery;
 import org.opencastproject.util.DateTimeSupport;
@@ -30,6 +31,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.MatchAllQueryBuilder;
+import org.elasticsearch.index.query.MoreLikeThisQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.QueryStringQueryBuilder;
@@ -45,6 +47,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Opencast implementation of the elastic search query builder.
@@ -53,9 +56,6 @@ public abstract class AbstractElasticsearchQueryBuilder<T extends SearchQuery> e
 
   /** Term queries on fields */
   private Map<String, Set<Object>> searchTerms = null;
-
-  /** Negative term queries on fields */
-  private Map<String, Set<Object>> negativeSearchTerms = null;
 
   /** Fields that need to match all values */
   protected List<ValueGroup> groups = null;
@@ -73,7 +73,7 @@ public abstract class AbstractElasticsearchQueryBuilder<T extends SearchQuery> e
   protected String fuzzyText = null;
 
   /** The original search query */
-  private T query = null;
+  private T query;
 
   /** The boolean query */
   private QueryBuilder queryBuilder = null;
@@ -126,14 +126,6 @@ public abstract class AbstractElasticsearchQueryBuilder<T extends SearchQuery> e
       this.queryBuilder = booleanQuery;
     }
 
-    // Negative terms
-    if (negativeSearchTerms != null) {
-      for (Map.Entry<String, Set<Object>> entry : negativeSearchTerms.entrySet()) {
-        booleanQuery.mustNot(new TermsQueryBuilder(entry.getKey(), entry.getValue().toArray(new Object[0])));
-      }
-      this.queryBuilder = booleanQuery;
-    }
-
     // Date ranges
     if (dateRanges != null) {
       for (DateRange dr : dateRanges) {
@@ -150,13 +142,11 @@ public abstract class AbstractElasticsearchQueryBuilder<T extends SearchQuery> e
     }
 
     // Fuzzy text
-    /*
     if (fuzzyText != null) {
-      FuzzyLikeThisQueryBuilder fuzzyQueryBuilder = QueryBuilders.fuzzyLikeThisQuery(TEXT_FUZZY).likeText(fuzzyText);
-      booleanQuery.must(fuzzyQueryBuilder);
+      MoreLikeThisQueryBuilder moreLikeThisQueryBuilder = QueryBuilders.moreLikeThisQuery(TEXT_FUZZY).like(fuzzyText);
+      booleanQuery.must(moreLikeThisQueryBuilder);
       this.queryBuilder = booleanQuery;
     }
-    */
 
     List<QueryBuilder> filters = new ArrayList<>();
 
@@ -173,10 +163,12 @@ public abstract class AbstractElasticsearchQueryBuilder<T extends SearchQuery> e
     }
 
     // Apply the filters
-    for (QueryBuilder filter: filters) {
-      booleanQuery.filter(filter);
+    if (!filters.isEmpty()) {
+      for (QueryBuilder filter : filters) {
+        booleanQuery.filter(filter);
+      }
+      this.queryBuilder = booleanQuery;
     }
-    this.queryBuilder = booleanQuery;
 
   }
 
@@ -223,48 +215,7 @@ public abstract class AbstractElasticsearchQueryBuilder<T extends SearchQuery> e
       dateRanges = new HashSet<>();
 
     // Add the term
-    DateRange dateRange = new DateRange(fieldName, startDate, endDate);
-    dateRanges.add(dateRange);
-  }
-
-  /**
-   * Stores <code>fieldValue</code> as a negative search term on the <code>fieldName</code> field.
-   *
-   * @param fieldName
-   *          the field name
-   * @param fieldValue
-   *          the field value
-   * @param clean
-   *          <code>true</code> to escape solr special characters in the field value
-   */
-  protected void andNot(String fieldName, Object fieldValue, boolean clean) {
-
-    // Fix the field name, just in case
-    fieldName = StringUtils.trim(fieldName);
-
-    // Make sure the data structures are set up accordingly
-    if (negativeSearchTerms == null)
-      negativeSearchTerms = new HashMap<>();
-    Set<Object> termValues = negativeSearchTerms.computeIfAbsent(fieldName, k -> new HashSet<>());
-
-    // Add the term
-    termValues.add(fieldValue);
-  }
-
-  /**
-   * Stores <code>fieldValues</code> as negative search terms on the <code>fieldName</code> field.
-   *
-   * @param fieldName
-   *          the field name
-   * @param fieldValues
-   *          the field value
-   * @param clean
-   *          <code>true</code> to escape solr special characters in the field value
-   */
-  protected void andNot(String fieldName, Object[] fieldValues, boolean clean) {
-    for (Object v : fieldValues) {
-      andNot(fieldName, v, clean);
-    }
+    dateRanges.add(new DateRange(fieldName, startDate, endDate));
   }
 
   /**
@@ -290,13 +241,13 @@ public abstract class AbstractElasticsearchQueryBuilder<T extends SearchQuery> e
   public static final class DateRange {
 
     /** The field name */
-    private String field = null;
+    private String field;
 
     /** The start date */
-    private Date startDate = null;
+    private Date startDate;
 
     /** The end date */
-    private Date endDate = null;
+    private Date endDate;
 
     /**
      * Creates a new date range specification with the given field name, start and end dates. <code>null</code> may be
@@ -309,7 +260,7 @@ public abstract class AbstractElasticsearchQueryBuilder<T extends SearchQuery> e
      * @param end
      *          the end date
      */
-    public DateRange(String field, Date start, Date end) {
+    DateRange(String field, Date start, Date end) {
       this.field = field;
       this.startDate = start;
       this.endDate = end;
@@ -336,10 +287,8 @@ public abstract class AbstractElasticsearchQueryBuilder<T extends SearchQuery> e
      */
     @Override
     public boolean equals(Object obj) {
-      if (obj instanceof DateRange) {
-        return ((DateRange) obj).field.equals(field);
-      }
-      return false;
+      return obj instanceof DateRange
+              && ((DateRange) obj).field.equals(field);
     }
 
     /**
@@ -360,10 +309,10 @@ public abstract class AbstractElasticsearchQueryBuilder<T extends SearchQuery> e
   public static final class ValueGroup {
 
     /** The field name */
-    private String field = null;
+    private String field;
 
     /** The values to store */
-    private Object[] values = null;
+    private Object[] values;
 
     /**
      * Creates a new value group for the given field and values.
@@ -384,11 +333,9 @@ public abstract class AbstractElasticsearchQueryBuilder<T extends SearchQuery> e
      * @return the filter builder
      */
     List<QueryBuilder> getFilterBuilders() {
-      List<QueryBuilder> filters = new ArrayList<>(values.length);
-      for (Object v : values) {
-        filters.add(QueryBuilders.termQuery(field, v.toString()));
-      }
-      return filters;
+      return Arrays.stream(values)
+              .map((v) -> QueryBuilders.termQuery(field, v.toString()))
+              .collect(Collectors.toList());
     }
 
     /**
@@ -398,8 +345,8 @@ public abstract class AbstractElasticsearchQueryBuilder<T extends SearchQuery> e
      */
     @Override
     public boolean equals(Object obj) {
-      return obj instanceof DateRange
-              && ((DateRange) obj).field.equals(field);
+      return obj instanceof ValueGroup
+              && ((ValueGroup) obj).field.equals(field);
     }
 
     /**
