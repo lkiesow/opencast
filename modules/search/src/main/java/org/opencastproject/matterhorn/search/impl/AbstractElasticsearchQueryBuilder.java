@@ -38,6 +38,7 @@ import org.elasticsearch.index.query.TermsQueryBuilder;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -56,14 +57,8 @@ public abstract class AbstractElasticsearchQueryBuilder<T extends SearchQuery> e
   /** Negative term queries on fields */
   private Map<String, Set<Object>> negativeSearchTerms = null;
 
-  /** Fields that must be empty */
-  private Set<String> emptyFields = null;
-
   /** Fields that need to match all values */
   protected List<ValueGroup> groups = null;
-
-  /** Fields that must not be empty */
-  private Set<String> nonEmptyFields = null;
 
   /** Fields that query a date range */
   private Set<DateRange> dateRanges = null;
@@ -126,11 +121,7 @@ public abstract class AbstractElasticsearchQueryBuilder<T extends SearchQuery> e
     // Terms
     if (searchTerms != null) {
       for (Map.Entry<String, Set<Object>> entry : searchTerms.entrySet()) {
-        Set<Object> values = entry.getValue();
-        if (values.size() == 1)
-          booleanQuery.must(new TermsQueryBuilder(entry.getKey(), values.iterator().next()));
-        else
-          booleanQuery.must(new TermsQueryBuilder(entry.getKey(), values.toArray(new String[values.size()])));
+        booleanQuery.must(new TermsQueryBuilder(entry.getKey(), entry.getValue().toArray(new Object[0])));
       }
       this.queryBuilder = booleanQuery;
     }
@@ -138,11 +129,7 @@ public abstract class AbstractElasticsearchQueryBuilder<T extends SearchQuery> e
     // Negative terms
     if (negativeSearchTerms != null) {
       for (Map.Entry<String, Set<Object>> entry : negativeSearchTerms.entrySet()) {
-        Set<Object> values = entry.getValue();
-        if (values.size() == 1)
-          booleanQuery.mustNot(new TermsQueryBuilder(entry.getKey(), values.iterator().next()));
-        else
-          booleanQuery.mustNot(new TermsQueryBuilder(entry.getKey(), values.toArray(new String[values.size()])));
+        booleanQuery.mustNot(new TermsQueryBuilder(entry.getKey(), entry.getValue().toArray(new Object[0])));
       }
       this.queryBuilder = booleanQuery;
     }
@@ -171,7 +158,6 @@ public abstract class AbstractElasticsearchQueryBuilder<T extends SearchQuery> e
     }
     */
 
-    QueryBuilder unfilteredQuery = queryBuilder;
     List<QueryBuilder> filters = new ArrayList<>();
 
     // Add filtering for AND terms
@@ -181,32 +167,16 @@ public abstract class AbstractElasticsearchQueryBuilder<T extends SearchQuery> e
       }
     }
 
-    // Non-Empty fields
-    if (nonEmptyFields != null) {
-      for (String field : nonEmptyFields) {
-        filters.add(QueryBuilders.existsQuery(field));
-      }
-    }
-
-    // Empty fields
-    if (emptyFields != null) {
-      for (String field : emptyFields) {
-        filters.add(QueryBuilders.missingQuery(field));
-      }
-    }
-
     // Filter expressions
     if (filter != null) {
       filters.add(QueryBuilders.termQuery(IndexSchema.TEXT, filter));
     }
 
     // Apply the filters
-    if (filters.size() == 1) {
-      this.queryBuilder = QueryBuilders.filteredQuery(unfilteredQuery, filters.get(0));
-    } else if (filters.size() > 1) {
-      QueryBuilder andFilter = QueryBuilders.andQuery(filters.toArray(new QueryBuilder[0]));
-      this.queryBuilder = QueryBuilders.filteredQuery(unfilteredQuery, andFilter);
+    for (QueryBuilder filter: filters) {
+      booleanQuery.filter(filter);
     }
+    this.queryBuilder = booleanQuery;
 
   }
 
@@ -215,39 +185,22 @@ public abstract class AbstractElasticsearchQueryBuilder<T extends SearchQuery> e
    *
    * @param fieldName
    *          the field name
-   * @param fieldValue
+   * @param fieldValues
    *          the field value
-   * @param clean
-   *          <code>true</code> to escape solr special characters in the field value
    */
-  protected void and(String fieldName, Object fieldValue, boolean clean) {
+  protected void and(String fieldName, Object... fieldValues) {
+
+    // Make sure the data structures are set up accordingly
+    if (searchTerms == null) {
+      searchTerms = new HashMap<>();
+    }
 
     // Fix the field name, just in case
     fieldName = StringUtils.trim(fieldName);
 
-    // Make sure the data structures are set up accordingly
-    if (searchTerms == null)
-      searchTerms = new HashMap<>();
-    Set<Object> termValues = searchTerms.computeIfAbsent(fieldName, k -> new HashSet<>());
-
-    // Add the term
-    termValues.add(fieldValue);
-  }
-
-  /**
-   * Stores <code>fieldValues</code> as search terms on the <code>fieldName</code> field.
-   *
-   * @param fieldName
-   *          the field name
-   * @param fieldValues
-   *          the field value
-   * @param clean
-   *          <code>true</code> to escape solr special characters in the field value
-   */
-  protected void and(String fieldName, Object[] fieldValues, boolean clean) {
-    for (Object v : fieldValues) {
-      and(fieldName, v, clean);
-    }
+    // insert value
+    searchTerms.computeIfAbsent(fieldName, k -> new HashSet<>())
+            .addAll(Arrays.asList(fieldValues));
   }
 
   /**
@@ -312,30 +265,6 @@ public abstract class AbstractElasticsearchQueryBuilder<T extends SearchQuery> e
     for (Object v : fieldValues) {
       andNot(fieldName, v, clean);
     }
-  }
-
-  /**
-   * Encodes the field name as part of the AND clause of a solr query: <tt>AND -fieldName : [* TO *]</tt>.
-   *
-   * @param fieldName
-   *          the field name
-   */
-  protected void andEmpty(String fieldName) {
-    if (emptyFields == null)
-      emptyFields = new HashSet<>();
-    emptyFields.add(StringUtils.trim(fieldName));
-  }
-
-  /**
-   * Encodes the field name as part of the AND clause of a solr query: <tt>AND fieldName : ["" TO *]</tt>.
-   *
-   * @param fieldName
-   *          the field name
-   */
-  protected void andNotEmpty(String fieldName) {
-    if (nonEmptyFields == null)
-      nonEmptyFields = new HashSet<>();
-    nonEmptyFields.add(StringUtils.trim(fieldName));
   }
 
   /**
