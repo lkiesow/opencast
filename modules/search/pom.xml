@@ -13,6 +13,7 @@
   <properties>
     <opencast.basedir>${project.basedir}/../..</opencast.basedir>
     <checkstyle.skip>false</checkstyle.skip>
+    <lucene.version>5.5.4</lucene.version>
   </properties>
   <dependencies>
     <dependency>
@@ -49,83 +50,83 @@
     <dependency>
       <groupId>org.apache.lucene</groupId>
       <artifactId>lucene-analyzers-common</artifactId>
-      <version>5.5.4</version>
+      <version>${lucene.version}</version>
       <scope>runtime</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.lucene</groupId>
       <artifactId>lucene-codecs</artifactId>
-      <version>5.5.4</version>
+      <version>${lucene.version}</version>
       <scope>runtime</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.lucene</groupId>
       <artifactId>lucene-core</artifactId>
-      <version>5.5.4</version>
+      <version>${lucene.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.lucene</groupId>
       <artifactId>lucene-expressions</artifactId>
-      <version>5.5.4</version>
+      <version>${lucene.version}</version>
       <scope>runtime</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.lucene</groupId>
       <artifactId>lucene-grouping</artifactId>
-      <version>5.5.4</version>
+      <version>${lucene.version}</version>
       <scope>runtime</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.lucene</groupId>
       <artifactId>lucene-highlighter</artifactId>
-      <version>5.5.4</version>
+      <version>${lucene.version}</version>
       <scope>runtime</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.lucene</groupId>
       <artifactId>lucene-join</artifactId>
-      <version>5.5.4</version>
+      <version>${lucene.version}</version>
       <scope>runtime</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.lucene</groupId>
       <artifactId>lucene-memory</artifactId>
-      <version>5.5.4</version>
+      <version>${lucene.version}</version>
       <scope>runtime</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.lucene</groupId>
       <artifactId>lucene-misc</artifactId>
-      <version>5.5.4</version>
+      <version>${lucene.version}</version>
       <scope>runtime</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.lucene</groupId>
       <artifactId>lucene-queries</artifactId>
-      <version>5.5.4</version>
+      <version>${lucene.version}</version>
       <scope>runtime</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.lucene</groupId>
       <artifactId>lucene-queryparser</artifactId>
-      <version>5.5.4</version>
+      <version>${lucene.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.lucene</groupId>
       <artifactId>lucene-sandbox</artifactId>
-      <version>5.5.4</version>
+      <version>${lucene.version}</version>
       <scope>runtime</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.lucene</groupId>
       <artifactId>lucene-spatial</artifactId>
-      <version>5.5.4</version>
+      <version>${lucene.version}</version>
       <scope>runtime</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.lucene</groupId>
       <artifactId>lucene-suggest</artifactId>
-      <version>5.5.4</version>
+      <version>${lucene.version}</version>
       <scope>runtime</scope>
     </dependency>
     <dependency>
@@ -218,8 +219,6 @@
       <version>1.1.0</version>
     </dependency>
 
-
-
     <!-- thirdparty -->
     <dependency>
       <groupId>org.slf4j</groupId>
@@ -279,7 +278,6 @@
               *
             </Import-Package>
             <Export-Package>
-              org.elasticsearch.*,
               org.opencastproject.matterhorn.search.impl;version=${project.version}
             </Export-Package>
             <Embed-Dependency>
@@ -319,8 +317,13 @@
             </Embed-Dependency>
             <_exportcontents>
               com.spatial4j.*;version=0.4,
+              com.carrotsearch.*,
+              org.jboss.netty.*,
+              org.apache.commons.cli,
+              org.joda.*,
               com.vividsolutions.*,
               org.apache.lucene.*,
+              org.elasticsearch.*,
               org.tartarus.snowball
             </_exportcontents>
           </instructions>
