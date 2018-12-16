@@ -52,7 +52,7 @@ import java.util.stream.Collectors;
 /**
  * Opencast implementation of the elastic search query builder.
  */
-public abstract class AbstractElasticsearchQueryBuilder<T extends SearchQuery> extends QueryBuilder {
+public abstract class AbstractElasticsearchQueryBuilder<T extends SearchQuery> implements QueryBuilder {
 
   /** Term queries on fields */
   private Map<String, Set<Object>> searchTerms = null;
@@ -227,12 +227,6 @@ public abstract class AbstractElasticsearchQueryBuilder<T extends SearchQuery> e
   @Override
   public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
     return queryBuilder.toXContent(builder, params);
-  }
-
-  @Override
-  protected void doXContent(XContentBuilder xContentBuilder, Params params) throws IOException {
-    // We do not need to implement this since this is basically just a wrapper around the internally used query builder.
-    throw new RuntimeException("Not implemented");
   }
 
   /**
