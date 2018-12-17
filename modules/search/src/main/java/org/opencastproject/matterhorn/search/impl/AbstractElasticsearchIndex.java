@@ -59,8 +59,9 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.node.Node;
-import org.elasticsearch.node.NodeBuilder;
+import org.elasticsearch.node.NodeValidationException;
 import org.elasticsearch.search.sort.SortOrder;
+import org.elasticsearch.transport.client.PreBuiltTransportClient;
 import org.osgi.service.component.ComponentContext;
 import org.osgi.service.component.ComponentException;
 import org.slf4j.Logger;
@@ -321,9 +322,15 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
 
         // Configure and start the elastic search node. In a testing scenario,
         // the node is being created locally.
-        NodeBuilder nodeBuilder = NodeBuilder.nodeBuilder().settings(settings);
-        elasticSearch = nodeBuilder.local(TestUtils.isTest()).build();
-        elasticSearch.start();
+        elasticSearch = new OpencastNode(settings);
+        // TODO:
+        //  elasticSearch = nodeBuilder.local(TestUtils.isTest()).build();
+        //  https://www.elastic.co/guide/en/elasticsearch/reference/5.5/breaking_50_settings_changes.html#_node_settings
+        try {
+          elasticSearch.start();
+        } catch (NodeValidationException e) {
+          throw new SearchIndexException(e);
+        }
         logger.info("Elasticsearch node is up and running");
       }
 
@@ -331,6 +338,10 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
       if (nodeClient == null) {
         if (elasticSearch == null) {
           // configure external Elasticsearch
+          TransportClient client = new PreBuiltTransportClient(Settings.EMPTY)
+        .addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName("host1"), 9300))
+        .addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName("host2"), 9300));
+
           nodeClient = TransportClient.builder()
                   .settings(settings).build()
                   .addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName(externalServerAddress),
@@ -624,6 +635,18 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
    */
   public String getIndexName() {
     return index;
+  }
+
+  private class OpencastNode extends Node {
+
+    public OpencastNode(Settings preparedSettings) {
+      super(preparedSettings);
+    }
+
+    @Override
+    protected void registerDerivedNodeNameWithLogger(String nodeName) {
+      // we never call this
+    }
   }
 
 }
