@@ -54,9 +54,9 @@ import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.action.support.WriteRequest;
 import org.elasticsearch.action.support.master.AcknowledgedResponse;
 import org.elasticsearch.client.Client;
-import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.common.transport.InetSocketTransportAddress;
+import org.elasticsearch.common.transport.TransportAddress;
+import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.node.Node;
 import org.elasticsearch.node.NodeValidationException;
@@ -338,13 +338,8 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
       if (nodeClient == null) {
         if (elasticSearch == null) {
           // configure external Elasticsearch
-          TransportClient client = new PreBuiltTransportClient(Settings.EMPTY)
-        .addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName("host1"), 9300))
-        .addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName("host2"), 9300));
-
-          nodeClient = TransportClient.builder()
-                  .settings(settings).build()
-                  .addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName(externalServerAddress),
+          nodeClient = new PreBuiltTransportClient(settings)
+                  .addTransportAddress(new TransportAddress(InetAddress.getByName(externalServerAddress),
                           externalServerPort));
         } else {
           // configure internal Elasticsearch
@@ -404,7 +399,7 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
         CreateIndexRequest indexCreateRequest = new CreateIndexRequest(idx);
         String settings = getIndexSettings(idx);
         if (settings != null)
-          indexCreateRequest.settings(settings);
+          indexCreateRequest.settings(settings, XContentType.JSON);
         CreateIndexResponse siteidxResponse = nodeClient.admin().indices().create(indexCreateRequest).actionGet();
         if (!siteidxResponse.isAcknowledged()) {
           throw new SearchIndexException("Unable to create index for '" + idx + "'");
@@ -432,7 +427,7 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
     try {
       GetResponse response = getRequestBuilder.execute().actionGet();
       if (response.isExists() && response.getField(VERSION) != null) {
-        int actualIndexVersion = Integer.parseInt((String) response.getField(VERSION).getValue());
+        int actualIndexVersion = Integer.parseInt(response.getField(VERSION).getValue());
         if (indexVersion != actualIndexVersion)
           throw new SearchIndexException("Search index is at version " + actualIndexVersion + ", but codebase expects "
                   + indexVersion);
@@ -467,7 +462,7 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
    * @throws SearchIndexException
    *           if the index configuration cannot be found
    */
-  protected Settings loadSettings(String index, String indexSettingsPath) throws IOException, SearchIndexException {
+  private Settings loadSettings(String index, String indexSettingsPath) throws IOException, SearchIndexException {
     // Check if a local configuration file is present
     File configFile = new File(PathSupport.concat(new String[] { indexSettingsPath, index, "settings.yml" }));
     if (!configFile.isFile()) {
@@ -476,9 +471,9 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
 
     // Finally, try and load the index settings
     try (FileInputStream fis = new FileInputStream(configFile)) {
-      return Settings.settingsBuilder().loadFromStream(configFile.getName(), fis).build();
+      return Settings.builder().loadFromStream(configFile.getName(), fis, false).build();
     } catch (FileNotFoundException e) {
-      throw new IOException("Unable to load elasticsearch settings from " + configFile.getAbsolutePath());
+      throw new IOException("Unable to load Elasticsearch settings from " + configFile.getAbsolutePath());
     }
   }
 
@@ -493,7 +488,7 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
    * @throws IOException
    *           if reading the index mapping fails
    */
-  protected String getIndexSettings(String index) throws IOException {
+  private String getIndexSettings(String index) throws IOException {
     String settings = null;
 
     File configFile = new File(PathSupport.concat(new String[] { indexSettingsPath, index, "settings.json" }));
@@ -535,7 +530,7 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
    * @throws IOException
    *           if reading the index mapping fails
    */
-  protected String getIndexTypeDefinition(String index, String documentType) throws SearchIndexException, IOException {
+  private String getIndexTypeDefinition(String index, String documentType) throws SearchIndexException, IOException {
     String mapping = null;
 
     File configFile = new File(PathSupport.concat(new String[] { indexSettingsPath, index,
@@ -584,9 +579,9 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
 
     // Make sure all fields are being returned
     if (query.getFields().length > 0) {
-      requestBuilder.addFields(query.getFields());
+      requestBuilder.storedFields(query.getFields());
     } else {
-      requestBuilder.addField("*");
+      requestBuilder.storedFields("*");
     }
 
     // Types
@@ -639,7 +634,7 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
 
   private class OpencastNode extends Node {
 
-    public OpencastNode(Settings preparedSettings) {
+    OpencastNode(Settings preparedSettings) {
       super(preparedSettings);
     }
 
