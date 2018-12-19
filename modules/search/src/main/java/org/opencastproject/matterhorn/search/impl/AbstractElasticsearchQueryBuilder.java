@@ -143,7 +143,10 @@ public abstract class AbstractElasticsearchQueryBuilder<T extends SearchQuery> i
 
     // Fuzzy text
     if (fuzzyText != null) {
-      MoreLikeThisQueryBuilder moreLikeThisQueryBuilder = QueryBuilders.moreLikeThisQuery(TEXT_FUZZY).like(fuzzyText);
+      MoreLikeThisQueryBuilder moreLikeThisQueryBuilder = QueryBuilders.moreLikeThisQuery(
+              new String[] {TEXT_FUZZY},
+              new String[] {fuzzyText},
+              null);
       booleanQuery.must(moreLikeThisQueryBuilder);
       this.queryBuilder = booleanQuery;
     }

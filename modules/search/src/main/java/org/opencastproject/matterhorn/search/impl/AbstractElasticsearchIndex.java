@@ -53,10 +53,11 @@ import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.action.support.WriteRequest;
 import org.elasticsearch.action.support.master.AcknowledgedResponse;
 import org.elasticsearch.client.Client;
-import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.loader.JsonSettingsLoader;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
+import org.elasticsearch.common.transport.TransportAddress;
+import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.node.Node;
 import org.elasticsearch.node.NodeValidationException;
@@ -331,13 +332,8 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
       if (nodeClient == null) {
         if (elasticSearch == null) {
           // configure external Elasticsearch
-          TransportClient client = new PreBuiltTransportClient(Settings.EMPTY)
-        .addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName("host1"), 9300))
-        .addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName("host2"), 9300));
-
-          nodeClient = TransportClient.builder()
-                  .settings(settings).build()
-                  .addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName(externalServerAddress),
+          nodeClient = new PreBuiltTransportClient(settings)
+                  .addTransportAddress(new TransportAddress(InetAddress.getByName(externalServerAddress),
                           externalServerPort));
         } else {
           // configure internal Elasticsearch
@@ -423,7 +419,7 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
     try {
       GetResponse response = getRequestBuilder.execute().actionGet();
       if (response.isExists() && response.getField(VERSION) != null) {
-        int actualIndexVersion = Integer.parseInt((String) response.getField(VERSION).getValue());
+        int actualIndexVersion = Integer.parseInt(response.getField(VERSION).getValue());
         if (indexVersion != actualIndexVersion)
           throw new SearchIndexException("Search index is at version " + actualIndexVersion + ", but codebase expects "
                   + indexVersion);
@@ -513,9 +509,9 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
 
     // Make sure all fields are being returned
     if (query.getFields().length > 0) {
-      requestBuilder.addFields(query.getFields());
+      requestBuilder.storedFields(query.getFields());
     } else {
-      requestBuilder.addField("*");
+      requestBuilder.storedFields("*");
     }
 
     // Types
@@ -568,7 +564,7 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
 
   private class OpencastNode extends Node {
 
-    public OpencastNode(Settings preparedSettings) {
+    OpencastNode(Settings preparedSettings) {
       super(preparedSettings);
     }
 
