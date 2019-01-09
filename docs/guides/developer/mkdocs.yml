@@ -16,7 +16,7 @@ extra_css:
 
 # This needs to be listed in order to populate the left navigation and the TOC
 # Items will appear in this order
-pages:
+nav:
 - Home: 'index.md'
 - Development Process:
    - Development: 'development-process.md'
@@ -85,5 +85,6 @@ pages:
    - Series API: 'api/series-api.md'
    - Groups API: 'api/groups-api.md'
    - Security API: 'api/security-api.md'
+   - Workflow API: 'api/workflow-api.md'
    - Data Types: 'api/types.md'
    - Glossary: 'api/glossary.md'

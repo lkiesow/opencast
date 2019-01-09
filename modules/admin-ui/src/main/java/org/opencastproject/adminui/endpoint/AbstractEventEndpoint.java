@@ -77,6 +77,7 @@ import org.opencastproject.index.service.api.IndexService;
 import org.opencastproject.index.service.api.IndexService.Source;
 import org.opencastproject.index.service.catalog.adapter.MetadataList;
 import org.opencastproject.index.service.catalog.adapter.MetadataList.Locked;
+import org.opencastproject.index.service.catalog.adapter.MetadataUtils;
 import org.opencastproject.index.service.exception.IndexServiceException;
 import org.opencastproject.index.service.impl.index.event.Event;
 import org.opencastproject.index.service.impl.index.event.EventIndexSchema;
@@ -105,6 +106,7 @@ import org.opencastproject.mediapackage.track.VideoStreamImpl;
 import org.opencastproject.metadata.dublincore.DublinCore;
 import org.opencastproject.metadata.dublincore.EventCatalogUIAdapter;
 import org.opencastproject.metadata.dublincore.MetadataCollection;
+import org.opencastproject.metadata.dublincore.MetadataField;
 import org.opencastproject.rest.BulkOperationResult;
 import org.opencastproject.rest.RestConstants;
 import org.opencastproject.scheduler.api.Recording;
@@ -169,8 +171,11 @@ import org.slf4j.LoggerFactory;
 
 import java.net.URI;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -246,6 +251,8 @@ public abstract class AbstractEventEndpoint {
 
   public abstract JobEndpoint getJobService();
 
+  public abstract SeriesEndpoint getSeriesService();
+
   public abstract AclService getAclService();
 
   public abstract EventCommentService getEventCommentService();
@@ -267,6 +274,8 @@ public abstract class AbstractEventEndpoint {
   public abstract UrlSigningService getUrlSigningService();
 
   public abstract Boolean signWithClientIP();
+
+  public abstract Boolean getOnlySeriesWithWriteAccessEventModal();
 
   /** Default server URL */
   protected String serverUrl = "http://localhost:8080";
@@ -298,6 +307,47 @@ public abstract class AbstractEventEndpoint {
     }
 
   }
+
+  /* As the list of event ids can grow large, we use a POST request to avoid problems with too large query strings */
+  @POST
+  @Path("workflowProperties")
+  @Produces(MediaType.APPLICATION_JSON)
+  @RestQuery(name = "workflowProperties", description = "Returns workflow properties for the specified events",
+             returnDescription = "The workflow properties for every event as JSON", restParameters = {
+                @RestParameter(name = "eventIds", description = "A JSON array of ids of the events", isRequired = true, type = RestParameter.Type.STRING)},
+             reponses = {
+                @RestResponse(description = "Returns the workflow properties for the events as JSON", responseCode = HttpServletResponse.SC_OK),
+                @RestResponse(description = "The list of ids could not be parsed into a json list.", responseCode = HttpServletResponse.SC_BAD_REQUEST)
+              })
+  public Response getEventWorkflowProperties(@FormParam("eventIds") String eventIds) throws UnauthorizedException {
+    if (StringUtils.isBlank(eventIds)) {
+      return Response.status(Response.Status.BAD_REQUEST).build();
+    }
+
+    JSONParser parser = new JSONParser();
+    List<String> ids;
+    try {
+      ids = (List<String>) parser.parse(eventIds);
+    } catch (org.json.simple.parser.ParseException e) {
+      logger.error("Unable to parse '{}'", eventIds, e);
+      return Response.status(Response.Status.BAD_REQUEST).build();
+    } catch (ClassCastException e) {
+      logger.error("Unable to cast '{}'", eventIds, e);
+      return Response.status(Response.Status.BAD_REQUEST).build();
+    }
+
+    final Map<String, Map<String, String>> eventWithProperties = getIndexService().getEventWorkflowProperties(ids);
+    final Map<String, Field> jsonEvents = new HashMap<>();
+    for (Entry<String, Map<String, String>> event : eventWithProperties.entrySet()) {
+      final Collection<Field> jsonProperties = new ArrayList<>();
+      for (Entry<String, String> property : event.getValue().entrySet()) {
+        jsonProperties.add(f(property.getKey(),property.getValue()));
+      }
+      jsonEvents.put(event.getKey(), f(event.getKey(), obj(jsonProperties)));
+    }
+    return okJson(obj(jsonEvents));
+  }
+
 
   @GET
   @Path("catalogAdapters")
@@ -515,7 +565,7 @@ public abstract class AbstractEventEndpoint {
                           @RestResponse(responseCode = SC_NO_CONTENT, description = "The method doesn't return any content") })
   public Response updateEventScheduling(@PathParam("eventId") String eventId,
           @FormParam("scheduling") String scheduling)
-          throws NotFoundException, UnauthorizedException, SearchIndexException {
+          throws NotFoundException, UnauthorizedException, SearchIndexException, IndexServiceException {
     if (StringUtils.isBlank(scheduling))
       return RestUtil.R.badRequest("Missing parameters");
 
@@ -537,7 +587,7 @@ public abstract class AbstractEventEndpoint {
   }
 
   private void updateEventScheduling(String scheduling, Event event) throws NotFoundException, UnauthorizedException,
-    SchedulerException, JSONException, ParseException {
+    SchedulerException, JSONException, ParseException, SearchIndexException, IndexServiceException {
     final TechnicalMetadata technicalMetadata = getSchedulerService().getTechnicalMetadata(event.getIdentifier());
     final org.codehaus.jettison.json.JSONObject schedulingJson = new org.codehaus.jettison.json.JSONObject(
             scheduling);
@@ -592,6 +642,39 @@ public abstract class AbstractEventEndpoint {
     if (!start.isNone() || !end.isNone() || !agentId.isNone() || !agentConfiguration.isNone() || !optOut.isNone()) {
       getSchedulerService()
         .updateEvent(event.getIdentifier(), start, end, agentId, Opt.none(), Opt.none(), Opt.none(), agentConfiguration, optOut, SchedulerService.ORIGIN);
+      // We want to keep the bibliographic meta data in sync
+      updateBibliographicMetadata(event, agentId, start, end);
+    }
+  }
+
+  private void updateBibliographicMetadata(Event event, Opt<String> agentId, Opt<Date> start, Opt<Date> end)
+    throws IndexServiceException, SearchIndexException, NotFoundException, UnauthorizedException {
+    final MetadataList metadataList = getIndexService().getMetadataListWithAllEventCatalogUIAdapters();
+    final Opt<MetadataCollection> optMetadataByAdapter = metadataList
+      .getMetadataByAdapter(getIndexService().getCommonEventCatalogUIAdapter());
+    if (optMetadataByAdapter.isSome()) {
+      final MetadataCollection collection = optMetadataByAdapter.get();
+      if (start.isSome() && collection.getOutputFields().containsKey("startDate")) {
+        final Opt<String> pattern = collection.getOutputFields().get("startDate").getPattern();
+        if (pattern.isSome()) {
+          final SimpleDateFormat sdf = new SimpleDateFormat(pattern.get());
+          sdf.setTimeZone(TimeZone.getTimeZone(ZoneId.of("UTC")));
+          final MetadataField.Type type = collection.getOutputFields().get("startDate").getType();
+          collection.updateStringField(collection.getOutputFields().get("startDate"), sdf.format(start.get()));
+          collection.getOutputFields().get("startDate").setPattern(pattern);
+          collection.getOutputFields().get("startDate").setType(type);
+        }
+      }
+      if (start.isSome() && end.isSome() && collection.getOutputFields().containsKey("duration")) {
+        final MetadataField.Type type = collection.getOutputFields().get("duration").getType();
+        final long duration = end.get().getTime() - start.get().getTime();
+        collection.updateStringField(collection.getOutputFields().get("duration"), duration + "");
+        collection.getOutputFields().get("duration").setType(type);
+      }
+      if (agentId.isSome() && collection.getOutputFields().containsKey("location")) {
+        collection.updateStringField(collection.getOutputFields().get("location"), agentId.get());
+      }
+      getIndexService().updateEventMetadata(event.getIdentifier(), metadataList, getIndex());
     }
   }
 
@@ -644,7 +727,7 @@ public abstract class AbstractEventEndpoint {
 
     JSONObject json = new JSONObject();
 
-    if (WorkflowInstance.WorkflowState.RUNNING.toString().equals(optEvent.get().getWorkflowState())) {
+    if (WorkflowUtil.isActive(optEvent.get().getWorkflowState())) {
       json.put("active", true);
     } else {
       json.put("active", false);
@@ -781,8 +864,10 @@ public abstract class AbstractEventEndpoint {
         return ok();
       }
     } catch (AclServiceException e) {
-      logger.error("Error applying acl '{}' to event '{}' because: {}",
-              accessControlList, eventId, ExceptionUtils.getStackTrace(e));
+      if (e.getCause() instanceof UnauthorizedException) {
+        return forbidden();
+      }
+      logger.error("Error applying acl '{}' to event '{}'", accessControlList, eventId, e);
       return serverError();
     } catch (SchedulerException e) {
       logger.error("Error applying ACL to scheduled event {} because {}", eventId, ExceptionUtils.getStackTrace(e));
@@ -1069,8 +1154,19 @@ public abstract class AbstractEventEndpoint {
     for (EventCatalogUIAdapter catalogUIAdapter : catalogUIAdapters) {
       metadataList.add(catalogUIAdapter, catalogUIAdapter.getFields(mediaPackage));
     }
-    metadataList.add(getIndexService().getCommonEventCatalogUIAdapter(),
-            EventUtils.getEventMetadata(optEvent.get(), getIndexService().getCommonEventCatalogUIAdapter()));
+
+    MetadataCollection mc = EventUtils.getEventMetadata(optEvent.get(), getIndexService().getCommonEventCatalogUIAdapter());
+    if (getOnlySeriesWithWriteAccessEventModal()) {
+      MetadataField<?> series = mc.getOutputFields().get(DublinCore.PROPERTY_IS_PART_OF.getLocalName());
+      mc.removeField(series);
+      Map<String, String> seriesAccessEventModal = getSeriesService().getUserSeriesByAccess(true);
+      Opt<Map<String, String>> map = Opt.some(seriesAccessEventModal);
+      MetadataField<String> newSeries = MetadataUtils.copyMetadataField(series);
+      newSeries.setCollection(map);
+      newSeries.setValue(optEvent.get().getSeriesId());
+      mc.addField(newSeries);
+    }
+    metadataList.add(getIndexService().getCommonEventCatalogUIAdapter(), mc);
 
     final String wfState = optEvent.get().getWorkflowState();
     if (wfState != null && WorkflowUtil.isActive(WorkflowInstance.WorkflowState.valueOf(wfState)))
@@ -1976,6 +2072,24 @@ public abstract class AbstractEventEndpoint {
         collection.removeField(collection.getOutputFields().get("startTime"));
       if (collection.getOutputFields().containsKey("location"))
         collection.removeField(collection.getOutputFields().get("location"));
+
+      if (collection.getOutputFields().containsKey(DublinCore.PROPERTY_PUBLISHER.getLocalName())) {
+        MetadataField<String> publisher = (MetadataField<String>) collection.getOutputFields().get(DublinCore.PROPERTY_PUBLISHER.getLocalName());
+        Map<String, String> users = new HashMap<String, String>();
+        if (!publisher.getCollection().isNone()) {
+          users = publisher.getCollection().get();
+        }
+        String loggedInUser = getSecurityService().getUser().getName();
+        if (!users.containsKey(loggedInUser)) {
+          users.put(loggedInUser, loggedInUser);
+        }
+        publisher.setValue(loggedInUser);
+      }
+
+      Map<String, String> seriesAccessEventModal = getSeriesService().getUserSeriesByAccess(getOnlySeriesWithWriteAccessEventModal());
+      Opt<Map<String, String>> map = Opt.some(seriesAccessEventModal);
+      collection.getOutputFields().get(DublinCore.PROPERTY_IS_PART_OF.getLocalName()).setCollection(map);
+
       metadataList.add(getIndexService().getCommonEventCatalogUIAdapter(), collection);
     }
     return okJson(metadataList.toJSON());
@@ -1995,7 +2109,8 @@ public abstract class AbstractEventEndpoint {
       for (WorkflowDefinition wflDef : workflowsDefinitions) {
         if (wflDef.containsTag(tags)) {
 
-          workflows.add(obj(f("id", v(wflDef.getId())), f("title", v(nul(wflDef.getTitle()).getOr(""))),
+          workflows.add(obj(f("id", v(wflDef.getId())), f("tags", arr(wflDef.getTags())),
+                  f("title", v(nul(wflDef.getTitle()).getOr(""))),
                   f("description", v(nul(wflDef.getDescription()).getOr(""))),
                   f("displayOrder", v(wflDef.getDisplayOrder())),
                   f("configuration_panel", v(nul(wflDef.getConfigurationPanel()).getOr("")))));
@@ -2210,6 +2325,8 @@ public abstract class AbstractEventEndpoint {
         query.withOptedOut(Boolean.parseBoolean(filters.get(name)));
       if (EventListQuery.FILTER_REVIEW_STATUS_NAME.equals(name))
         query.withReviewStatus(filters.get(name));
+      if (EventListQuery.FILTER_PUBLISHER_NAME.equals(name))
+        query.withPublisher(filters.get(name));
       if (EventListQuery.FILTER_COMMENTS_NAME.equals(name)) {
         switch (Comments.valueOf(filters.get(name))) {
           case NONE:

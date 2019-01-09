@@ -115,6 +115,16 @@ directly in the Opencast administrative user interface.
 |-----------|-------|-------------------|
 |ROLE_ADMIN |POST   |/api/recreateIndex |
 
+**Workflow API**
+
+|ROLE                                |METHOD | URL                                                      |
+|------------------------------------|-------|----------------------------------------------------------|
+|ROLE_API_WORKFLOW_INSTANCE_CREATE   |POST   |/api/workflow                                             |
+|ROLE_API_WORKFLOW_INSTANCE_VIEW     |GET    |/api/workflow<br>/api/workflow/\*                         |
+|ROLE_API_WORKFLOW_INSTANCE_EDIT     |PUT    |/api/workflow/\*                                          |
+|ROLE_API_WORKFLOW_INSTANCE_DELETE   |DELETE |/api/workflow/\*                                          |
+|ROLE_API_WORKFLOW_DEFINITION_VIEW   |GET    |/api/workflow-definitions<br>/api/workflow-definitions/\* |
+
 **User- and Role-switching**
 
 The External API supports user- and role-switching, i.e. it is possible to perform requests on behalf of another

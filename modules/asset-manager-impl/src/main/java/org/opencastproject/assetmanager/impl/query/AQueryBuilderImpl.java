@@ -105,6 +105,28 @@ public final class AQueryBuilderImpl implements AQueryBuilder, EntityPaths {
   }
 
   /* -- */
+  @Override public Predicate mediaPackageIds(final String... mpIds) {
+    return new AbstractPredicate() {
+      /* SELECT */
+      @Override public SelectQueryContribution contributeSelect(JPAQueryFactory f) {
+        return SelectQueryContribution.mk().from(FROM_SNAPSHOT).where(Q_SNAPSHOT.mediaPackageId.in(mpIds));
+      }
+
+      /* DELETE */
+      @Override public DeleteQueryContribution contributeDelete(String owner) {
+        return DeleteQueryContribution.mk().where(new Where() {
+          @Override public BooleanExpression fromSnapshot(@Nonnull QSnapshotDto e) {
+            return e.mediaPackageId.in(mpIds);
+          }
+
+          @Override public BooleanExpression fromProperty(@Nonnull QPropertyDto p) {
+            return p.mediaPackageId.in(mpIds);
+          }
+        });
+      }
+
+    };
+  }
 
   @Override public Predicate mediaPackageId(final String mpId) {
     return new AbstractPredicate() {
@@ -182,10 +204,26 @@ public final class AQueryBuilderImpl implements AQueryBuilder, EntityPaths {
     };
   }
 
+  @Override public Predicate storage(final String storage) {
+    return new SnapshotBasedPredicate() {
+      @Override protected BooleanExpression mkSnapshotFieldPredicate(QSnapshotDto e) {
+        return e.storageId.eq(storage);
+      }
+    };
+  }
+
   @Override public Field<Availability> availability() {
     return new AbstractSnapshotField<Availability, String>(Q_SNAPSHOT.availability) {
       @Override protected String extract(Availability availability) {
         return availability.name();
+      }
+    };
+  }
+
+  @Override public Field<String> storage() {
+    return new AbstractSnapshotField<String, String>(Q_SNAPSHOT.storageId) {
+      @Override protected String extract(String storageId) {
+        return storageId;
       }
     };
   }

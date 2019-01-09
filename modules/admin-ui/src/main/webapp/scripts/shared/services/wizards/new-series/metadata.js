@@ -22,101 +22,123 @@
 
 angular.module('adminNg.services')
 .factory('NewSeriesMetadata', ['NewSeriesMetadataResource', function (NewSeriesMetadataResource) {
-    var Metadata = function () {
-        var me = this, mainMetadataName = 'dublincore/series', i;
+  var Metadata = function () {
+    var me = this, mainMetadataName = 'dublincore/series', i;
 
-        this.requiredMetadata = {};
+    this.requiredMetadata = {};
 
-        // As soon as the required metadata fields arrive from the backend,
-        // we check which are mandatory.
-        // This information will be needed in ordert to tell if we can move
-        // on to the next page of the wizard.
-        this.findRequiredMetadata = function (data) {
-            var mainData = data[mainMetadataName];
-            me.ud[mainMetadataName] = mainData;
-            if (mainData && mainData.fields) {
-                for (i = 0; i < mainData.fields.length; i++) {
-                    mainData.fields[i].tabindex = i + 1; // just hooking the tab index up here, as this is already running through all elements
-                    if (mainData.fields[i].required) {
-                        me.requiredMetadata[mainData.fields[i].id] = false;
-                        if (mainData.fields[i].type === 'boolean') {
-                            // set all boolean fields to false by default
-                            mainData.fields[i].value = false;
-                            me.requiredMetadata[mainData.fields[i].id] = true;
-                        }
-                    }
-                }
-            }
-        };
-
-        // Checks if the current state of this wizard is valid and we are
-        // ready to move on.
-        this.isValid = function () {
-            var result = true;
-            //FIXME: The angular validation should rather be used,
-            // unfortunately it didn't work in this context.
-            angular.forEach(me.requiredMetadata, function (item) {
-                if (item === false) {
-                    result = false;
-                }
-            });
-            return result;
-        };
-
-        this.save = function (scope) {
-            //FIXME: This should be nicer, rather propagate the id and values
-            //instead of looking for them in the parent scope.
-            var params = scope.$parent.params,
-                fieldId = params.id,
-                value = params.value;
-
-            if (params.collection) {
-                if (angular.isArray(value)) {
-                    var presentableValue = '';
-
-                    angular.forEach(value, function (item, index) {
-                        presentableValue += item;
-                        if ((index + 1) < value.length) {
-                            presentableValue += ', ';
-                        }
-                    });
-
-                    params.presentableValue = presentableValue;
-                } else {
-                    params.presentableValue = params.collection[value];
-                }
-            } else {
-                params.presentableValue = value;
-            }
-
-            me.ud[mainMetadataName].fields[fieldId] = params;
-
-            if (!angular.isUndefined(me.requiredMetadata[fieldId])) {
-                if (angular.isDefined(value) && value.length > 0) {
-                    // we have received a required value
-                    me.requiredMetadata[fieldId] = true;
-                } else {
-                    // the user has deleted the value
-                    me.requiredMetadata[fieldId] = false;
-                }
-            }
-        };
-
-        this.reset = function () {
-            me.ud = {};
-            me.metadata = NewSeriesMetadataResource.get(me.findRequiredMetadata);
-        };
-
-        this.getUserEntries = function () {
-            if (angular.isDefined(me.ud[mainMetadataName])) {
-                return me.ud[mainMetadataName].fields;
-            } else {
-                return {};
-            }
-        };
-
-        this.reset();
+    this.updateRequiredMetadata = function(fieldId, value) {
+      if (angular.isDefined(value) && value.length > 0) {
+        me.requiredMetadata[fieldId] = true;
+      } else {
+        me.requiredMetadata[fieldId] = false;
+      }
     };
 
-    return new Metadata();
+    // As soon as the required metadata fields arrive from the backend,
+    // we check which are mandatory.
+    // This information will be needed in ordert to tell if we can move
+    // on to the next page of the wizard.
+    this.findRequiredMetadata = function (data) {
+      var mainData = data[mainMetadataName];
+      me.ud[mainMetadataName] = mainData;
+      if (mainData && mainData.fields) {
+        for (i = 0; i < mainData.fields.length; i++) {
+          var field = mainData.fields[i];
+          // preserve default value, if set
+          if (field.hasOwnProperty('value') && field.value) {
+            field.presentableValue = me.extractPresentableValue(field);
+            me.ud[mainMetadataName].fields[field.id] = field;
+          }
+          // just hooking the tab index up here, as this is already running through all elements
+          field.tabindex = i + 1;
+          if (field.required) {
+            me.updateRequiredMetadata(field.id, field.value);
+            if (field.type === 'boolean') {
+              // set all boolean fields to false by default
+              field.value = false;
+              me.requiredMetadata[field.id] = true;
+            }
+          }
+        }
+      }
+    };
+
+    // Checks if the current state of this wizard is valid and we are
+    // ready to move on.
+    this.isValid = function () {
+      var result = true;
+      //FIXME: The angular validation should rather be used,
+      // unfortunately it didn't work in this context.
+      angular.forEach(me.requiredMetadata, function (item) {
+        if (item === false) {
+          result = false;
+        }
+      });
+      return result;
+    };
+
+    this.extractPresentableValue = function (field) {
+      var actualValue = field.value;
+      var presentableValue = '';
+      if (field.collection) {
+        if (angular.isArray(actualValue)) {
+          angular.forEach(actualValue, function (item, index) {
+            presentableValue += item;
+            if ((index + 1) < actualValue.length) {
+              presentableValue += ', ';
+            }
+          });
+          field.presentableValue = presentableValue;
+        } else {
+          if (field.collection.hasOwnProperty(actualValue)) {
+            presentableValue = field.collection[actualValue];
+          } else {
+            // this should work in older browsers, albeit looking clumsy
+            var matchingKey = Object.keys(field.collection)
+              .filter(function(key) {return field.collection[key] === actualValue;})[0];
+            presentableValue = field.type === 'ordered_text'
+              ? JSON.parse(matchingKey)['label']
+              : matchingKey;
+          }
+        }
+      } else {
+        presentableValue = actualValue;
+      }
+      return presentableValue;
+    };
+
+    this.save = function (scope) {
+      //FIXME: This should be nicer, rather propagate the id and values
+      //instead of looking for them in the parent scope.
+      var params = scope.$parent.params,
+          fieldId = params.id,
+          value = params.value;
+
+      params.presentableValue = me.extractPresentableValue(params);
+
+      me.ud[mainMetadataName].fields[fieldId] = params;
+
+      if (angular.isDefined(me.requiredMetadata[fieldId])) {
+        me.updateRequiredMetadata(fieldId, value);
+      }
+    };
+
+    this.reset = function () {
+      me.ud = {};
+      me.metadata = NewSeriesMetadataResource.get(me.findRequiredMetadata);
+    };
+
+    this.getUserEntries = function () {
+      if (angular.isDefined(me.ud[mainMetadataName])) {
+        return me.ud[mainMetadataName].fields;
+      } else {
+        return {};
+      }
+    };
+
+    this.reset();
+  };
+
+  return new Metadata();
 }]);

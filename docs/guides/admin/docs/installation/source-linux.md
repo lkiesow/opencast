@@ -37,17 +37,19 @@ Cloning the Git repository:
 Install Dependencies
 --------------------
 
-Please make sure to install the following dependencies. Note that not all dependencies are in the system repositories.
+Please make sure to install the following dependencies.
 
 Required:
 
-    java-devel / openjdk >= 1.8.0
+    java-1.8.0-openjdk-devel.x86_64 / openjdk-8-jdk
     ffmpeg >= 3.2.4
     maven >= 3.1
+    python >= 2.6, < 3.0
     unzip
     gcc-c++
     tar
     bzip2
+    nc
 
 Required (not necessarily on the same machine):
 

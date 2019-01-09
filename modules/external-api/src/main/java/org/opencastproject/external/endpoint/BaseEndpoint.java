@@ -31,6 +31,7 @@ import static org.opencastproject.util.RestUtil.getEndpointUrl;
 import org.opencastproject.external.common.ApiMediaType;
 import org.opencastproject.external.common.ApiVersion;
 import org.opencastproject.external.impl.index.ExternalIndex;
+import org.opencastproject.rest.RestConstants;
 import org.opencastproject.security.api.Organization;
 import org.opencastproject.security.api.Role;
 import org.opencastproject.security.api.SecurityService;
@@ -82,7 +83,7 @@ import javax.ws.rs.core.Response;
  */
 @Path("/")
 @Produces({ ApiMediaType.JSON, ApiMediaType.VERSION_1_0_0, ApiMediaType.VERSION_1_1_0 })
-@RestService(name = "externalapiservice", title = "External API Service", notes = "", abstractText = "Provides a location for external apis to query the current server of the API.")
+@RestService(name = "externalapiservice", title = "External API Service", notes = {}, abstractText = "Provides a location for external apis to query the current server of the API.")
 public class BaseEndpoint {
 
   /** The logging facility */
@@ -95,7 +96,7 @@ public class BaseEndpoint {
   private static final SimpleSerializer serializer = new SimpleSerializer();
 
   /** Base URL of this endpoint */
-  private String endpointBaseUrl;
+  protected String endpointBaseUrl;
 
   /* OSGi service references */
   private SecurityService securityService;
@@ -115,8 +116,10 @@ public class BaseEndpoint {
   void activate(ComponentContext cc) {
     logger.info("Activating External API - Base Endpoint");
 
-    final Tuple<String, String> endpointUrl = getEndpointUrl(cc);
+    final Tuple<String, String> endpointUrl = getEndpointUrl(cc, OpencastConstants.EXTERNAL_API_URL_ORG_PROPERTY,
+            RestConstants.SERVICE_PATH_PROPERTY);
     endpointBaseUrl = UrlSupport.concat(endpointUrl.getA(), endpointUrl.getB());
+    logger.debug("Configured service endpoint is {}", endpointBaseUrl);
   }
 
   @GET

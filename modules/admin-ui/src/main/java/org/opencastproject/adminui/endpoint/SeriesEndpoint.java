@@ -85,6 +85,7 @@ import org.opencastproject.rest.BulkOperationResult;
 import org.opencastproject.security.api.AccessControlList;
 import org.opencastproject.security.api.AccessControlParser;
 import org.opencastproject.security.api.AclScope;
+import org.opencastproject.security.api.Permissions;
 import org.opencastproject.security.api.SecurityService;
 import org.opencastproject.security.api.UnauthorizedException;
 import org.opencastproject.series.api.SeriesException;
@@ -124,6 +125,7 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Dictionary;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -164,8 +166,12 @@ public class SeriesEndpoint implements ManagedService {
   public static final String THEME_KEY = "theme";
 
   private Boolean deleteSeriesWithEventsAllowed = true;
+  private Boolean onlySeriesWithWriteAccessSeriesTab = false;
+  private Boolean onlySeriesWithWriteAccessEventsFilter = false;
 
   public static final String SERIES_HASEVENTS_DELETE_ALLOW_KEY = "series.hasEvents.delete.allow";
+  public static final String SERIESTAB_ONLYSERIESWITHWRITEACCESS_KEY = "seriesTab.onlySeriesWithWriteAccess";
+  public static final String EVENTSFILTER_ONLYSERIESWITHWRITEACCESS_KEY = "eventsFilter.onlySeriesWithWriteAccess";
 
   private SeriesService seriesService;
   private SecurityService securityService;
@@ -226,6 +232,16 @@ public class SeriesEndpoint implements ManagedService {
     Object dictionaryValue = properties.get(SERIES_HASEVENTS_DELETE_ALLOW_KEY);
     if (dictionaryValue != null) {
       deleteSeriesWithEventsAllowed = BooleanUtils.toBoolean(dictionaryValue.toString());
+    }
+
+    dictionaryValue = properties.get(SERIESTAB_ONLYSERIESWITHWRITEACCESS_KEY);
+    if (dictionaryValue != null) {
+      onlySeriesWithWriteAccessSeriesTab = BooleanUtils.toBoolean(dictionaryValue.toString());
+    }
+
+    dictionaryValue = properties.get(EVENTSFILTER_ONLYSERIESWITHWRITEACCESS_KEY);
+    if (dictionaryValue != null) {
+      onlySeriesWithWriteAccessEventsFilter = BooleanUtils.toBoolean(dictionaryValue.toString());
     }
   }
 
@@ -444,20 +460,20 @@ public class SeriesEndpoint implements ManagedService {
 
     MetadataField<?> organizers = metadata.getOutputFields().get(DublinCore.PROPERTY_CREATOR.getLocalName());
     metadata.removeField(organizers);
-    MetadataField<String> newOrganizers = MetadataUtils.copyMetadataField(organizers);
-    newOrganizers.setValue(StringUtils.join(series.getOrganizers(), ", "));
+    MetadataField<List<String>> newOrganizers = MetadataUtils.copyMetadataField(organizers);
+    newOrganizers.setValue(series.getOrganizers());
     metadata.addField(newOrganizers);
 
     MetadataField<?> contributors = metadata.getOutputFields().get(DublinCore.PROPERTY_CONTRIBUTOR.getLocalName());
     metadata.removeField(contributors);
-    MetadataField<String> newContributors = MetadataUtils.copyMetadataField(contributors);
-    newContributors.setValue(StringUtils.join(series.getContributors(), ", "));
+    MetadataField<List<String>> newContributors = MetadataUtils.copyMetadataField(contributors);
+    newContributors.setValue(series.getContributors());
     metadata.addField(newContributors);
 
     MetadataField<?> publishers = metadata.getOutputFields().get(DublinCore.PROPERTY_PUBLISHER.getLocalName());
     metadata.removeField(publishers);
-    MetadataField<String> newPublishers = MetadataUtils.copyMetadataField(publishers);
-    newPublishers.setValue(StringUtils.join(series.getPublishers(), ", "));
+    MetadataField<List<String>> newPublishers = MetadataUtils.copyMetadataField(publishers);
+    newPublishers.setValue(series.getPublishers());
     metadata.addField(newPublishers);
 
     // Admin UI only field
@@ -630,7 +646,7 @@ public class SeriesEndpoint implements ManagedService {
           @RestParameter(name = "filter", isRequired = false, description = "The filter used for the query. They should be formated like that: 'filter1:value1,filter2,value2'", type = STRING),
           @RestParameter(name = "offset", isRequired = false, description = "The page offset", type = INTEGER, defaultValue = "0"),
           @RestParameter(name = "optedOut", isRequired = false, description = "Whether this series is opted out", type = BOOLEAN),
-          @RestParameter(name = "limit", isRequired = false, description = "Results per page (max 100)", type = INTEGER, defaultValue = "100") }, reponses = {
+          @RestParameter(name = "limit", isRequired = false, description = "The limit to define the number of returned results (-1 for all)", type = INTEGER, defaultValue = "100") }, reponses = {
           @RestResponse(responseCode = SC_OK, description = "The access control list."),
           @RestResponse(responseCode = SC_UNAUTHORIZED, description = "If the current user is not authorized to perform this action") })
   public Response getSeries(@QueryParam("filter") String filter, @QueryParam("sort") String sort,
@@ -710,6 +726,13 @@ public class SeriesEndpoint implements ManagedService {
         }
       }
 
+      // We search for write actions
+      if (onlySeriesWithWriteAccessSeriesTab) {
+        query.withoutActions();
+        query.withAction(Permissions.Action.WRITE);
+        query.withAction(Permissions.Action.READ);
+      }
+
       logger.trace("Using Query: " + query.toString());
 
       SearchResult<Series> result = searchIndex.getByQuery(query);
@@ -752,6 +775,40 @@ public class SeriesEndpoint implements ManagedService {
       return okJsonList(series, offset, limit, result.getHitCount());
     } catch (Exception e) {
       logger.warn("Could not perform search query: {}", ExceptionUtils.getStackTrace(e));
+      throw new WebApplicationException(Status.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  /**
+   * Search all user series with write or read-only permissions.
+   *
+   * @param writeAccess
+   *         true: write access
+   *         false: read-only access
+   * @return user series with write or read-only access,
+   *         depending on the parameter
+   */
+  public HashMap<String, String> getUserSeriesByAccess(boolean writeAccess) {
+    try {
+      SeriesSearchQuery query = new SeriesSearchQuery(
+      securityService.getOrganization().getId(), securityService.getUser());
+
+      if (writeAccess) {
+        query.withoutActions();
+        query.withAction(Permissions.Action.WRITE);
+        query.withAction(Permissions.Action.READ);
+      }
+
+      SearchResult<Series> result = searchIndex.getByQuery(query);
+      HashMap<String, String> seriesMap = new HashMap<String, String>();
+      for (SearchResultItem<Series> item : result.getItems()) {
+        Series series = item.getSource();
+        seriesMap.put(series.getTitle(), series.getIdentifier());
+      }
+
+      return seriesMap;
+    } catch (SearchIndexException e) {
+      logger.warn("Could not perform search query: {}", e);
       throw new WebApplicationException(Status.INTERNAL_SERVER_ERROR);
     }
   }
@@ -1101,5 +1158,13 @@ public class SeriesEndpoint implements ManagedService {
     JSONObject jsonReturnObj = new JSONObject();
     jsonReturnObj.put("deleteSeriesWithEventsAllowed", deleteSeriesWithEventsAllowed);
     return Response.ok(jsonReturnObj.toString()).build();
+  }
+
+  public Boolean getOnlySeriesWithWriteAccessSeriesTab() {
+    return onlySeriesWithWriteAccessSeriesTab;
+  }
+
+  public Boolean getOnlySeriesWithWriteAccessEventsFilter() {
+    return onlySeriesWithWriteAccessEventsFilter;
   }
 }

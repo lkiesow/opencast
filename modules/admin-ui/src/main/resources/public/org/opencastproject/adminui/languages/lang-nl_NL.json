@@ -64,7 +64,13 @@
          "NAME": "Naam"
       },
       "ACTIONS": {
-         "CONFIRMATION": "Bevestiging vereist"
+         "CONFIRMATION": "Bevestiging"
+      },
+      "WARNINGS": {
+         "SERIES_HAS_EVENTS": "Deze serie bevat eventementen. Door verwijderen van de serie worden de eventementen niet verwijderd."
+      },
+      "ERRORS": {
+         "SERIES_HAS_EVENTS": "Deze serie kan niet verwijdertd worden omdat deze serie nog eventementen bevat."
       }
    },
    "MEDIAMODULE": "Mediamodule",
@@ -75,7 +81,7 @@
       "USERS_GUIDE": "Gebruikershandleiding",
       "DOCUMENTATION": "Documentatie",
       "REST_DOC": "REST API documentatie",
-      "HOTKEY_CHEAT_SHEET": "Keyboard Shortcuts"
+      "HOTKEY_CHEAT_SHEET": "Sneltoetsen"
    },
    "NOTIFICATIONS": {
       "ACL_ADDED": "Het toegangsbeleid werd aangemaakt",
@@ -121,6 +127,7 @@
       "SERIES_NOT_UPDATED_ALL": "Geen van de series konden opgeslagen worden",
       "EVENTS_DELETED": "Het event werd verwijderd",
       "EVENTS_NOT_DELETED": "Het/De event(s) konden niet verwijderd worden",
+      "EVENTS_NOT_DELETED_NOT_AUTHORIZED": "De gebeurtenis kan niet verwijderd worden, omdat u niet gemachtigd bent om dit te doen.",
       "SERIES_DELETED": "De serie werd verwijderd",
       "SERIES_NOT_DELETED": "De serie kon niet verwijderd worden",
       "USER_BLACKLIST_CREATED": "De zwarte lijst werd aangemaakt",
@@ -131,6 +138,7 @@
       "USER_BLACKLIST_NOT_DELETED": "De zwarte lijst kon niet verwijderd worden",
       "LOCATION_DELETED": "De locatie werd verwijderd",
       "LOCATION_NOT_DELETED": "De locatie kon niet verwijderd worden",
+      "LOCATION_NOT_DELETED_NOT_AUTHORIZED": "De locatie kan niet verwijderd worden, omdat u niet gemachtigd bent om dit te doen.",
       "LOCATION_BLACKLIST_CREATED": "De zwarte lijst werd aangemaakt",
       "LOCATION_BLACKLIST_NOT_CREATED": "De zwarte lijst kon niet aangemaakt worden",
       "LOCATION_BLACKLIST_SAVED": "De zwarte lijst werd opgeslagen",
@@ -150,6 +158,7 @@
       "CONFLICT_BULK_DETECTED": "Planningsconflict: de wijzigingen aan de gebeurtenis resulteert in conflicten. Wijzig de locatie, datums of tijden.",
       "CONFLICT_ALREADY_ENDED": "Planningsfout: het evenement is reeds beëindigd.",
       "CONFLICT_END_BEFORE_START": "Planningsfout: eindtijd moet later zijn dan het begin.",
+      "CONFLICT_IN_THE_PAST": "De ingeplande data kan niet worden geupdate. Je kan geen opname inplannen in het verleden.",
       "INVALID_ACL_RULES": "Regels moeten een geldige rol en lees en / of schrijf rechten hebben.",
       "MISSING_ACL_RULES": "Ten minste 1 rol met schrijf en lees rechten is vereist!",
       "SAVED_ACL_RULES": "De toegangsregels zijn opgeslagen.",
@@ -165,10 +174,12 @@
       "THEME_NAME_ALREADY_TAKEN": "Deze naam is reeds in gebruik",
       "THEME_NAME_EMPTY": "De naam kan niet leeg zijn",
       "BUMPER_UPLOAD_ERROR": "Fout tijdens uploaden media",
+      "BUMPER_REQUIRED": "Uw dient een bumper te uploaden",
       "TRAILER_UPLOAD_ERROR": "Fout tijdens uploaden media",
       "TITLE_UPLOAD_ERROR": "Fout tijdens uploaden media",
       "LICENSE_UPLOAD_ERROR": "Fout tijdens uploaden media",
       "WATERMARK_UPLOAD_ERROR": "Fout tijdens uploaden media",
+      "WATERMARK_REQUIRED": "Uw dient een watermerk te uploaden",
       "THEME_UPLOAD_STARTED": "De media wordt geüpload…",
       "THEME_CREATED": "Het thema werd aangemaakt",
       "THEME_NOT_CREATED": "Het thema kon niet aangemaakt worden",
@@ -179,6 +190,9 @@
       "VIDEO_CUT_NOT_SAVED": "De bewerkte informatie kon niet worden opgeslagen",
       "VIDEO_CUT_SAVED": "De bewerkte informatie werd opgeslagen",
       "VIDEO_CUT_PROCESSING": "De video wordt verwerkt…",
+      "THUMBNAIL_CHANGE_FAILED": "Het wijzigen van de miniatuurafbeelding is mislukt.",
+      "VIDEO_SOURCE_TRACKS_INVALID": "U hebt geen videotracks geselecteerd voor de verwerking",
+      "VIDEO_TOO_MANY_AUDIOS": "Je kan niet meer dan 1 audio stream op een enkele video stream plaatsen",
       "SERVER_UNRESPONSIVE": "Oops! De server lijkt momenteel niet te reageren. Gelieve het later nogmaals te proberen.",
       "SERVICE_UNAVAILABLE": "Oops! De server lijkt momenteel niet te reageren. Gelieve het later nogmaals te proberen.",
       "ACTIVE_TRANSACTION": "Het huidige evenement kan momenteel niet worden bewerkt aangezien het bij een actieve transactie betrokken is."
@@ -195,7 +209,8 @@
       "DELETE": {
          "SERIES": {
             "CAPTION": "Verwijderen",
-            "BUTTON": "Verwijder"
+            "BUTTON": "Verwijder",
+            "CANNOT_DELETE": "Deze series kunnen niet verwijdertd worden omdat deze nog eventementen bevaten."
          },
          "EVENTS": {
             "CAPTION": "Verwijderen",
@@ -211,6 +226,7 @@
                "EVENTS_RETRACTED": "Evenementen die ingetrokken worden",
                "RETRACT_WORKFLOW": "Workflow om evenementen in te trekken"
             },
+            "UNAUTHORIZED": "Je hebt geen machtiging om het geselecteerde evenement te verwijderen. Gelieve selectie te verwijderen om verder te gaan.",
             "UNPUBLISHED": {
                "NONE": "Geen van de geselecteerde gebeurtenissen kunnen worden verwijderd zonder het achterlaten van niet-gekoppelde bestanden."
             },
@@ -242,12 +258,14 @@
       },
       "EDIT_EVENTS": {
          "CAPTION": "Geplande gebeurtenissen bewerken",
+         "CONFLICT_CHECK_RUNNING": "Conflict check wordt uitgevoerd…",
          "GENERAL": {
             "CAPTION": "Algemeen",
             "CANNOTSTART": "Gemarkeerde Event (s) kunnen niet worden verwerkt, alleen geplande gebeurtenissen worden ondersteund.",
             "NOCHANGES": "Geen veranderingen in de gebeurtenissen gedetecteerd!",
-            "CONFLICT_FIRST_EVENT": "Changed event",
-            "CONFLICT_SECOND_EVENT": "Event in conflict"
+            "CONFLICT_FIRST_EVENT": "Evenement veranderd",
+            "CONFLICT_SECOND_EVENT": "Event in conflict",
+            "CANNOTEDITSCHEDULE": "Onvoldoende permissies om de tijdschema informatie aan te passen voor het geselecteerde event. Je kan verdergaan, zonder de mogelijkheid om tijdschema informatie aan te passen voor alle events."
          },
          "METADATA": {
             "EDIT": "Metagegevens bewerken"
@@ -269,7 +287,10 @@
    "DATES": {
       "TODAY": "Vandaag",
       "TOMORROW": "Morgen",
-      "YESTERDAY": "Gisteren"
+      "YESTERDAY": "Gisteren",
+      "THIS_WEEK": "Deze week",
+      "THIS_MONTH": "Deze maand",
+      "THIS_YEAR": "Dit jaar"
    },
    "DATETIMES": {
       "TODAY": "Vandaag om {{ time }}",
@@ -438,6 +459,7 @@
                "CAPTION": "Asset upload",
                "SELECT_TYPE": "Selecteer asset type",
                "ADD": "Asset toevoegen",
+               "NO_OPTIONS": "Een lijst met asset opties werd niet verleend voor dit gedeelte van de webpagina!",
                "OPTION": {
                   "CLASS_HANDOUT_NOTES": "Hand-out aantekeningen",
                   "CAPTIONS_DFXP": "Ondertitels DFXP",
@@ -468,13 +490,13 @@
                "SU": "Zo"
             },
             "WEEKDAYSLONG": {
-               "MO": "Monday",
-               "TU": "Tuesday",
-               "WE": "Wednesday",
-               "TH": "Thursday",
-               "FR": "Friday",
-               "SA": "Saturday",
-               "SU": "Sunday"
+               "MO": "Maandag",
+               "TU": "Dinsdag",
+               "WE": "Woensdag",
+               "TH": "Donderdag",
+               "FR": "Vrijdag",
+               "SA": "Zaterdag",
+               "SU": "Zondag"
             }
          },
          "NAVIGATION": {
@@ -640,6 +662,8 @@
                "TYPE": "Type",
                "SIZE": "Grootte",
                "DETAILS": "Details",
+               "STREAMS": "Streams",
+               "PREVIEW": "Preview",
                "ATTACHMENTS": {
                   "TITLE": "Bijlagen",
                   "CAPTION": "Bijlagen",
@@ -810,6 +834,7 @@
                "SOURCE": "Bron",
                "CREATED": "Aangemaakt",
                "CREATED_BY": "Aangemaakt door",
+               "PUBLISHER": "Uitgever",
                "LICENSE": "Licentie",
                "CONTRIBUTORS": "Bijdrager(s)",
                "RIGHTS": "Rechten",
@@ -847,6 +872,7 @@
                "ACTIONS": "Acties",
                "DETAILS": "Details",
                "DESCRIPTION": "",
+               "MORE_INFO": "Meer informatie & acties",
                "ID": "ID",
                "TYPE": "Type",
                "TITLE": "Titel",
@@ -864,17 +890,50 @@
                   "ABORT": "Uitvoering van de workflow instantie afbreken (mislukte bewerking niet opnieuw proberen)",
                   "RETRY": "Uitvoering van de workflow instantie opnieuw proberen",
                   "DELETE": "Werkstroom instantie verwijderen"
+               },
+               "OPERATION_STATUS": {
+                  "INSTANTIATED": "Geïnstantieerd",
+                  "RUNNING": "In uitvoering",
+                  "PAUSED": "Gepauseerd",
+                  "SUCCEEDED": "Geslaagd",
+                  "FAILED": "Mislukt",
+                  "SKIPPED": "Overgeslagen",
+                  "RETRY": "Opnieuw"
                }
+            },
+            "WORKFLOW_INSTANCES": {
+               "TITLE": "Worfklow instanties"
             },
             "WORKFLOW_DETAILS": {
                "TITLE": "Workflow details",
                "CONFIGURATION": "Workflow configuratie"
             },
             "WORKFLOW_OPERATIONS": {
-               "TITLE": "Workflow operaties"
+               "TITLE": "Workflow operaties",
+               "DETAILS_LINK": "Operaties",
+               "TABLE_HEADERS": {
+                  "TITLE": "Titel",
+                  "STATUS": "Status",
+                  "DESCRIPTION": "Omschrijving"
+               }
             },
             "OPERATION_DETAILS": {
-               "TITLE": "Operatie details"
+               "TITLE": "Operatie details",
+               "TABLE_HEADERS": {
+                  "TITLE": "Titel",
+                  "STATE": "Status",
+                  "DESCRIPTION": "Omschrijving",
+                  "EXECUTION_HOST": "Execution Host",
+                  "JOB": "Taak",
+                  "TIME_IN_QUEUE": "Tijd in wachtrij",
+                  "STARTED": "Gestart",
+                  "FINISHED": "Voltooid",
+                  "RETRY_STRATEGY": "Retry Strategy",
+                  "FAILED_ATTEMPTS": "Mislukte pogingen",
+                  "MAX_ATTEMPTS": "Max",
+                  "EXCEPTION_HANDLER_WORKFLOW": "Exception Handler Workflow",
+                  "FAIL_ON_ERROR": "Falen bij fout"
+               }
             },
             "QUICKACTION_WORKFLOW_DETAILS": {
                "TITLE": "Workflow details"
@@ -928,14 +987,12 @@
             },
             "METADATA_EXTENDED": {
                "CAPTION": "Uitgebreide metadata",
-               "DESCRIPTION": "",
                "METADATA": {
                   "TITLE": "Uitgebreide metadata"
                }
             },
             "ACCESS": {
                "CAPTION": "Toegangspolicy",
-               "DESCRIPTION": "",
                "TEMPLATES": {
                   "TITLE": "Sjablonen"
                },
@@ -973,6 +1030,7 @@
          "TABLE": {
             "CAPTION": "Seriën",
             "TITLE": "Seriën",
+            "HAS_EVENTS": "Bevat eventementen",
             "CREATORS": "Organisator(en)",
             "CONTRIBUTORS": "Bijdrager(s)",
             "CREATED": "Aangemaakt",
@@ -1191,7 +1249,7 @@
          },
          "DETAILS": {
             "NEWCAPTION": "Gebruiker aanmaken",
-            "EDITCAPTION": "Gebruiker editeren",
+            "EDITCAPTION": "Gebruikersdetails - {{username}}",
             "TABS": {
                "USER": "Gebruiker",
                "ROLES": "Rollen",
@@ -1235,7 +1293,7 @@
          },
          "DETAILS": {
             "NEWCAPTION": "Groep aanmaken",
-            "EDITCAPTION": "Groep aanpassen",
+            "EDITCAPTION": "Groep details - {{name}}",
             "TABS": {
                "GROUP": "Groep",
                "ROLES": "Rollen",
@@ -1316,7 +1374,7 @@
             }
          },
          "DETAILS": {
-            "HEADER": "Toegang beleidsdetails - {{resourceId}}",
+            "HEADER": "Toegangspolicy details - {{name}}",
             "TABS": {
                "SUMMARY": "Samenvatting",
                "METADATA": "Metadata",
@@ -1499,7 +1557,7 @@
          },
          "DETAILS": {
             "NEWCAPTION": "Thema aanmaken",
-            "EDITCAPTION": "Editeer thema",
+            "EDITCAPTION": "Theme details - {{name}}",
             "GENERAL": {
                "CAPTION": "Algemeen",
                "NAME": "Naam",
@@ -1525,7 +1583,8 @@
                "ACTIVE": "Actief",
                "ENABLE": "Bumper activeren",
                "UPLOAD_LABEL": "Video uploaden",
-               "UPLOAD_BUTTON": "Upload"
+               "UPLOAD_BUTTON": "Upload",
+               "SELECT": "Selecteer"
             },
             "TITLE": {
                "CAPTION": "Titel",
@@ -1593,6 +1652,19 @@
                "OPERATIONS": "Operaties",
                "INCIDENTS": "Incidenten"
             }
+         },
+         "STATUS": {
+            "QUEUED": "In wachtrij",
+            "PAUSED": "Gepauseerd",
+            "RUNNING": "In uitvoering",
+            "FINISHED": "Voltooid",
+            "FAILED": "Mislukt",
+            "DELETED": "Verwijderd",
+            "INSTANTIATED": "Geïnstantieerd",
+            "DISPATCHING": "Versturen",
+            "RESTART": "Herstart",
+            "CANCELED": "Geannuleerd",
+            "WAITING": "Wachtend"
          }
       },
       "SERVERS": {
@@ -1628,6 +1700,11 @@
             "TOOLTIP": {
                "SANITIZE": "Sanitize dienst (zet dienst terug naar staat normaal)"
             }
+         },
+         "STATUS": {
+            "NORMAL": "Normaal",
+            "WARNING": "Let op",
+            "ERROR": "Fout"
          }
       }
    },
@@ -1651,8 +1728,10 @@
       },
       "AREAS": {
          "METADATA": "Metadata",
+         "THUMBNAIL": "Miniatuurafbeelding",
          "COMMENTS": "Commentaren",
-         "SEGMENTS": "Segmenten"
+         "SEGMENTS": "Segmenten",
+         "TRACKS": "Spoor"
       },
       "ACTIONS": {
          "SPLIT": "Segmenteer",
@@ -1667,7 +1746,75 @@
       },
       "SEGMENTS": {
          "REMOVE_SEGMENT": "Segment verwijderen",
-         "USE_SEGMENT": "Gebruik dit segment"
+         "USE_SEGMENT": "Gebruik dit segment",
+         "START": "Start",
+         "END": "Einde"
+      },
+      "THUMBNAIL": {
+         "DESCRIPTION": "Een standaard thumbnail om het event te visualiseren wordt automatisch gegenereerd. Indien je zelf een andere thumbnail wil gebruiken kan je een thumbnail laten genereren op de huidige positie van de videoplayer, of zelf een afbeelding uploaden.",
+         "ACTIONS": {
+            "EXTRACT": {
+               "FROM_VIDEO": {
+                  "LABEL": "Extraheren uit video",
+                  "TOOLTIP": "Thumbnail genereren van de video op de huidige positie van de videoplayer"
+               },
+               "FROM_LEFT_VIDEO": {
+                  "LABEL": "Extraheren uit linke video",
+                  "TOOLTIP": "Thumbnail genereren van de links video op de huidige positie van de videoplayer"
+               },
+               "FROM_RIGHT_VIDEO": {
+                  "LABEL": "Extraheren uit rechte video",
+                  "TOOLTIP": "Thumbnail genereren van de rechtse video op de huidige positie van de videoplayer"
+               }
+            },
+            "UPLOAD": {
+               "LABEL": "Afbeelding uploaden",
+               "TOOLTIP": "Miniatuurafbeelding uploaden"
+            },
+            "USE_DEFAULT": {
+               "LABEL": "Standaard miniatuurafbeelding gebruiken",
+               "TOOLTIP": "Gebruik de standaard thumbnail die automatisch gegenereerd werd"
+            }
+         },
+         "PREVIEW": {
+            "NOT_AVAILABLE": "Geen preview beschikbaar",
+            "OUTDATED": "De preview is verouderd gezien segmenten gewijzigd werden. Het zal bijgewerkt worden van zodra je je wijzigingen opslaat."
+         },
+         "CURRENT": {
+            "DEFAULT": "Je gebruikt momenteel de default thumbnail.",
+            "SNAPSHOT": "De huidige thumbnail werd gegenereerd uit de video.",
+            "UPLOAD": "U gebruikt momenteel een geüploade thumbnail."
+         }
+      },
+      "TRACKS": {
+         "DESCRIPTION": "Je kan tracks deselecteren om deze uit te sluiten van verdere verwerking. Gelieve rekening te houden met het feit dat je het evenement opnieuw moet publiceren om de wijzigingen effectief toe te passen.",
+         "NOTIFICATION": {
+            "NO_VIDEO_TRACK_SELECTED": "Selecteer ten minste een video track",
+            "NO_AUDIO_TRACK_SELECTED": "Selecteer ten minste een audio track"
+         },
+         "TRACK": {
+            "HEADER": "Spoor"
+         },
+         "VIDEO": {
+            "HEADER": "Videospoor",
+            "NOT_AVAILABLE": "Geen videotracks beschikbaar",
+            "NO_PREVIEW_AVAILABLE": "Geen preview afbeelding gevonden",
+            "NO_TRACK_SELECTED": "Geen videotrack geselecteerd",
+            "TOOLTIPS": {
+               "HIDE": "Deze video track is momenteel ingeschakeld. Klik om te schakelen",
+               "UNHIDE": "Deze video track is momenteel uitgeschakeld. Klik om te schakelen."
+            }
+         },
+         "AUDIO": {
+            "HEADER": "Geluidsspoor",
+            "NOT_AVAILABLE": "Geen audiotracks beschikbaar",
+            "NO_PREVIEW_AVAILABLE": "Geen preview afbeelding gevonden",
+            "NO_TRACK_SELECTED": "Geen audiotrack geselecteerd",
+            "TOOLTIPS": {
+               "HIDE": "Deze audio track is momenteel ingeschakeld. Klik om uit te schakelen",
+               "UNHIDE": "Deze audio track is momenteel uitgeschakeld. Klik om in te schakelen"
+            }
+         }
       },
       "PLAYER": {
          "PLAY": "Afspelen",
@@ -1736,13 +1883,19 @@
             "LABEL": "Toegangspolicy"
          },
          "COMMENTS": {
-            "LABEL": "Commentaren"
+            "LABEL": "Commentaren",
+            "NONE": "Geen",
+            "OPEN": "Open",
+            "RESOLVED": "Opgelost"
          },
          "CONTRIBUTORS": {
             "LABEL": "Bijdragers"
          },
          "CREATOR": {
             "LABEL": "Auteur"
+         },
+         "PUBLISHER": {
+            "LABEL": "Uitgever"
          },
          "HOSTNAME": {
             "LABEL": "Hostnaam"
@@ -1947,14 +2100,14 @@
    },
    "HOTKEYS": {
       "CHEAT_SHEET": {
-         "TITLE": "Keyboard shortcuts",
-         "HINT": "This page lists the currently available keyboard shortcuts. Note that these might change depending on what page you are currently visiting."
+         "TITLE": "Sneltoetsen",
+         "HINT": "Op deze pagina staan de beschikbare sneltoetsen. Deze kunnen afhankelijk zijn van de pagina die je momenteel bezoekt."
       },
       "KEYS": {
          "CTRL": "Ctrl",
          "ALT": "Alt",
          "OPTION": "⌥",
-         "SPACE": "Space",
+         "SPACE": "Spatie",
          "BACKSPACE": "⌫",
          "LEFT": "←",
          "RIGHT": "→",
@@ -1983,36 +2136,47 @@
       },
       "DESCRIPTIONS": {
          "GENERAL": {
-            "MAIN_MENU": "Main menu",
-            "SELECT_NEXT_DASHBOARD_FILTER": "Select next dashboard filter",
-            "SELECT_PREVIOUS_DASHBOARD_FILTER": "Select previous dashboard filter",
+            "MAIN_MENU": "Hoofdmenu",
+            "SELECT_NEXT_DASHBOARD_FILTER": "Selecteer de volgende dashboard filter",
+            "SELECT_PREVIOUS_DASHBOARD_FILTER": "Selecteer de vorige dashboard filter",
             "REMOVE_FILTERS": "Alle filters verwijderen",
             "EVENT_VIEW": "Evenementen",
             "SERIES_VIEW": "Reeks",
             "NEW_EVENT": "Event toevoegen",
             "NEW_SERIES": "Reeks toevoegen",
-            "CHEAT_SHEET": "Keyboard shortcuts"
+            "CHEAT_SHEET": "Sneltoetsen"
          },
          "PLAYER": {
-            "PLAY_PAUSE": "Play/pause",
+            "PLAY_PAUSE": "Afspelen/pauzeren",
             "PREVIOUS_FRAME": "Vorig frame",
             "NEXT_FRAME": "Volgend frame",
-            "STEP_BACKWARD": "Jump 10s back",
-            "STEP_FORWARD": "Jump 10s forward",
-            "PREVIOUS_SEGMENT": "Previous segment/jump to start",
-            "NEXT_SEGMENT": "Next segment/jump to end",
-            "VOLUME_UP": "Volume up",
-            "VOLUME_DOWN": "Volume down",
+            "STEP_BACKWARD": "10s terug springen",
+            "STEP_FORWARD": "10s vooruit springen",
+            "PREVIOUS_SEGMENT": "Vorige segment / Direct naar begin",
+            "NEXT_SEGMENT": "Volgende segment / Direct naar einde",
+            "VOLUME_UP": "Volume omhoog",
+            "VOLUME_DOWN": "Volume omlaag",
             "MUTE": "Mute/unmute"
          },
          "EDITOR": {
             "SPLIT_AT_CURRENT_TIME": "Segmenteer",
             "CUT_SELECTED_SEGMENT": "Knippen",
-            "PLAY_CURRENT_SEGMENT": "Play current segment",
-            "CLEAR_LIST": "Clear segment",
-            "PLAY_CURRENT_SEGMENT_WITH_PRE-ROLL": "Replay segment with pre-roll",
+            "PLAY_CURRENT_SEGMENT": "Actueele segment afspelen",
+            "CLEAR_LIST": "Segment verwijderen",
+            "PLAY_CURRENT_SEGMENT_WITH_PRE-ROLL": "Segment herhalen met pre-roll",
             "PLAY_ENDING_OF_CURRENT_SEGMENT": "Einde van segment"
          }
+      }
+   },
+   "AGENTS": {
+      "STATUS": {
+         "CAPTURING": "Opnemen",
+         "ERROR": "Fout",
+         "IDLE": "Inactief",
+         "OFFLINE": "Offline",
+         "SHUTTING_DOWN": "Uitschakelen",
+         "UNKNOWN": "Onbekend",
+         "UPLOADING": "Uploaden"
       }
    }
 }

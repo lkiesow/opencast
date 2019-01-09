@@ -45,125 +45,111 @@
  */
 angular.module('adminNg.directives')
 .directive('adminNgEditableMultiSelect', ['$timeout', function ($timeout) {
-    return {
-        restrict: 'A',
-        templateUrl: 'shared/partials/editableMultiSelect.html',
-        replace: true,
-        scope: {
-            params:     '=',
-            collection: '=',
-            mixed:      '=',
-            save:       '='
-        },
-        link: function (scope, element) {
-            scope.data = {};
-            scope.data.list = {};
-            if (scope.params.id) {
-                scope.data.list.id = scope.params.id;
-            } else {
-                scope.data.list.id = scope.params.name;
-            }
+  return {
+    restrict: 'A',
+    templateUrl: 'shared/partials/editableMultiSelect.html',
+    replace: true,
+    scope: {
+      params:     '=',
+      collection: '=',
+      mixed:      '=',
+      save:       '='
+    },
+    link: function (scope, element) {
+      scope.data = {};
+      scope.data.list = {};
+      if (scope.params.id) {
+        scope.data.list.id = scope.params.id;
+      } else {
+        scope.data.list.id = scope.params.name;
+      }
 
-            scope.enterEditMode = function () {
-                scope.parseValues();
-                scope.editMode = true;
-                scope.focusTimer = $timeout(function () {
-                    element.find('input').focus();
-                });
-            };
+      scope.enterEditMode = function () {
+        scope.editMode = true;
+        $timeout(function () {
+          element.find('input').focus();
+        });
+      };
 
-            scope.leaveEditMode = function () {
-                scope.storeValues();
-                scope.editMode = false;
-                scope.value = '';
-            };
+      scope.onBlur = function (event) {
+        if (!scope.removedValue) {
+          scope.leaveEditMode();
+        } else {
+          $timeout(function () {
+            element.find('input').focus();
+          });
+        }
+        delete scope.removedValue;
+      };
 
-            scope.addValue = function (model, value) {
-                if (value && model.indexOf(value) === -1) {
-                    model.push(value);
-                    scope.editMode = false;
-                }
-                scope.submit();
-            };
+      scope.leaveEditMode = function () {
+        scope.editMode = false;
+      };
 
-            scope.removeValue = function (model, value) {
-                model.splice(model.indexOf(value), 1);
-                scope.submit();
-            };
+      scope.keyUp = function (event) {
+        if (event.keyCode === 13) {
+          // ENTER
+          if (angular.isDefined(scope.data.value)) {
+            scope.addValue(scope.params.value, scope.data.value);
+          }
+          scope.data.value = '';
+        } else if (event.keyCode === 27) {
+          // ESC
+          scope.leaveEditMode();
+        }
+        event.stopPropagation();
+      };
 
-            scope.storeValues = function () {
-              scope.parseValues();
-              if (scope.mixed || scope.collection[scope.value]) {
-                  var newValue = angular.isDefined(scope.collection[scope.value]) ? scope.collection[scope.value] : scope.value;
-                  scope.addValue(scope.params.value, newValue);
-              }
-            };
+      scope.addValue = function (model, value) {
+        value = value.trim();
 
-            scope.keyUp = function (event) {
-                var value = event.target.value;
-                if (angular.isDefined(scope.value)) {
-                    scope.value = scope.value.trim();
-                }
-                if (event.keyCode === 13) {
-                    // ENTER
-                    scope.storeValues();
-                } else if (event.keyCode === 27) {
-                    // ESC
-                    scope.editMode = false;
-                } else if (value.length >= 2) {
-                    // TODO update the collection
-                    scope.collection = scope.collection;
-                }
-                event.stopPropagation();
-            };
+        if (scope.mixed || scope.collection[value]) {
+          value = angular.isDefined(scope.collection[value]) ? scope.collection[value] : value;
 
-            scope.getText = function (value) {
-                if (angular.isDefined(scope.collection[value])) {
-                    return scope.collection[value];
-                } else {
-                    return value;
-                }
-            };
+          if (value && model.indexOf(value) === -1) {
+            model.push(value);
+          }
+          scope.submit();
+        }
+      };
 
-            /**
-             * This function parses the current values by removing extra whitespace and replacing values with those in the collection.
-             */
-            scope.parseValues = function () {
-                scope.trimValues();
-                scope.findCollectionValue();
-            };
+      scope.removeValue = function (model, value) {
+        scope.removedValue = true;
+        model.splice(model.indexOf(value), 1);
+        scope.submit();
+      };
 
-            /**
-             * This function trims the whitespace from all of the values.
-             */
-            scope.trimValues = function () {
-               angular.forEach(scope.params.value, function(value) {
-                   scope.params.value[scope.params.value.indexOf(value)] = scope.params.value[scope.params.value.indexOf(value)].trim();
-               });
-            };
+      scope.submit = function () {
+        scope.parseValues();
+        if (angular.isDefined(scope.save)) {
+          scope.save(scope.params.id);
+        }
+      };
 
-            /**
-             * This function replaces all of the current values with those in the collection.
-             */
-            scope.findCollectionValue = function() {
-                angular.forEach(scope.params.value, function(value) {
-                    if (angular.isDefined(scope.collection[value])) {
-                        scope.params.value[scope.params.value.indexOf(value)] = scope.collection[value];
-                    }
-                });
-            };
+      /**
+       * This function parses the current values by removing extra whitespace and replacing values with those in the
+       * collection.
+       */
+      scope.parseValues = function () {
+        angular.forEach(scope.params.value, function(value) {
+          scope.params.value[scope.params.value.indexOf(value)] =
+            scope.params.value[scope.params.value.indexOf(value)].trim();
+        });
 
-            scope.submit = function () {
-                scope.parseValues();
-                if (angular.isDefined(scope.save)) {
-                    scope.save(scope.params.id);
-                }
-                scope.editMode = false;
-            };
+        angular.forEach(scope.params.value, function(value) {
+          if (angular.isDefined(scope.collection[value])) {
+            scope.params.value[scope.params.value.indexOf(value)] = scope.collection[value];
+          }
+        });
+      };
 
-            scope.$on('$destroy', function () {
-                $timeout.cancel(scope.focusTimer);
-            });
-       }
-    };
+      scope.getText = function (value) {
+        if (angular.isDefined(scope.collection[value])) {
+          return scope.collection[value];
+        } else {
+          return value;
+        }
+      };
+    }
+  };
 }]);

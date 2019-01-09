@@ -14,7 +14,6 @@
     <opencast.basedir>${project.basedir}/../..</opencast.basedir>
     <checkstyle.skip>false</checkstyle.skip>
     <skipTests>false</skipTests>
-    <nexus.npm>${opencast.nexus.url}/nexus/content/repositories/npmjs/</nexus.npm>
   </properties>
   <dependencies>
     <!-- osgi support -->
@@ -100,6 +99,11 @@
     </dependency>
     <dependency>
       <groupId>org.opencastproject</groupId>
+      <artifactId>opencast-distribution-workflowoperation</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.opencastproject</groupId>
       <artifactId>opencast-event-comment</artifactId>
       <version>${project.version}</version>
       <scope>provided</scope>
@@ -157,6 +161,11 @@
     <dependency>
       <groupId>org.opencastproject</groupId>
       <artifactId>opencast-common-jpa-impl</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.opencastproject</groupId>
+      <artifactId>opencast-composer-service-api</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
@@ -309,8 +318,6 @@
                   <executable>npm</executable>
                   <arguments>
                     <argument>install</argument>
-                    <argument>--registry</argument>
-                    <argument>${nexus.npm}</argument>
                   </arguments>
                 </configuration>
               </execution>
@@ -327,6 +334,20 @@
                   <arguments>
                     <argument>build</argument>
                     <argument>--skipTests=${skipTests}</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+              <execution>
+                <id>esline</id>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <phase>test</phase>
+                <configuration>
+                  <executable>npm</executable>
+                  <arguments>
+                    <argument>run</argument>
+                    <argument>eslint</argument>
                   </arguments>
                 </configuration>
               </execution>
@@ -352,8 +373,8 @@
                   <goal>install-node-and-npm</goal>
                 </goals>
                 <configuration>
-                  <nodeVersion>v8.9.4</nodeVersion>
-                  <npmVersion>5.6.0</npmVersion>
+                  <nodeVersion>${node.version}</nodeVersion>
+                  <npmVersion>${npm.version}</npmVersion>
                 </configuration>
               </execution>
               <execution>
@@ -362,7 +383,7 @@
                   <goal>npm</goal>
                 </goals>
                 <configuration>
-                  <arguments>install --registry ${nexus.npm}</arguments>
+                  <arguments>install</arguments>
                 </configuration>
               </execution>
               <execution>
@@ -372,6 +393,16 @@
                 </goals>
                 <configuration>
                   <arguments>build --skipTests=${skipTests}</arguments>
+                </configuration>
+              </execution>
+              <execution>
+                <phase>test</phase>
+                <id>eslint</id>
+                <goals>
+                  <goal>npm</goal>
+                </goals>
+                <configuration>
+                  <arguments>run eslint</arguments>
                 </configuration>
               </execution>
             </executions>

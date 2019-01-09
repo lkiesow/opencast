@@ -59,7 +59,7 @@ import javax.ws.rs.core.Response;
 @RestService(
     name = "externalapicaptureagents",
     title = "External API Capture Agents Service",
-    notes = "",
+    notes = {},
     abstractText = "Provides resources and operations related to the capture agents"
 )
 public class CaptureAgentsEndpoint {
@@ -83,7 +83,7 @@ public class CaptureAgentsEndpoint {
 
   /** OSGi activation method */
   void activate(ComponentContext cc) {
-    logger.info("Activated External API - Capture Agents Endpoint");
+    logger.info("Activating External API - Capture Agents Endpoint");
   }
 
   @GET

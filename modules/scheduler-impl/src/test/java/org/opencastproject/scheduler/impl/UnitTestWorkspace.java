@@ -49,7 +49,7 @@ public class UnitTestWorkspace implements Workspace {
   private final File baseDir;
 
   public UnitTestWorkspace() {
-    baseDir = new File(new File(IoSupport.getSystemTmpDir()), "schedulertest");
+    baseDir = SchedulerServiceImplTest.baseDir;
     logger.info("Creating workspace under " + baseDir.getAbsolutePath());
     baseDir.mkdirs();
     clean();
@@ -187,6 +187,11 @@ public class UnitTestWorkspace implements Workspace {
 
   @Override
   public void cleanup(Id mediaPackageId) throws IOException {
+    // Nothing to do
+  }
+
+  @Override
+  public void cleanup(Id mediaPackageId, boolean filesOnly) throws IOException {
     // Nothing to do
   }
 

@@ -168,10 +168,10 @@ define(["require", "jquery", "underscore", "backbone", "mousetrap", "bowser", "b
   function getDefaultLanguage(language) {
       switch (language) {
           case "de": return "de-DE";
+          case "da": return "da-DK";
           case "el": return "el-GR";
           case "en": return "en-US";
           case "es": return "es-ES";
-          case "fil": return "fil-PH";
           case "fr": return "fr-FR";
           case "gl": return "gl-ES";
           case "he": return "he-IL";
@@ -179,9 +179,7 @@ define(["require", "jquery", "underscore", "backbone", "mousetrap", "bowser", "b
           case "pl": return "pl-PL";
           case "sl": return "sl-SI";
           case "sv": return "sv-SE";
-          case "tl": return "tl-PH";
           case "tr": return "tr-TR";
-          case "zh": return "zh-CN";
           default: return null;
       }
   }

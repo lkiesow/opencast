@@ -267,7 +267,7 @@ snippet.  A simple configuration panel could look like this:
     </configuration_panel>
 
 The checkbox in this `<configuration_panel>` will now be displayed in the administrative tools, and the user's
-selection will be used to replace the `${review.hold}` variable in the workflow.
+selection will be used to replace the `${someaction}` variable in the workflow.
 
 This input can also be sent by capture agents, using the ingest endpoints. Please note that capture agents usually do
 not load the configuration panel. Hence defaults set in the user interface will not apply to ingests. To circumvent
@@ -315,6 +315,28 @@ Example:
       …
     </operation>
 
+
+## Thumbnail Support
+
+The Admin UI comes with explicit support for thumbnails that are supposed to represent events visually, e.g. in lists
+of events as commonly used in video portals and other similar systems.
+To make it possible to implement the required processing and retain flexibility, the Admin UI will store the following
+information in variables of workflow instances:
+
+Variable          | Description
+:-----------------|:-----------
+thumbnailType     | The type of the thumbnail as number (see table below)
+thumbnailPosition | The time position in case of snapshot thumbnails
+thumbnailTrack    | The source track in case of snapshot thumbnails
+
+Thumbnail Type | Description
+:--------------|:-----------
+0              | The default thumbnail shall be extracted at a configured time position
+1              | The thumbnail has been uploaded and is stored in the asset manager as media package attachment
+2              | The thumbnail shall be extracted at a given time position from a given track
+
+To fully support the thumbnail feature, your workflows should take care of creating the different types of thumbnails
+and be consistent to the Admin UI thumbnail configuration (see [Thumbnail Configuration](admin-ui/thumbnails.md))
 
 ## Test the Workflow
 

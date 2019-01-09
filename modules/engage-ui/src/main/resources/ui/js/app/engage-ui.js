@@ -93,43 +93,21 @@ function($, bootbox, _, alertify) {
             var lang = language.substring(0, language.indexOf("-"));
 	    if (!lang || lang.length <= 0) lang = language;
 
-            switch (lang) {
-                case "en":
-                    return "en-US";
-                case "de":
-                    return "de-DE";
-                case "es":
-                    return "es-ES";
-                case "fr":
-                    return "fr-FR";
-                case "gl":
-                    return "gl-ES";
-                case "nl":
-                    return "nl-NL";
-                case "fi":
-                    return "fi-FI";
-                case "it":
-                    return "it-IT";
-                case "ja":
-                    return "ja-JA";
-                case "tlh":
-                    return "tlh-AA";
-                case "no":
-                    return "no-NO";
-                case "pt":
-                    return "pt-BR";
-                case "ru":
-                    return "ru-RU";
-                case "sv":
-                    return "sv-SE";
-                case "tr":
-                    return "tr-TR";
-                case "zh":
-                    return "zh-CN";
-                case "el":
-                    return "el-GR";
-                default:
-                    return null;
+          switch (lang) {
+              case "de": return "de-DE";
+              case "da": return "da-DK";
+              case "el": return "el-GR";
+              case "en": return "en-US";
+              case "es": return "es-ES";
+              case "fr": return "fr-FR";
+              case "gl": return "gl-ES";
+              case "he": return "he-IL";
+              case "nl": return "nl-NL";
+              case "pl": return "pl-PL";
+              case "sl": return "sl-SI";
+              case "sv": return "sv-SE";
+              case "tr": return "tr-TR";
+              default: return null;
             }
         }
 
@@ -694,20 +672,16 @@ function($, bootbox, _, alertify) {
                     };
 
                     if (data.mediapackage.media && data.mediapackage.media.track) {
-                    	// Check if there's a 'live' track
-                        for (var i = 0; i < data.mediapackage.media.track.length; i++) {
-                            var track = data.mediapackage.media.track[i];
-                            if (track.live) {
-                            	// Is event in progress?
-                            	var start = new Date(data.mediapackage.start);
-                            	var end = new Date(start.getTime() + parseInt (data.mediapackage.duration));
-                            	var now = new Date(); 
-                                if (now < start || now > end) {
-                                	live = msg_live_not_in_progress;
-                                	canLaunch = false;
-                                } else live = msg_live_in_progress;
-                                break;
-                            }
+                        // Check if there's a 'live' track
+                        if (data.mediapackage.media.track.live) {
+                            // Is event in progress?
+                            var start = new Date(data.mediapackage.start);
+                            var end = new Date(start.getTime() + parseInt (data.mediapackage.duration));
+                            var now = new Date();
+                            if (now < start || now >= end) {
+                                live = _.escape(msg_live_not_in_progress);
+                                canLaunch = false;
+                            } else live = _.escape(msg_live_in_progress);
                         }
                     }
                     tile = tile + "<div class=\"live\">" + live + "</div>";

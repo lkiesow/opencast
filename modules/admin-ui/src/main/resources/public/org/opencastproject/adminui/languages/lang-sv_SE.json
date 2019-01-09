@@ -64,18 +64,24 @@
          "NAME": "Namn"
       },
       "ACTIONS": {
-         "CONFIRMATION": "Bekräftelse krävs"
+         "CONFIRMATION": "Bekräftelse"
+      },
+      "WARNINGS": {
+         "SERIES_HAS_EVENTS": "This series does contain events. Deleting the series will not delete the events."
+      },
+      "ERRORS": {
+         "SERIES_HAS_EVENTS": "This series cannot be deleted as it still contains events."
       }
    },
    "MEDIAMODULE": "Mediemodul",
-   "SYSTEM_NOTIFICATIONS": "System warnings and notifications",
-   "LANGUAGE": "Select language",
+   "SYSTEM_NOTIFICATIONS": "Systemvarningar och meddelanden",
+   "LANGUAGE": "Välj språk",
    "HELP": {
       "HELP": "Hjälp",
       "USERS_GUIDE": "Användarhandbok",
       "DOCUMENTATION": "Dokumentation",
       "REST_DOC": "REST API dokumentation",
-      "HOTKEY_CHEAT_SHEET": "Keyboard Shortcuts"
+      "HOTKEY_CHEAT_SHEET": "Kortkommandon"
    },
    "NOTIFICATIONS": {
       "ACL_ADDED": "Åtkomstpolicyn har skapats",
@@ -110,10 +116,10 @@
       "EVENTS_PROCESSING_ACTION_NOT_RETRY": "Bearbetning kunde inte fortsättas.",
       "EVENTS_PROCESSING_ACTION_NONE": "Bearbetning avbryts...",
       "EVENTS_PROCESSING_ACTION_NOT_NONE": "Bearbetning kunde inte avbrytas.",
-      "EVENTS_PROCESSING_ACTION_STOP": "Processing stopped.",
-      "EVENTS_PROCESSING_ACTION_NOT_STOP": "Processing could not be stopped.",
-      "EVENTS_PROCESSING_DELETE_WORKFLOW": "Deleted Workflow.",
-      "EVENTS_PROCESSING_DELETE_WORKFLOW_FAILED": "Workflow could not be deleted.",
+      "EVENTS_PROCESSING_ACTION_STOP": "Behandlingen stoppades.",
+      "EVENTS_PROCESSING_ACTION_NOT_STOP": "Bearbetning kunde inte avbrytas.",
+      "EVENTS_PROCESSING_DELETE_WORKFLOW": "Tog bort arbetsflödet.",
+      "EVENTS_PROCESSING_DELETE_WORKFLOW_FAILED": "Arbetsflödet kunde inte tas bort.",
       "SERIES_UPDATED_NB": "{{ number }} serier har uppdaterats",
       "SERIES_UPDATED_ALL": "Alla serier har uppdaterats",
       "SERIES_NOT_UPDATED": "Serien kunde inte sparas",
@@ -121,6 +127,7 @@
       "SERIES_NOT_UPDATED_ALL": "Ingen av serier kunde sparas",
       "EVENTS_DELETED": "Händelsen har tagits bort",
       "EVENTS_NOT_DELETED": "Händelsen kunde inte raderas",
+      "EVENTS_NOT_DELETED_NOT_AUTHORIZED": "Du kan inte radera händelsen för att du inte ha rättigheterna.",
       "SERIES_DELETED": "Serien har tagits bort",
       "SERIES_NOT_DELETED": "Serien kunde inte raderas",
       "USER_BLACKLIST_CREATED": "Svartlistan har skapats",
@@ -131,6 +138,7 @@
       "USER_BLACKLIST_NOT_DELETED": "Svartlistan kunde inte tas bort",
       "LOCATION_DELETED": "Platsen har raderats",
       "LOCATION_NOT_DELETED": "Platsen kunde inte raderas",
+      "LOCATION_NOT_DELETED_NOT_AUTHORIZED": "Platsen kunde inte tas bort eftersom att du inte har rättigheterna för att göra det.",
       "LOCATION_BLACKLIST_CREATED": "Svartlistan har skapats",
       "LOCATION_BLACKLIST_NOT_CREATED": "Svartlistan kunde inte skapas",
       "LOCATION_BLACKLIST_SAVED": "Svartlistan har sparats",
@@ -150,6 +158,7 @@
       "CONFLICT_BULK_DETECTED": "Scheduling conflict: changing the events results in conflicts. Please change the location, dates or times.",
       "CONFLICT_ALREADY_ENDED": "Fel vid schemaläggning: Händelsen har redan avslutats.",
       "CONFLICT_END_BEFORE_START": "Fel vid schemaläggning: Slutet måste vara senare än början.",
+      "CONFLICT_IN_THE_PAST": "The schedule could not be updated: You cannot schedule an event to be in the past.",
       "INVALID_ACL_RULES": "Regler måste innehålla en giltig roll och läs- eller/och skrivrätt.",
       "MISSING_ACL_RULES": "Åtminstone en roll med läs- och skrivrättigheter krävs!",
       "SAVED_ACL_RULES": "Reglerna för åtkomst har sparats.",
@@ -165,10 +174,12 @@
       "THEME_NAME_ALREADY_TAKEN": "Detta namn används redan",
       "THEME_NAME_EMPTY": "Namn får inte vara tom",
       "BUMPER_UPLOAD_ERROR": "Fel vid uppladdning av media",
+      "BUMPER_REQUIRED": "You must upload a bumper",
       "TRAILER_UPLOAD_ERROR": "Fel vid uppladdning av media",
       "TITLE_UPLOAD_ERROR": "Fel vid uppladdning av media",
       "LICENSE_UPLOAD_ERROR": "Fel vid uppladdning av media",
       "WATERMARK_UPLOAD_ERROR": "Fel vid uppladdning av media",
+      "WATERMARK_REQUIRED": "Du måste ladda upp ett vattenmärke",
       "THEME_UPLOAD_STARTED": "Mediat laddas upp…",
       "THEME_CREATED": "Temat har skapats",
       "THEME_NOT_CREATED": "Temat kunde inte skapas",
@@ -179,6 +190,9 @@
       "VIDEO_CUT_NOT_SAVED": "Redigeringsinformationen kunde inte sparas",
       "VIDEO_CUT_SAVED": "Redigeringsinformationen har sparats",
       "VIDEO_CUT_PROCESSING": "Videon bearbetas…",
+      "THUMBNAIL_CHANGE_FAILED": "Misslyckades med att byta miniatyr.",
+      "VIDEO_SOURCE_TRACKS_INVALID": "Du har inte valt att bearbeta några videospår",
+      "VIDEO_TOO_MANY_AUDIOS": "Du kan inte ha mer än en ljudström i samma videoström",
       "SERVER_UNRESPONSIVE": "Oops! Servern svarar inte. Försök igen senare.",
       "SERVICE_UNAVAILABLE": "Oops! Servern svarar inte. Försök igen senare.",
       "ACTIVE_TRANSACTION": "Den aktuella händelsen kan för närvarande inte redigeras för att den deltar i en aktiv transaktion."
@@ -195,7 +209,8 @@
       "DELETE": {
          "SERIES": {
             "CAPTION": "Ta bort",
-            "BUTTON": "Ta bort"
+            "BUTTON": "Ta bort",
+            "CANNOT_DELETE": "The highlighted series cannot be deleted as they still contain events."
          },
          "EVENTS": {
             "CAPTION": "Ta bort",
@@ -211,6 +226,7 @@
                "EVENTS_RETRACTED": "Händelser som ska dras tillbaka",
                "RETRACT_WORKFLOW": "Workflow att ta tillbaka händelser"
             },
+            "UNAUTHORIZED": "You are not authorized to delete the highlighted events. Please unselect them to continue.",
             "UNPUBLISHED": {
                "NONE": "Ingen av de markerade händelserna kan tas bort utan att lämna överblivna filer."
             },
@@ -241,23 +257,25 @@
          }
       },
       "EDIT_EVENTS": {
-         "CAPTION": "Edit scheduled events",
+         "CAPTION": "Redigera schemalagda händelser",
+         "CONFLICT_CHECK_RUNNING": "Conflict check is running…",
          "GENERAL": {
             "CAPTION": "Allmänt",
             "CANNOTSTART": "Highlighted event(s) cannot be processed, only scheduled events are supported.",
             "NOCHANGES": "No changes to the events detected!",
             "CONFLICT_FIRST_EVENT": "Changed event",
-            "CONFLICT_SECOND_EVENT": "Event in conflict"
+            "CONFLICT_SECOND_EVENT": "Händelse i konflikt",
+            "CANNOTEDITSCHEDULE": "For the highlighted events, you don't have the permission to edit scheduling information. You can continue, but you won't be able to edit scheduling information of any events at all."
          },
          "METADATA": {
-            "EDIT": "Edit metadata"
+            "EDIT": "Redigera metadata"
          },
          "SUMMARY": {
             "CAPTION": "Summering",
-            "SINGLE_EVENT_CAPTION": "Event “{{ title }}”",
+            "SINGLE_EVENT_CAPTION": "Händelse \"{{ title }}\"",
             "TYPE": "Typ",
-            "PREVIOUS": "Old value",
-            "NEXT": "New value"
+            "PREVIOUS": "Gammalt värde",
+            "NEXT": "Nytt värde"
          },
          "EDIT": {
             "CAPTION": "Redigera",
@@ -269,7 +287,10 @@
    "DATES": {
       "TODAY": "Idag",
       "TOMORROW": "Imorgon",
-      "YESTERDAY": "Igår"
+      "YESTERDAY": "Igår",
+      "THIS_WEEK": "Den här veckan",
+      "THIS_MONTH": "Den här månaden",
+      "THIS_YEAR": "Det här året"
    },
    "DATETIMES": {
       "TODAY": "Idag på {{ time }}",
@@ -414,7 +435,7 @@
                   "START_TIME": "Starttid",
                   "TIMEZONE": "Tidszon",
                   "END_DATE": "Slutdatum",
-                  "END_TIME": "End time",
+                  "END_TIME": "Sluttid",
                   "DURATION": "Längd"
                },
                "SCHEDULE_SINGLE": {
@@ -438,6 +459,7 @@
                "CAPTION": "Uppladdning av resurser",
                "SELECT_TYPE": "Välj typ av resurs",
                "ADD": "Lägg till resurs",
+               "NO_OPTIONS": "A list of asset options was not provided to this section of the web page!",
                "OPTION": {
                   "CLASS_HANDOUT_NOTES": "Lektionsanteckningar/Handout",
                   "CAPTIONS_DFXP": "Undertexter DFXP",
@@ -468,13 +490,13 @@
                "SU": "Sö"
             },
             "WEEKDAYSLONG": {
-               "MO": "Monday",
-               "TU": "Tuesday",
-               "WE": "Wednesday",
-               "TH": "Thursday",
-               "FR": "Friday",
-               "SA": "Saturday",
-               "SU": "Sunday"
+               "MO": "Måndag",
+               "TU": "Tisdag",
+               "WE": "Onsdag",
+               "TH": "Torsdag",
+               "FR": "Fredag",
+               "SA": "Lördag",
+               "SU": "Söndag"
             }
          },
          "NAVIGATION": {
@@ -493,7 +515,7 @@
             "SERIES": "Serie",
             "DATE": "Datum",
             "START": "Start",
-            "END": "End",
+            "END": "Slut",
             "STOP": "Stopp",
             "STATUS": "Status",
             "LOCATION": "Plats",
@@ -508,18 +530,18 @@
             "PREVIOUS": "Föregående",
             "NOCONTENT": "Inga data tillgängliga",
             "PUBLISHED": "Publicerad",
-            "WEEKDAY": "Weekday",
+            "WEEKDAY": "Veckodag",
             "TOOLTIP": {
-               "START": "Filter for this start date",
-               "SERIES": "Filter for this series",
+               "START": "Filter för detta startdatum",
+               "SERIES": "Filter för den här serien",
                "STATUS": "Filter for this event status",
-               "LOCATION": "Filter for this location",
-               "DETAILS": "Open event details",
-               "DELETE": "Delete event",
-               "EDITOR": "Open video Editor",
+               "LOCATION": "Filtrera för den här platsen",
+               "DETAILS": "Öppna eventdetaljer",
+               "DELETE": "Ta bort händelse",
+               "EDITOR": "Öppna videoredigeraren",
                "EDITOR_NEEDS_CUTTING": "Open video Editor (a comment indicates that cutting the video has been requested)",
-               "COMMENTS": "View comments",
-               "PAUSED_WORKFLOW": "View paused workflow"
+               "COMMENTS": "Visa kommentarer",
+               "PAUSED_WORKFLOW": "Visa pausat arbetsflöde"
             }
          },
          "SCHEDULING_STATUS": {
@@ -622,7 +644,7 @@
                   "START_TIME": "Starttid",
                   "TIMEZONE": "Tidszon",
                   "END_DATE": "Slutdatum",
-                  "END_TIME": "End time",
+                  "END_TIME": "Sluttid",
                   "DURATION": "Längd"
                },
                "SCHEDULE_SINGLE": {
@@ -640,6 +662,8 @@
                "TYPE": "Typ",
                "SIZE": "Storlek",
                "DETAILS": "Detaljer",
+               "STREAMS": "Strömmar",
+               "PREVIEW": "Förhandsgranska",
                "ATTACHMENTS": {
                   "TITLE": "Bilagor",
                   "CAPTION": "Bilagor",
@@ -810,6 +834,7 @@
                "SOURCE": "Källa",
                "CREATED": "Skapad",
                "CREATED_BY": "Skapad av",
+               "PUBLISHER": "Utgivare",
                "LICENSE": "Licens",
                "CONTRIBUTORS": "Medförfattare",
                "RIGHTS": "Rättigheter",
@@ -847,6 +872,7 @@
                "ACTIONS": "Åtgärder",
                "DETAILS": "Detaljer",
                "DESCRIPTION": "",
+               "MORE_INFO": "Mer information och åtgärder",
                "ID": "ID",
                "TYPE": "Typ",
                "TITLE": "Titel",
@@ -864,17 +890,50 @@
                   "ABORT": "Abort execution of workflow instance (don't retry failed operation again)",
                   "RETRY": "Retry execution of workflow instance",
                   "DELETE": "Delete workflow instance"
+               },
+               "OPERATION_STATUS": {
+                  "INSTANTIATED": "Instantiated",
+                  "RUNNING": "Kör",
+                  "PAUSED": "Pausad",
+                  "SUCCEEDED": "Lyckade",
+                  "FAILED": "Misslyckad",
+                  "SKIPPED": "Hoppades över",
+                  "RETRY": "Försök igen"
                }
+            },
+            "WORKFLOW_INSTANCES": {
+               "TITLE": "Instanser för arbetsflöde"
             },
             "WORKFLOW_DETAILS": {
                "TITLE": "Workflowdetaljer",
                "CONFIGURATION": "Workflowkonfiguration"
             },
             "WORKFLOW_OPERATIONS": {
-               "TITLE": "Workflowoperationer"
+               "TITLE": "Workflowoperationer",
+               "DETAILS_LINK": "Aktiviteter",
+               "TABLE_HEADERS": {
+                  "TITLE": "Titel",
+                  "STATUS": "Status",
+                  "DESCRIPTION": "Beskrivning"
+               }
             },
             "OPERATION_DETAILS": {
-               "TITLE": "Operationsdetaljer"
+               "TITLE": "Operationsdetaljer",
+               "TABLE_HEADERS": {
+                  "TITLE": "Titel",
+                  "STATE": "Status",
+                  "DESCRIPTION": "Beskrivning",
+                  "EXECUTION_HOST": "Execution Host",
+                  "JOB": "Jobb",
+                  "TIME_IN_QUEUE": "Tid i kön",
+                  "STARTED": "Startad",
+                  "FINISHED": "Färdig",
+                  "RETRY_STRATEGY": "Retry Strategy",
+                  "FAILED_ATTEMPTS": "Misslyckade försök",
+                  "MAX_ATTEMPTS": "Max",
+                  "EXCEPTION_HANDLER_WORKFLOW": "Exception Handler Workflow",
+                  "FAIL_ON_ERROR": "Misslyckas vid fel"
+               }
             },
             "QUICKACTION_WORKFLOW_DETAILS": {
                "TITLE": "Workflowdetaljer"
@@ -928,14 +987,12 @@
             },
             "METADATA_EXTENDED": {
                "CAPTION": "Utökad metadata",
-               "DESCRIPTION": "",
                "METADATA": {
                   "TITLE": "Utökad metadata"
                }
             },
             "ACCESS": {
                "CAPTION": "Åtkomstpolicy",
-               "DESCRIPTION": "",
                "TEMPLATES": {
                   "TITLE": "Mallar"
                },
@@ -973,6 +1030,7 @@
          "TABLE": {
             "CAPTION": "Serie",
             "TITLE": "Serie",
+            "HAS_EVENTS": "Innehåller händelser",
             "CREATORS": "Organisatör(er)",
             "CONTRIBUTORS": "Medförfattare",
             "CREATED": "Skapad",
@@ -982,7 +1040,7 @@
             "TOOLTIP": {
                "SERIES": "Filter events for this series",
                "DETAILS": "Open series details",
-               "DELETE": "Delete series"
+               "DELETE": "Ta bort serier"
             }
          },
          "DETAILS": {
@@ -1089,9 +1147,9 @@
             "BLACKLIST_TO": "Svartlistad tills",
             "ACTION": "Åtgärder",
             "TOOLTIP": {
-               "NAME": "Filter events for this location",
-               "DETAILS": "Open location details",
-               "DELETE": "Delete location (unregister capture agent)"
+               "NAME": "Filtrera händelserna för den här platsen",
+               "DETAILS": "Öppna platsdetaljer",
+               "DELETE": "Ta bort plats (avregistrera capture agent)"
             }
          },
          "DETAILS": {
@@ -1185,13 +1243,13 @@
             "BLACKLIST_TO": "Svartlistad tills",
             "ACTION": "Åtgärder",
             "TOOLTIP": {
-               "DELETE": "Delete user",
-               "DETAILS": "Open user details"
+               "DELETE": "Ta bort användare",
+               "DETAILS": "Öppna användaruppgifter"
             }
          },
          "DETAILS": {
             "NEWCAPTION": "Skapa användare",
-            "EDITCAPTION": "Redigera användare",
+            "EDITCAPTION": "Användardetaljer - {{username}}",
             "TABS": {
                "USER": "Användare",
                "ROLES": "Roller",
@@ -1229,13 +1287,13 @@
             "ROLE": "Roll",
             "ACTION": "Åtgärder",
             "TOOLTIP": {
-               "DETAILS": "Open group details",
-               "DELETE": "Delete group"
+               "DETAILS": "Öppna gruppdetaljer",
+               "DELETE": "Ta bort grupp"
             }
          },
          "DETAILS": {
             "NEWCAPTION": "Skapa grupp",
-            "EDITCAPTION": "Redigera grupp",
+            "EDITCAPTION": "Gruppdetaljer - {{name}}",
             "TABS": {
                "GROUP": "Grupp",
                "ROLES": "Roller",
@@ -1316,7 +1374,7 @@
             }
          },
          "DETAILS": {
-            "HEADER": "Tillgångsinformationer - {{resourceId}}",
+            "HEADER": "Access policy details  - {{name}}",
             "TABS": {
                "SUMMARY": "Summering",
                "METADATA": "Metadata",
@@ -1493,13 +1551,13 @@
             "USAGE": "Användning",
             "ACTION": "Åtgärder",
             "TOOLTIP": {
-               "DELETE": "Delete theme",
-               "DETAILS": "Open theme details"
+               "DELETE": "Ta bort tema",
+               "DETAILS": "Öppna temadetaljer"
             }
          },
          "DETAILS": {
             "NEWCAPTION": "Skapa tema",
-            "EDITCAPTION": "Redigera tema",
+            "EDITCAPTION": "Detaljer för temat - {{name}}",
             "GENERAL": {
                "CAPTION": "Allmänt",
                "NAME": "Namn",
@@ -1525,7 +1583,8 @@
                "ACTIVE": "Aktiv",
                "ENABLE": "Aktivera bumper",
                "UPLOAD_LABEL": "Ladda upp video",
-               "UPLOAD_BUTTON": "Ladda upp"
+               "UPLOAD_BUTTON": "Ladda upp",
+               "SELECT": "Välj"
             },
             "TITLE": {
                "CAPTION": "Titel",
@@ -1593,6 +1652,19 @@
                "OPERATIONS": "Aktiviteter",
                "INCIDENTS": "Incidenter"
             }
+         },
+         "STATUS": {
+            "QUEUED": "Kölagd",
+            "PAUSED": "Pausad",
+            "RUNNING": "Kör",
+            "FINISHED": "Färdig",
+            "FAILED": "Misslyckad",
+            "DELETED": "Togs bort",
+            "INSTANTIATED": "Instantiated",
+            "DISPATCHING": "Dispatching",
+            "RESTART": "Starta om",
+            "CANCELED": "Avbröts",
+            "WAITING": "Väntar"
          }
       },
       "SERVERS": {
@@ -1628,6 +1700,11 @@
             "TOOLTIP": {
                "SANITIZE": "Sanitize service (set service back to state normal)"
             }
+         },
+         "STATUS": {
+            "NORMAL": "Normal",
+            "WARNING": "Varning",
+            "ERROR": "Fel"
          }
       }
    },
@@ -1635,8 +1712,8 @@
       "WARNING_UNSAVED": "Warning: Some of your changes were not saved. If you leave the video editor, these changes will get lost. Do you really want to continue?",
       "TIMELINE": "Tidslinje",
       "ZOOMLEVEL": "Zoomnivå",
-      "PREVIEW_MODE": "Preview Mode",
-      "PREVIEW_MODE_TOOLTIP": "Play selected segments only",
+      "PREVIEW_MODE": "Förhandsgranskningsläge",
+      "PREVIEW_MODE_TOOLTIP": "Spela enbart de utvalda segmenten",
       "ZOOM": "Zooma",
       "BUTTONS": {
          "CLOSE": "Stäng",
@@ -1651,8 +1728,10 @@
       },
       "AREAS": {
          "METADATA": "Metadata",
+         "THUMBNAIL": "Miniatyrbild",
          "COMMENTS": "Kommentarer",
-         "SEGMENTS": "Segment"
+         "SEGMENTS": "Segment",
+         "TRACKS": "Spår"
       },
       "ACTIONS": {
          "SPLIT": "Dela",
@@ -1667,7 +1746,75 @@
       },
       "SEGMENTS": {
          "REMOVE_SEGMENT": "Radera segment",
-         "USE_SEGMENT": "Använd detta segment"
+         "USE_SEGMENT": "Använd detta segment",
+         "START": "Starta",
+         "END": "Slut"
+      },
+      "THUMBNAIL": {
+         "DESCRIPTION": "A default thumbnail used to visually represent the event is generated automatically. In case you want to use a different thumbnail, you can extract a thumbnail from the video at the current playback position or upload an image.",
+         "ACTIONS": {
+            "EXTRACT": {
+               "FROM_VIDEO": {
+                  "LABEL": "Extrahera från video",
+                  "TOOLTIP": "Extract the thumbnail from the video at the current playback position"
+               },
+               "FROM_LEFT_VIDEO": {
+                  "LABEL": "Extrahera från den vänstra videon",
+                  "TOOLTIP": "Extract the thumbnail from the left video at the current playback position"
+               },
+               "FROM_RIGHT_VIDEO": {
+                  "LABEL": "Extrahera från den högra videon",
+                  "TOOLTIP": "Extract the thumbnail from the right video at the current playback position"
+               }
+            },
+            "UPLOAD": {
+               "LABEL": "Ladda upp bild",
+               "TOOLTIP": "Ladda upp en miniatyrbild"
+            },
+            "USE_DEFAULT": {
+               "LABEL": "Använd standard-miniatyrbild",
+               "TOOLTIP": "Use the default thumbnail that is generated automatically"
+            }
+         },
+         "PREVIEW": {
+            "NOT_AVAILABLE": "No preview available",
+            "OUTDATED": "The preview is outdated since segments were changed. It will be updated as soon as you save your changes."
+         },
+         "CURRENT": {
+            "DEFAULT": "You are currently using the default thumbnail.",
+            "SNAPSHOT": "The current thumbnail has been extracted from the video.",
+            "UPLOAD": "You are currently using an uploaded thumbnail."
+         }
+      },
+      "TRACKS": {
+         "DESCRIPTION": "You can unselect tracks to exclude them from further processing. Please note that you need to (re-)publish the event to actually apply the changes.",
+         "NOTIFICATION": {
+            "NO_VIDEO_TRACK_SELECTED": "You must enable at least one video track",
+            "NO_AUDIO_TRACK_SELECTED": "You must enable at least one audio track"
+         },
+         "TRACK": {
+            "HEADER": "Spår"
+         },
+         "VIDEO": {
+            "HEADER": "Videospår",
+            "NOT_AVAILABLE": "Det finns inga videospår tillgängliga",
+            "NO_PREVIEW_AVAILABLE": "No preview image found",
+            "NO_TRACK_SELECTED": "No video track selected",
+            "TOOLTIPS": {
+               "HIDE": "This video track is currently enabled. Click to disable",
+               "UNHIDE": "This video track is currently disabled. Click to enable."
+            }
+         },
+         "AUDIO": {
+            "HEADER": "Ljudspår",
+            "NOT_AVAILABLE": "No audio tracks available",
+            "NO_PREVIEW_AVAILABLE": "No preview image found",
+            "NO_TRACK_SELECTED": "No audio track selected",
+            "TOOLTIPS": {
+               "HIDE": "This audio track is currently enabled. Click to disable",
+               "UNHIDE": "This audio track is currently disabled. Click to enable"
+            }
+         }
       },
       "PLAYER": {
          "PLAY": "Spela",
@@ -1704,7 +1851,7 @@
       "PROFILES": {
          "FILTERS_HEADER": "Sparade filter-set",
          "EDIT": "Edit filter set",
-         "REMOVE": "Remove saved filter",
+         "REMOVE": "Ta bort sparat filter",
          "EMPTY": "Inga sparade filter än",
          "SAVE_FILTERS": "Spara",
          "FILTER_HEADER": "Spara filter-set",
@@ -1736,13 +1883,19 @@
             "LABEL": "Åtkomstpolicy"
          },
          "COMMENTS": {
-            "LABEL": "Kommentarer"
+            "LABEL": "Kommentarer",
+            "NONE": "Inga",
+            "OPEN": "Öppna",
+            "RESOLVED": "Löst"
          },
          "CONTRIBUTORS": {
             "LABEL": "Bidragsgivare"
          },
          "CREATOR": {
             "LABEL": "Skapare"
+         },
+         "PUBLISHER": {
+            "LABEL": "Utgivare"
          },
          "HOSTNAME": {
             "LABEL": "Hostnamn"
@@ -1947,14 +2100,14 @@
    },
    "HOTKEYS": {
       "CHEAT_SHEET": {
-         "TITLE": "Keyboard shortcuts",
+         "TITLE": "Tangentbordsgenvägar",
          "HINT": "This page lists the currently available keyboard shortcuts. Note that these might change depending on what page you are currently visiting."
       },
       "KEYS": {
          "CTRL": "Ctrl",
          "ALT": "Alt",
          "OPTION": "⌥",
-         "SPACE": "Space",
+         "SPACE": "Mellanslag",
          "BACKSPACE": "⌫",
          "LEFT": "←",
          "RIGHT": "→",
@@ -1972,18 +2125,18 @@
          "PAGEUP": "Page↑",
          "PAGEDOWN": "Page↓",
          "END": "End",
-         "HOME": "Home",
+         "HOME": "Hem",
          "INS": "Ins",
          "DEL": "Del"
       },
       "GROUPS": {
          "GENERAL": "Allmänt",
-         "PLAYER": "Player",
+         "PLAYER": "Spelare",
          "EDITOR": "Redigerare"
       },
       "DESCRIPTIONS": {
          "GENERAL": {
-            "MAIN_MENU": "Main menu",
+            "MAIN_MENU": "Huvudmeny",
             "SELECT_NEXT_DASHBOARD_FILTER": "Select next dashboard filter",
             "SELECT_PREVIOUS_DASHBOARD_FILTER": "Select previous dashboard filter",
             "REMOVE_FILTERS": "Rensa alla filter",
@@ -1991,28 +2144,39 @@
             "SERIES_VIEW": "Serie",
             "NEW_EVENT": "Lägg till händelse",
             "NEW_SERIES": "Lägg till serie",
-            "CHEAT_SHEET": "Keyboard shortcuts"
+            "CHEAT_SHEET": "Tangentbordsgenvägar"
          },
          "PLAYER": {
-            "PLAY_PAUSE": "Play/pause",
+            "PLAY_PAUSE": "Spela upp/pausa",
             "PREVIOUS_FRAME": "Föregående bild",
             "NEXT_FRAME": "Nästa bild",
-            "STEP_BACKWARD": "Jump 10s back",
-            "STEP_FORWARD": "Jump 10s forward",
-            "PREVIOUS_SEGMENT": "Previous segment/jump to start",
-            "NEXT_SEGMENT": "Next segment/jump to end",
-            "VOLUME_UP": "Volume up",
-            "VOLUME_DOWN": "Volume down",
-            "MUTE": "Mute/unmute"
+            "STEP_BACKWARD": "Hoppa tillbaka 10 sek",
+            "STEP_FORWARD": "Hoppa fram 10 sek",
+            "PREVIOUS_SEGMENT": "Föregående segment/hoppa tillbaka till början",
+            "NEXT_SEGMENT": "Nästa segment/hoppa till slutet",
+            "VOLUME_UP": "Volym upp",
+            "VOLUME_DOWN": "Volym ner",
+            "MUTE": "Ljud av/på"
          },
          "EDITOR": {
             "SPLIT_AT_CURRENT_TIME": "Dela",
             "CUT_SELECTED_SEGMENT": "Klipp ut",
-            "PLAY_CURRENT_SEGMENT": "Play current segment",
-            "CLEAR_LIST": "Clear segment",
+            "PLAY_CURRENT_SEGMENT": "Spela nuvarande segment",
+            "CLEAR_LIST": "Rensa segment",
             "PLAY_CURRENT_SEGMENT_WITH_PRE-ROLL": "Replay segment with pre-roll",
             "PLAY_ENDING_OF_CURRENT_SEGMENT": "Slutet av segmentet"
          }
+      }
+   },
+   "AGENTS": {
+      "STATUS": {
+         "CAPTURING": "Fångar upp",
+         "ERROR": "Fel",
+         "IDLE": "Vilande",
+         "OFFLINE": "Offline",
+         "SHUTTING_DOWN": "Stänger ner",
+         "UNKNOWN": "Okänd",
+         "UPLOADING": "Laddar upp"
       }
    }
 }

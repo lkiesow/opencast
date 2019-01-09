@@ -50,6 +50,7 @@ The following table contains the workflow operations that are available in an ou
 |failing             |Operations that always fails                                   |[Documentation](failing-woh.md)|
 |http-notify         |Notifies an HTTP endpoint about the process of the workflow    |[Documentation](httpnotify-woh.md)|
 |image               |Extract images from a video using FFmpeg                       |[Documentation](image-woh.md)|
+|image-convert       |Convert images using FFmpeg                                    |[Documentation](image-convert-woh.md)|
 |image-to-video      |Create a video track from a source image                       |[Documentation](imagetovideo-woh.md)|
 |import-wf-properties|Import workflow properties                                     |[Documentation](import-wf-properties-woh.md)|
 |incident            |Testing incidents on a dummy job                               |[Documentation](incident-woh.md)|
@@ -77,11 +78,13 @@ The following table contains the workflow operations that are available in an ou
 |retract-youtube     |Retracts media from YouTube                                    |[Documentation](retract-youtube-woh.md)|
 |segment-video       |Extracting segments from presentation                          |[Documentation](segmentvideo-woh.md)|
 |segmentpreviews     |Extract segment images from a video using FFmpeg               |[Documentation](segmentpreviews-woh.md)|
+|select-streams       |Select streams for further processing                           |[Documentation](select-streams-woh.md)|
 |send-email          |Sends email notifications at any part of a workflow            |[Documentation](send-email-woh.md)|
 |series              |Apply series to the mediapackage                               |[Documentation](series-woh.md)|
 |silence             |Silence detection on audio of the mediapackage                 |[Documentation](silence-woh.md)|
 |snapshot            |Archive the current state of the mediapackage                  |[Documentation](snapshot-woh.md)|
 |start-watson-transcription|Starts automated transcription provided by IBM Watson    |[Documentation](start-watson-transcription-woh.md)|
+|start-workflow      |Start a new workflow for given media package ID                |[Documentation](start-workflow-woh.md)|
 |tag                 |Modify the tag sets of media package elements                  |[Documentation](tag-woh.md)|
 |tag-by-dcterm       |Modify the tags if dublincore term matches value               |[Documentation](tag-by-dcterm-woh.md)|
 |theme               |Make settings of themes available to processing                |[Documentation](theme-woh.md)|

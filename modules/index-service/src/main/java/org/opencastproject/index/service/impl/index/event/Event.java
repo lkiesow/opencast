@@ -36,7 +36,6 @@ import org.codehaus.jettison.mapped.Configuration;
 import org.codehaus.jettison.mapped.MappedNamespaceConvention;
 import org.codehaus.jettison.mapped.MappedXMLStreamReader;
 import org.codehaus.jettison.mapped.MappedXMLStreamWriter;
-import org.joda.time.DateTime;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -44,7 +43,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.StringWriter;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -69,7 +67,7 @@ import javax.xml.transform.stream.StreamSource;
  */
 @XmlType(name = "event", namespace = IndexObject.INDEX_XML_NAMESPACE, propOrder = { "identifier", "organization",
         "title", "description", "subject", "location", "presenters", "contributors", "seriesId", "seriesName",
-        "language", "source", "created", "creator", "license", "rights", "accessPolicy", "managedAcl", "workflowState",
+        "language", "source", "created", "creator", "publisher", "license", "rights", "accessPolicy", "managedAcl", "workflowState",
         "workflowId", "workflowDefinitionId", "recordingStartTime", "recordingEndTime", "duration", "trackMimetypes",
         "trackStreamResolutions", "trackFlavors", "metadataFlavors", "metadataMimetypes", "attachmentFlavors",
         "reviewStatus", "reviewDate", "optedOut", "blacklisted", "hasComments", "hasOpenComments", "hasPreview", "needsCutting",
@@ -172,6 +170,10 @@ public class Event implements IndexObject {
   /** The creator of the event */
   @XmlElement(name = "creator")
   private String creator = null;
+
+  /** The publisher of the event */
+  @XmlElement(name = "publisher")
+  private String publisher = null;
 
   /** The license of the event */
   @XmlElement(name = "license")
@@ -550,6 +552,25 @@ public class Event implements IndexObject {
    */
   public String getCreator() {
     return creator;
+  }
+
+  /**
+   * Sets the publisher
+   *
+   * @param publisher
+   *          the publisher
+   */
+  public void setPublisher(String publisher) {
+    this.publisher = publisher;
+  }
+
+  /**
+   * Returns the publisher
+   *
+   * @return the publisher
+   */
+  public String getPublisher() {
+    return publisher;
   }
 
   /**
@@ -1174,13 +1195,22 @@ public class Event implements IndexObject {
     eventStatus = "EVENTS.EVENTS.STATUS.PROCESSED";
   }
 
+  /**
+   * Check whether or not the start time of the recording of this event has passed, yet.
+   *
+   * This method treats non-scheduled (i.e.) uploaded events as always having
+   * a recording start time in the pase, because for the video to be able
+   * to be uploaded, it obviously must have been recorded, already.
+   *
+   * @return <code>true</code> if the start ime of the recording of this event
+   *         is in the past, and <code>false</code> otherwise
+   */
   public boolean hasRecordingStarted() {
-    if (getSchedulingStatus() == null)
-      return true;
-
-    Date startDate = new DateTime(getTechnicalStartTime()).toDate();
-    Date now = new DateTime().toDate();
-    return startDate.before(now);
+    return
+            // handle uploaded events
+            getSchedulingStatus() == null
+            // handle scheduled events
+            || getRecordingStatus() != null;
   }
 
   /**
@@ -1322,15 +1352,15 @@ public class Event implements IndexObject {
    *
    * @param xml
    *          the input stream
+   * @param unmarshaller the unmarshaller to use
    * @return the deserialized recording event
    * @throws IOException
    */
-  public static Event valueOf(InputStream xml) throws IOException {
+  public static Event valueOf(InputStream xml, Unmarshaller unmarshaller) throws IOException {
     try {
       if (context == null) {
         createJAXBContext();
       }
-      Unmarshaller unmarshaller = context.createUnmarshaller();
       return unmarshaller.unmarshal(new StreamSource(xml), Event.class).getValue();
     } catch (JAXBException e) {
       throw new IOException(e.getLinkedException() != null ? e.getLinkedException() : e);
@@ -1442,6 +1472,22 @@ public class Event implements IndexObject {
       return writer.toString();
     } catch (JAXBException e) {
       throw new IllegalStateException(e.getLinkedException() != null ? e.getLinkedException() : e);
+    }
+  }
+
+  /**
+   * Create an unmarshaller for events
+   * @return an unmarshaller for events
+   * @throws IOException
+   */
+  public static Unmarshaller createUnmarshaller() throws IOException {
+    try {
+      if (context == null) {
+        createJAXBContext();
+      }
+      return context.createUnmarshaller();
+    } catch (JAXBException e) {
+      throw new IOException(e.getLinkedException() != null ? e.getLinkedException() : e);
     }
   }
 

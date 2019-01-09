@@ -97,7 +97,19 @@ describe('Processing Step in New Event Wizard', function () {
         describe('without a checkbox', function () {
             beforeEach(function () {
                 $('#new-event-workflow-configuration')
-                    .append('<input class="configField" id="testID" value="testvalueA">');
+                    .append('<input type="text" class="configField" id="testID" value="testvalueA">');
+            });
+
+            it('returns the field value', function () {
+                expect(NewEventProcessing.getWorkflowConfig())
+                    .toEqual({ testID: 'testvalueA' });
+            });
+        });
+
+        describe('with a hidden field', function () {
+            beforeEach(function () {
+                $('#new-event-workflow-configuration')
+                    .append('<input type="hidden" class="configField" id="testID" value="testvalueA">');
             });
 
             it('returns the field value', function () {
