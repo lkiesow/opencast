@@ -136,7 +136,7 @@ public abstract class BaseMessageReceiverImpl<T extends Serializable> {
               messageSender.sendObjectMessage(IndexProducer.RESPONSE_QUEUE, MessageSender.DestinationType.Queue,
                       IndexRecreateObject.end(obj.getIndexName(), obj.getService()));
           } else {
-            lockService.synchronize(baseMessage.getId().get(), execute.curry(baseMessage.getObject()).toFn());
+            lockService.synchronize(baseMessage.getId(), execute.curry(baseMessage.getObject()).toFn());
           }
         } catch (InterruptedException e) {
           logger.error("Problem while getting {} message events {}", clazzName, ExceptionUtils.getStackTrace(e));

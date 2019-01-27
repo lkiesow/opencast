@@ -112,7 +112,7 @@ public class LiveScheduleMessageReceiver {
               securityService.setOrganization(baseMessage.getOrganization());
               securityService.setUser(baseMessage.getUser());
               if (handler != null) {
-                Lock l = lock.get(baseMessage.getId().get());
+                Lock l = lock.get(baseMessage.getId());
                 try {
                   l.lock();
                   handler.execute((MessageItem) baseMessage.getObject());
