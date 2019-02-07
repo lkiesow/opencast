@@ -70,10 +70,10 @@ import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHitField;
+import org.elasticsearch.search.aggregations.AggregationBuilder;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms.Bucket;
-import org.elasticsearch.search.aggregations.bucket.terms.TermsBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -613,7 +613,7 @@ public abstract class AbstractSearchIndex extends AbstractElasticsearchIndex {
    */
   public List<String> getTermsForField(String field, Option<String[]> types) {
     final String facetName = "terms";
-    TermsBuilder aggBuilder = AggregationBuilders.terms(facetName).field(field);
+    AggregationBuilder aggBuilder = AggregationBuilders.terms(facetName).field(field);
     SearchRequestBuilder search = getSearchClient().prepareSearch(getIndexName()).addAggregation(aggBuilder);
 
     if (types.isSome())

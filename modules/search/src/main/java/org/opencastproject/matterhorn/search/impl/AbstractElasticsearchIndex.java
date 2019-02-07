@@ -57,6 +57,7 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.loader.JsonSettingsLoader;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.common.transport.TransportAddress;
+import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.node.Node;
@@ -332,9 +333,14 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
       if (nodeClient == null) {
         if (elasticSearch == null) {
           // configure external Elasticsearch
+          final InetAddress inetAddress = InetAddress.getByName(externalServerAddress);
+          nodeClient = new PreBuiltTransportClient(settings)
+                  .addTransportAddress(new InetSocketTransportAddress(inetAddress, externalServerPort));
+          /*
           nodeClient = new PreBuiltTransportClient(settings)
                   .addTransportAddress(new TransportAddress(InetAddress.getByName(externalServerAddress),
                           externalServerPort));
+          */
         } else {
           // configure internal Elasticsearch
           nodeClient = elasticSearch.client();
@@ -419,7 +425,7 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
     try {
       GetResponse response = getRequestBuilder.execute().actionGet();
       if (response.isExists() && response.getField(VERSION) != null) {
-        int actualIndexVersion = Integer.parseInt(response.getField(VERSION).getValue());
+        int actualIndexVersion = Integer.parseInt(response.getField(VERSION).getValue().toString());
         if (indexVersion != actualIndexVersion)
           throw new SearchIndexException("Search index is at version " + actualIndexVersion + ", but codebase expects "
                   + indexVersion);
@@ -568,7 +574,7 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
       super(preparedSettings);
     }
 
-    @Override
+    //@Override preparation for ES6
     protected void registerDerivedNodeNameWithLogger(String nodeName) {
       // we never call this
     }

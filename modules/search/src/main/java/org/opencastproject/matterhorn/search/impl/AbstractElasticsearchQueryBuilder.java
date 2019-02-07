@@ -28,12 +28,16 @@ import org.opencastproject.matterhorn.search.SearchQuery;
 import org.opencastproject.util.DateTimeSupport;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.lucene.search.Query;
+import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.MatchAllQueryBuilder;
 import org.elasticsearch.index.query.MoreLikeThisQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.query.QueryRewriteContext;
+import org.elasticsearch.index.query.QueryShardContext;
 import org.elasticsearch.index.query.QueryStringQueryBuilder;
 import org.elasticsearch.index.query.RangeQueryBuilder;
 import org.elasticsearch.index.query.TermsQueryBuilder;
@@ -230,6 +234,61 @@ public abstract class AbstractElasticsearchQueryBuilder<T extends SearchQuery> i
   @Override
   public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
     return queryBuilder.toXContent(builder, params);
+  }
+
+  @Override
+  public Query toQuery(QueryShardContext context) throws IOException {
+    return queryBuilder.toQuery(context);
+  }
+
+  @Override
+  public Query toFilter(QueryShardContext context) throws IOException {
+    return queryBuilder.toFilter(context);
+  }
+
+  @Override
+  public QueryBuilder queryName(String queryName) {
+    return queryBuilder.queryName(queryName);
+  }
+
+  @Override
+  public String queryName() {
+    return queryBuilder.queryName();
+  }
+
+  @Override
+  public float boost() {
+    return queryBuilder.boost();
+  }
+
+  @Override
+  public QueryBuilder boost(float boost) {
+    return queryBuilder.boost(boost);
+  }
+
+  @Override
+  public String getName() {
+    return queryBuilder.getName();
+  }
+
+  @Override
+  public String getWriteableName() {
+    return queryBuilder.getWriteableName();
+  }
+
+  @Override
+  public void writeTo(StreamOutput out) throws IOException {
+    queryBuilder.writeTo(out);
+  }
+
+  @Override
+  public QueryBuilder rewrite(QueryRewriteContext queryShardContext) throws IOException {
+    return queryBuilder.rewrite(queryShardContext);
+  }
+
+  @Override
+  public boolean isFragment() {
+    return queryBuilder.isFragment();
   }
 
   /**
