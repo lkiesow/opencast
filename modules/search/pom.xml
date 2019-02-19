@@ -284,6 +284,7 @@
             <Build-Number>${buildNumber}</Build-Number>
             <Import-Package>
               !com.github.mustachejava*,
+              !com.google.common.geometry,
               !com.google.protobuf,
               !groovy.lang,
               !org.antlr.*,
@@ -297,6 +298,7 @@
               !org.hyperic.sigar,
               !org.jboss.logging,
               !org.jboss.marshalling,
+              !joptsimple,
               !sun.security.*,
               *
             </Import-Package>
