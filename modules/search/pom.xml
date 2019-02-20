@@ -219,8 +219,8 @@
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty</artifactId>
-      <version>3.10.6.Final</version>
+      <artifactId>netty-all</artifactId>
+      <version>4.1.33.Final</version>
     </dependency>
     <dependency>
       <groupId>org.yaml</groupId>
@@ -283,12 +283,15 @@
             <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
             <Build-Number>${buildNumber}</Build-Number>
             <Import-Package>
+              !com.barchart.udt*,
+              !com.fasterxml.aalto*,
               !com.github.mustachejava*,
               !com.google.common.geometry,
-              !com.google.protobuf,
+              !com.google.protobuf*,
               !groovy.lang,
               !org.antlr.*,
               !org.apache.log4j.*,
+              !org.apache.logging.*,
               !org.apache.lucene.*,
               !org.tartarus.snowball*,
               !org.apache.tomcat.*,
@@ -298,7 +301,7 @@
               !org.hyperic.sigar,
               !org.jboss.logging,
               !org.jboss.marshalling,
-              !joptsimple,
+              !joptsimple*,
               !sun.security.*,
               *
             </Import-Package>
@@ -313,6 +316,7 @@
               commons-cli,
               compress-lzf,
               elasticsearch,
+              transport,
               hppc,
               jackson-dataformat-smile,
               jackson-dataformat-yaml,
@@ -338,7 +342,7 @@
               lucene-spatial-extras,
               lucene-spatial3d,
               lucene-suggest,
-              netty,
+              netty-all,
               snakeyaml,
               spatial4j,
               t-digest
