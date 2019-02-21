@@ -255,6 +255,12 @@
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-lang3</artifactId>
     </dependency>
+    <dependency>
+      <groupId>com.jcraft</groupId>
+      <artifactId>jzlib</artifactId>
+      <version>1.1.3</version>
+    </dependency>
+
     <!-- testing -->
     <dependency>
       <groupId>junit</groupId>
@@ -288,11 +294,16 @@
               !com.github.mustachejava*,
               !com.google.common.geometry,
               !com.google.protobuf*,
+              !com.jcraft.jzlib,
+              !gnu.io*,
               !groovy.lang,
+              !io.netty.internal.tcnative,
+              !org.eclipse.jetty.alpn,
               !org.antlr.*,
               !org.apache.log4j.*,
               !org.apache.logging.*,
               !org.apache.lucene.*,
+              !org.conscrypt*,
               !org.tartarus.snowball*,
               !org.apache.tomcat.*,
               !org.bouncycastle.*,
@@ -301,6 +312,8 @@
               !org.hyperic.sigar,
               !org.jboss.logging,
               !org.jboss.marshalling,
+              !lzma.sdk*,
+              !net.jpountz.*,
               !joptsimple*,
               !sun.security.*,
               *
@@ -325,6 +338,7 @@
               joda-convert,
               jsr166e,
               jts,
+              jzlib,
               lucene-analyzers-common,
               lucene-backward-codecs,
               lucene-codecs,
