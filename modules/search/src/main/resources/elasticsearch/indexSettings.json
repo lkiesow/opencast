@@ -6,7 +6,7 @@
         "tokenizer": "whitespace",
         "filter": [
           "lowercase"
-        ]
+          ]
       }
     }
   }

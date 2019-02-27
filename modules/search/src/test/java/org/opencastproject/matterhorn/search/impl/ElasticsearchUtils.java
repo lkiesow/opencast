@@ -59,7 +59,7 @@ public final class ElasticsearchUtils {
     if (!configurationRoot.mkdirs())
       throw new IOException("Error creating " + configurationRoot);
 
-    String[] files = new String[] { "content-mapping.json", "names.txt", "settings.yml", "version-mapping.json" };
+    String[] files = new String[] { "content-mapping.json", "settings.yml", "version-mapping.json" };
 
     for (String file : files) {
       String bundleLocation = PathSupport.concat(new String[] { "/elasticsearch", index, file });

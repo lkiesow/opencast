@@ -54,6 +54,7 @@ import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.settings.loader.JsonSettingsLoader;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.indices.IndexAlreadyExistsException;
@@ -390,7 +391,7 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
       if (!indicesExistsResponse.isExists()) {
         logger.debug("Trying to create index for '{}'", idx);
         CreateIndexRequest indexCreateRequest = new CreateIndexRequest(idx)
-                .settings(loadIndexSettings(idx));
+                .settings(new JsonSettingsLoader().load(loadIndexSettings(idx)));
         CreateIndexResponse siteIdxResponse = nodeClient.admin().indices().create(indexCreateRequest).actionGet();
         if (!siteIdxResponse.isAcknowledged()) {
           throw new SearchIndexException("Unable to create index for '" + idx + "'");
@@ -403,7 +404,7 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
     // Store the correct mapping
     for (String type : getDocumentTypes()) {
       PutMappingRequest siteMappingRequest = new PutMappingRequest(idx);
-      siteMappingRequest.source(getIndexTypeDefinition(idx, type));
+      siteMappingRequest.source(loadIndexMappings(idx, type));
       siteMappingRequest.type(type);
       PutMappingResponse siteMappingResponse = nodeClient.admin().indices().putMapping(siteMappingRequest).actionGet();
       if (!siteMappingResponse.isAcknowledged()) {
@@ -439,6 +440,37 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
     }
 
     preparedIndices.add(idx);
+  }
+
+  /**
+   * Load resources from active index class resources if they exist or fall back to this classes resources as default.
+   *
+   * @param index
+   *          the index identifier
+   * @return the string containing the resource
+   * @throws IOException
+   *           if reading the resources fails
+   */
+  private String loadResources(final String index, final String fileName) throws IOException {
+
+    // Try loading from the index implementation
+    // This allows index implementations to override the defaults
+    String resourcePath = "/elasticsearch/" + index + "/" + fileName;
+    try (InputStream is = this.getClass().getResourceAsStream(resourcePath)) {
+      if (is != null) {
+        final String settings = IOUtils.toString(is, StandardCharsets.UTF_8);
+        logger.debug("Reading elastic search index settings from {}:\n{}", this.getClass(), settings);
+        return settings;
+      }
+    }
+
+    // Load the defaults from this class
+    resourcePath = "/elasticsearch/" + fileName;
+    try (InputStream is = AbstractElasticsearchIndex.class.getResourceAsStream(resourcePath)) {
+      final String settings = IOUtils.toString(is, StandardCharsets.UTF_8);
+      logger.debug("Reading elastic search index settings from {}:\n{}", AbstractElasticsearchIndex.class, settings);
+      return settings;
+    }
   }
 
   /**
@@ -478,23 +510,7 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
    *           if reading the index mapping fails
    */
   private String loadIndexSettings(final String index) throws IOException {
-
-    // Try loading from the index implementation
-    // This allows index implementations to override the defaults
-    String resourcePath = "/elasticsearch/" + index + "/indexSettings.json";
-    try (InputStream is = this.getClass().getResourceAsStream(resourcePath)) {
-      if (is != null) {
-        logger.debug("Reading elastic search index settings from {}", this.getClass());
-        return IOUtils.toString(is, StandardCharsets.UTF_8);
-      }
-    }
-
-    // Load the defaults from this class
-    resourcePath = "/elasticsearch/indexSettings.json";
-    try (InputStream is = AbstractElasticsearchIndex.class.getResourceAsStream(resourcePath)) {
-      logger.debug("Reading elastic search index settings from {}", this.getClass());
-      return IOUtils.toString(is, StandardCharsets.UTF_8);
-    }
+    return loadResources(index, "indexSettings.json");
   }
 
   /**
@@ -507,37 +523,11 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
    * @param documentType
    *          the document type
    * @return the string containing the configuration
-   * @throws SearchIndexException
-   *           if the index cannot be created
    * @throws IOException
    *           if reading the index mapping fails
    */
-  protected String getIndexTypeDefinition(String index, String documentType) throws SearchIndexException, IOException {
-    String mapping = null;
-
-    File configFile = new File(PathSupport.concat(new String[] { indexSettingsPath, index,
-            documentType + "-mapping.json" }));
-    if (configFile.isFile()) {
-      try (FileInputStream fis = new FileInputStream(configFile)) {
-        mapping = IOUtils.toString(fis, StandardCharsets.UTF_8);
-      } catch (IOException e) {
-        logger.warn("Unable to load index mapping from {}", configFile.getAbsolutePath(), e);
-      }
-    }
-
-    // If no local settings were found, read them from the bundle resources
-    if (mapping == null) {
-      String resourcePath = PathSupport
-              .concat(new String[] { "/elasticsearch/", index, documentType + "-mapping.json" });
-      try (InputStream is = this.getClass().getResourceAsStream(resourcePath)) {
-        if (is != null) {
-          logger.debug("Reading elastic search index mapping '{}' from the bundle resource", documentType);
-          mapping = IOUtils.toString(is, StandardCharsets.UTF_8);
-        }
-      }
-    }
-
-    return mapping;
+  private String loadIndexMappings(final String index, final String documentType) throws IOException {
+    return loadResources(index, documentType + "-mapping.json");
   }
 
   /**
