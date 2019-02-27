@@ -314,7 +314,7 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
     synchronized (AbstractElasticsearchIndex.class) {
 
       // Prepare the configuration of the elastic search node
-      Settings settings = loadSettings(index, indexSettingsPath);
+      Settings settings = loadNodeSettings(index, indexSettingsPath);
       if (elasticSearch == null && externalServerAddress == null) {
         logger.info("Starting local Elasticsearch node");
 
@@ -389,12 +389,10 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
               .exists(new IndicesExistsRequest(idx)).actionGet();
       if (!indicesExistsResponse.isExists()) {
         logger.debug("Trying to create index for '{}'", idx);
-        CreateIndexRequest indexCreateRequest = new CreateIndexRequest(idx);
-        String settings = getIndexSettings(idx);
-        if (settings != null)
-          indexCreateRequest.settings(settings);
-        CreateIndexResponse siteidxResponse = nodeClient.admin().indices().create(indexCreateRequest).actionGet();
-        if (!siteidxResponse.isAcknowledged()) {
+        CreateIndexRequest indexCreateRequest = new CreateIndexRequest(idx)
+                .settings(loadIndexSettings(idx));
+        CreateIndexResponse siteIdxResponse = nodeClient.admin().indices().create(indexCreateRequest).actionGet();
+        if (!siteIdxResponse.isAcknowledged()) {
           throw new SearchIndexException("Unable to create index for '" + idx + "'");
         }
       }
@@ -455,7 +453,7 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
    * @throws SearchIndexException
    *           if the index configuration cannot be found
    */
-  protected Settings loadSettings(String index, String indexSettingsPath) throws IOException, SearchIndexException {
+  private Settings loadNodeSettings(String index, String indexSettingsPath) throws IOException, SearchIndexException {
     // Check if a local configuration file is present
     File configFile = new File(PathSupport.concat(new String[] { indexSettingsPath, index, "settings.yml" }));
     if (!configFile.isFile()) {
@@ -471,9 +469,7 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
   }
 
   /**
-   * Loads the index settings. An initial attempt is made to get the configuration from
-   * <code>${opencast.home}/etc/index/&lt;index&gt;/settings.json</code>. If this file can't be found, the
-   * default mapping loaded from the classpath.
+   * Loads the index settings.
    *
    * @param index
    *          the index identifier
@@ -481,31 +477,24 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
    * @throws IOException
    *           if reading the index mapping fails
    */
-  protected String getIndexSettings(String index) throws IOException {
-    String settings = null;
+  private String loadIndexSettings(final String index) throws IOException {
 
-    File configFile = new File(PathSupport.concat(new String[] { indexSettingsPath, index, "settings.json" }));
-    if (configFile.isFile()) {
-      try (FileInputStream fis = new FileInputStream(configFile)) {
-        settings = IOUtils.toString(fis, StandardCharsets.UTF_8);
-      } catch (IOException e) {
-        logger.warn("Unable to load index settings from {}", configFile.getAbsolutePath(), e);
+    // Try loading from the index implementation
+    // This allows index implementations to override the defaults
+    String resourcePath = "/elasticsearch/" + index + "/indexSettings.json";
+    try (InputStream is = this.getClass().getResourceAsStream(resourcePath)) {
+      if (is != null) {
+        logger.debug("Reading elastic search index settings from {}", this.getClass());
+        return IOUtils.toString(is, StandardCharsets.UTF_8);
       }
     }
 
-    // If no local settings were found, read them from the bundle resources
-    if (settings == null) {
-      String resourcePath = PathSupport
-              .concat(new String[] { "/elasticsearch/", index, "settings.json" });
-      try (InputStream is = this.getClass().getResourceAsStream(resourcePath)) {
-        if (is != null) {
-          logger.debug("Reading elastic search index settings '{}' from the bundle resource", index);
-          settings = IOUtils.toString(is, StandardCharsets.UTF_8);
-        }
-      }
+    // Load the defaults from this class
+    resourcePath = "/elasticsearch/indexSettings.json";
+    try (InputStream is = AbstractElasticsearchIndex.class.getResourceAsStream(resourcePath)) {
+      logger.debug("Reading elastic search index settings from {}", this.getClass());
+      return IOUtils.toString(is, StandardCharsets.UTF_8);
     }
-
-    return settings;
   }
 
   /**
