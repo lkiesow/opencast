@@ -105,9 +105,6 @@ public abstract class AbstractElasticsearchQueryBuilder<T extends SearchQuery> i
 
   /**
    * {@inheritDoc}
-   *
-   * @see org.elasticsearch.index.query.QueryBuilder#doXContent(org.elasticsearch.common.xcontent.XContentBuilder,
-   *      org.elasticsearch.common.xcontent.ToXContent.Params)
    */
   public abstract void buildQuery(T query);
 
