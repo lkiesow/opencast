@@ -56,9 +56,6 @@ import org.elasticsearch.client.Client;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.loader.JsonSettingsLoader;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
-import org.elasticsearch.common.transport.TransportAddress;
-import org.elasticsearch.common.transport.InetSocketTransportAddress;
-import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.node.Node;
 import org.elasticsearch.node.NodeValidationException;
@@ -70,7 +67,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetAddress;
@@ -397,7 +393,7 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
       if (!indicesExistsResponse.isExists()) {
         logger.debug("Trying to create index for '{}'", idx);
         CreateIndexRequest indexCreateRequest = new CreateIndexRequest(idx)
-                .settings(new JsonSettingsLoader().load(loadResources("indexSettings.json")));
+                .settings(new JsonSettingsLoader(false).load(loadResources("indexSettings.json")));
         CreateIndexResponse siteIdxResponse = nodeClient.admin().indices().create(indexCreateRequest).actionGet();
         if (!siteIdxResponse.isAcknowledged()) {
           throw new SearchIndexException("Unable to create index for '" + idx + "'");
@@ -489,9 +485,18 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
     }
 
     // Finally, try and load the index settings
-    try (FileInputStream fis = new FileInputStream(configFile)) {
-      return Settings.settingsBuilder().loadFromStream(configFile.getName(), fis).build();
+    Settings settings = Settings.builder().loadFromPath(configFile.toPath()).build();
+    Settings.Builder preparedSettings = Settings.builder();
+    for (Map.Entry<String, String> entry: settings.getAsMap().entrySet()) {
+      String value = entry.getValue();
+      for (Map.Entry prop: System.getProperties().entrySet()) {
+        value = value.replace("${" + prop.getKey() + "}", prop.getValue().toString());
+      }
+      preparedSettings.put(entry.getKey(), value);
     }
+    preparedSettings.put("transport.type", "local");
+    preparedSettings.put("http.enabled","false");
+    return preparedSettings.build();
   }
 
   /**
