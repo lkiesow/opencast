@@ -31,6 +31,8 @@ import org.opencastproject.matterhorn.search.SearchQuery.Order;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.core.config.Configurator;
+import org.apache.logging.log4j.core.config.builder.api.ConfigurationBuilderFactory;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.ResourceAlreadyExistsException;
 import org.elasticsearch.action.DocWriteResponse;
@@ -332,11 +334,6 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
           final InetAddress inetAddress = InetAddress.getByName(externalServerAddress);
           nodeClient = new PreBuiltTransportClient(settings)
                   .addTransportAddress(new InetSocketTransportAddress(inetAddress, externalServerPort));
-          /*
-          nodeClient = new PreBuiltTransportClient(settings)
-                  .addTransportAddress(new TransportAddress(InetAddress.getByName(externalServerAddress),
-                          externalServerPort));
-          */
         } else {
           // configure internal Elasticsearch
           nodeClient = elasticSearch.client();
@@ -495,7 +492,10 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
       preparedSettings.put(entry.getKey(), value);
     }
     preparedSettings.put("transport.type", "local");
-    preparedSettings.put("http.enabled","false");
+    preparedSettings.put("http.enabled", "false");
+
+    Configurator.initialize(ConfigurationBuilderFactory.newConfigurationBuilder().build());
+
     return preparedSettings.build();
   }
 
