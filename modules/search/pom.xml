@@ -341,7 +341,7 @@
               *
             </Import-Package>
             <Private-Package>
-              org.apache.logging.log4j
+              org.apache.logging.log4j*
             </Private-Package>
             <Export-Package>
               org.opencastproject.matterhorn.search.impl;version=${project.version}

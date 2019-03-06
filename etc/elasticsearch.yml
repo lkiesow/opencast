@@ -51,9 +51,3 @@ network.host: 127.0.0.1
 
 # Disable HTTP completely:
 #http.enabled: false
-
-
-################################## Shutdown ###################################
-
-# Disable the Elasticsearch Shutdown API (recomended).
-action.disable_shutdown: true
