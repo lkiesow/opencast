@@ -316,9 +316,6 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
         // Configure and start the elastic search node. In a testing scenario,
         // the node is being created locally.
         elasticSearch = new OpencastNode(settings);
-        // TODO:
-        //  elasticSearch = nodeBuilder.local(TestUtils.isTest()).build();
-        //  https://www.elastic.co/guide/en/elasticsearch/reference/5.5/breaking_50_settings_changes.html#_node_settings
         try {
           elasticSearch.start();
         } catch (NodeValidationException e) {
@@ -579,10 +576,6 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
       super(preparedSettings);
     }
 
-    //@Override preparation for ES6
-    protected void registerDerivedNodeNameWithLogger(String nodeName) {
-      // we never call this
-    }
   }
 
 }
