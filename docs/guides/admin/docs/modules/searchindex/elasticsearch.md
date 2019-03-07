@@ -25,13 +25,13 @@ Elasticsearch configuration file called `elasticsearch.yml`:
 ```yml
 cluster.name: opencast
 network.host: 0.0.0.0
+discovery.type: single-node
 ```
 
 …and run
 
 ```sh
 % docker run -p 9200:9200 -p 9300:9300 \
-    -e "discovery.type=single-node" \
     -v "$(pwd)/elasticsearch.yml":/usr/share/elasticsearch/config/elasticsearch.yml \
     elasticsearch:5.6.15
 ```

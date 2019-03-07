@@ -488,8 +488,11 @@ public abstract class AbstractElasticsearchIndex implements SearchIndex {
       }
       preparedSettings.put(entry.getKey(), value);
     }
-    //preparedSettings.put("transport.type", "local");
-    //preparedSettings.put("http.enabled", "false");
+
+    if (externalServerAddress == null) {
+      preparedSettings.put("transport.type", "local");
+      preparedSettings.put("http.enabled", "false");
+    }
 
     Configurator.initialize(ConfigurationBuilderFactory.newConfigurationBuilder().build());
 
