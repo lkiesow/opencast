@@ -114,7 +114,7 @@ public class PublishEngageWorkflowOperationHandler extends AbstractWorkflowOpera
   private static final String MERGE_FORCE_FLAVORS_DEFAULT = "dublincore/*,security/*";
 
   /** The default path to the player **/
-  protected static final String DEFAULT_PLAYER_PATH = "/engage/ui/watch.html";
+  protected static final String PLAYER_PATH = "/watch/";
 
   /** The streaming distribution service */
   private DistributionService streamingDistributionService = null;
@@ -447,18 +447,8 @@ public class PublishEngageWorkflowOperationHandler extends AbstractWorkflowOpera
    * @param mp
    * @return the assembled player URI for this mediapackage
    */
-  protected URI createEngageUri(URI engageUri, MediaPackage mp) {
-    String playerPath = null;
-    String configedPlayerPath = null;
-    // Use the current user's organizational information for the player path
-    Organization currentOrg = securityService.getOrganization();
-    if (currentOrg != null) {
-      configedPlayerPath = StringUtils
-              .trimToNull(currentOrg.getProperties().get(ConfigurablePublishWorkflowOperationHandler.PLAYER_PROPERTY));
-    }
-    // If not configuration, use a default path
-    playerPath = configedPlayerPath != null ? configedPlayerPath : DEFAULT_PLAYER_PATH;
-    return URIUtils.resolve(engageUri, playerPath + "?id=" + mp.getIdentifier().compact());
+  URI createEngageUri(URI engageUri, MediaPackage mp) {
+    return URIUtils.resolve(engageUri, PLAYER_PATH + mp.getIdentifier().compact());
   }
 
   /**
