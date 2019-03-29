@@ -229,7 +229,7 @@ angular.module('adminNg.controllers')
                 }
               }, this);
               return roles;
-            });
+            }).catch(angular.noop);
           }, this);
         },
         cleanupScopeResources = function() {
@@ -413,7 +413,7 @@ angular.module('adminNg.controllers')
                   }
                 }
               });
-            });
+            }).catch(angular.noop);
           }, function () {
             $scope.scheduling.hasProperties = false;
           });
@@ -451,7 +451,7 @@ angular.module('adminNg.controllers')
           $scope.roles[role.name] = role.value;
         });
         roleOffset = Object.keys($scope.roles).length;
-      }).finally(function () {
+      }).catch(angular.noop).finally(function () {
         loading = false;
       });
       return rolePromise;
@@ -532,13 +532,12 @@ angular.module('adminNg.controllers')
           if (!me.checkValidity()) {
             resolve();
           } else {
-            ConflictCheckResource.check($scope.source, me.noConflictsDetected, me.conflictsDetected)
-                            .$promise.then(function() {
-                              resolve();
-                            })
-                            .catch(function(err) {
-                              reject();
-                            });
+            ConflictCheckResource.check($scope.source, me.noConflictsDetected, me.conflictsDetected).$promise.then(
+              function() {
+                resolve();
+              }).catch(function(err) {
+                reject();
+              });
           }
         } else {
           $scope.checkingConflicts = false;
