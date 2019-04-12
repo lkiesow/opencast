@@ -45,8 +45,7 @@ import org.opencastproject.workflow.api.WorkflowParser;
 import org.opencastproject.workflow.api.WorkflowQuery;
 import org.opencastproject.workflow.api.WorkflowQuery.QueryTerm;
 import org.opencastproject.workflow.api.WorkflowService;
-import org.opencastproject.workflow.api.WorkflowSet;
-import org.opencastproject.workflow.api.WorkflowStatistics;
+import org.opencastproject.workflow.api.WorkflowStatisticsReport;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpResponse;
@@ -178,7 +177,7 @@ public class WorkflowServiceRemoteImpl extends RemoteBase implements WorkflowSer
    *      #getWorkflowInstances(org.opencastproject.workflow.api.WorkflowQuery)
    */
   @Override
-  public WorkflowSet getWorkflowInstances(WorkflowQuery query) throws WorkflowDatabaseException {
+  public List<WorkflowInstance> getWorkflowInstances(WorkflowQuery query) throws WorkflowDatabaseException {
     List<NameValuePair> queryStringParams = new ArrayList<>();
 
     if (query.getText() != null)
@@ -257,7 +256,46 @@ public class WorkflowServiceRemoteImpl extends RemoteBase implements WorkflowSer
     HttpResponse response = getResponse(get);
     try {
       if (response != null)
-        return WorkflowParser.parseWorkflowSet(response.getEntity().getContent());
+        return WorkflowParser.parseWorkflowSet(response.getEntity().getContent()).getItems();
+    } catch (Exception e) {
+      throw new WorkflowDatabaseException(e);
+    } finally {
+      closeConnection(response);
+    }
+    throw new WorkflowDatabaseException("Workflow instances can not be loaded from a remote workflow service");
+  }
+
+  @Override
+  public List<WorkflowInstance> getWorkflowInstancesByMediaPackage(String mediaPackageId)
+          throws WorkflowDatabaseException {
+    List<NameValuePair> queryStringParams = new ArrayList<>();
+
+    queryStringParams.add(new BasicNameValuePair("mediaPackageId", mediaPackageId));
+
+    HttpGet get = new HttpGet("/mediaPackage/" + mediaPackageId + "/instances.xml");
+    HttpResponse response = getResponse(get);
+    try {
+      if (response != null)
+        return WorkflowParser.parseWorkflowSet(response.getEntity().getContent()).getItems();
+    } catch (Exception e) {
+      throw new WorkflowDatabaseException(e);
+    } finally {
+      closeConnection(response);
+    }
+    throw new WorkflowDatabaseException("Workflow instances can not be loaded from a remote workflow service");
+  }
+
+  @Override
+  public boolean mediaPackageHasActiveWorkflows(String mediaPackageId) throws WorkflowDatabaseException {
+    List<NameValuePair> queryStringParams = new ArrayList<>();
+
+    queryStringParams.add(new BasicNameValuePair("mediaPackageId", mediaPackageId));
+
+    HttpGet get = new HttpGet("/mediaPackage/" + mediaPackageId + "/hasActiveWorkflows");
+    HttpResponse response = getResponse(get);
+    try {
+      if (response != null)
+        return Boolean.valueOf(response.getEntity().getContent().toString());
     } catch (Exception e) {
       throw new WorkflowDatabaseException(e);
     } finally {
@@ -272,9 +310,9 @@ public class WorkflowServiceRemoteImpl extends RemoteBase implements WorkflowSer
    * @see org.opencastproject.workflow.api.WorkflowService#getWorkflowInstancesForAdministrativeRead(org.opencastproject.workflow.api.WorkflowQuery)
    */
   @Override
-  public WorkflowSet getWorkflowInstancesForAdministrativeRead(WorkflowQuery q) throws WorkflowDatabaseException,
+  public List<WorkflowInstance> getWorkflowInstancesForAdministrativeRead(WorkflowQuery q) throws WorkflowDatabaseException,
           UnauthorizedException {
-    return getWorkflowInstances(q);
+    return getWorkflowInstances(q); // TODO this doesn't make sense
   }
 
   /**
@@ -283,7 +321,7 @@ public class WorkflowServiceRemoteImpl extends RemoteBase implements WorkflowSer
    * @see org.opencastproject.workflow.api.WorkflowService#getStatistics()
    */
   @Override
-  public WorkflowStatistics getStatistics() throws WorkflowDatabaseException {
+  public WorkflowStatisticsReport getStatistics() throws WorkflowDatabaseException {
     HttpGet get = new HttpGet("/statistics.xml");
     HttpResponse response = getResponse(get);
     try {
@@ -388,16 +426,6 @@ public class WorkflowServiceRemoteImpl extends RemoteBase implements WorkflowSer
     } catch (NotFoundException e) {
       throw new IllegalStateException("A null parent workflow id should never result in a not found exception ", e);
     }
-  }
-
-  /**
-   * {@inheritDoc}
-   *
-   * @see org.opencastproject.workflow.api.WorkflowService#countWorkflowInstances()
-   */
-  @Override
-  public long countWorkflowInstances() throws WorkflowDatabaseException {
-    return countWorkflowInstances(null, null);
   }
 
   /**

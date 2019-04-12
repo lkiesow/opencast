@@ -56,7 +56,7 @@ final class WorkflowOperationWorker {
 
   /**
    * Creates a worker that will execute the given handler and thereby the current operation of the workflow instance.
-   * When the worker is finished, a callback will be made to the workflow service reporting either success or failure of
+   * When the worker is succeeded, a callback will be made to the workflow service reporting either success or failure of
    * the current workflow operation.
    *
    * @param handler
@@ -75,7 +75,7 @@ final class WorkflowOperationWorker {
 
   /**
    * Creates a worker that will execute the given handler and thereby the current operation of the workflow instance.
-   * When the worker is finished, a callback will be made to the workflow service reporting either success or failure of
+   * When the worker is succeeded, a callback will be made to the workflow service reporting either success or failure of
    * the current workflow operation.
    *
    * @param handler

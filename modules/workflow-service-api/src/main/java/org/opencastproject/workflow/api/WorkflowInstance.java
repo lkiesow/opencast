@@ -23,7 +23,9 @@ package org.opencastproject.workflow.api;
 
 import org.opencastproject.mediapackage.MediaPackage;
 
+import java.util.Date;
 import java.util.List;
+import java.util.Set;
 
 import javax.xml.bind.annotation.adapters.XmlAdapter;
 import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
@@ -118,6 +120,10 @@ public interface WorkflowInstance extends Configurable {
    */
   List<WorkflowOperationInstance> getOperations();
 
+  Date getDateCreated();
+
+  void setDateCreated(Date dateCreated);
+
   /**
    * Sets the list of workflow operations.
    *
@@ -150,7 +156,7 @@ public interface WorkflowInstance extends Configurable {
   void setState(WorkflowState state);
 
   /**
-   * @return True if the workflow has not finished, been stopped or failed.
+   * @return True if the workflow has not succeeded, been stopped or failed.
    */
   boolean isActive();
 
@@ -194,4 +200,19 @@ public interface WorkflowInstance extends Configurable {
    *          insert the given workflow after this operation
    */
   void insert(WorkflowDefinition workflowDefinition, WorkflowOperationInstance after);
+
+  /**
+   * Get a set of all workflow configurations.
+   *
+   * @return the workflow configuration set
+   */
+  Set<WorkflowConfiguration> getCompleteConfiguration();
+
+  /**
+   * Set a set of all workflow configurations.
+   *
+   * @param configuration
+   *         the workflow configuration set
+   */
+  void setCompleteConfiguration(Set<WorkflowConfiguration> configuration);
 }

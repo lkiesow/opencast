@@ -25,9 +25,7 @@ import static com.entwinemedia.fn.data.json.Jsons.arr;
 import static com.entwinemedia.fn.data.json.Jsons.f;
 import static com.entwinemedia.fn.data.json.Jsons.obj;
 import static com.entwinemedia.fn.data.json.Jsons.v;
-import static org.opencastproject.index.service.util.RestUtils.stream;
 import static org.opencastproject.util.DateTimeSupport.toUTC;
-import static org.opencastproject.util.doc.rest.RestParameter.Type.STRING;
 
 import org.opencastproject.adminui.exception.JobEndpointException;
 import org.opencastproject.index.service.resources.list.query.JobsListQuery;
@@ -37,10 +35,6 @@ import org.opencastproject.job.api.IncidentTree;
 import org.opencastproject.job.api.Job;
 import org.opencastproject.matterhorn.search.SearchQuery;
 import org.opencastproject.matterhorn.search.SortCriterion;
-import org.opencastproject.mediapackage.MediaPackage;
-import org.opencastproject.security.api.User;
-import org.opencastproject.security.api.UserDirectoryService;
-import org.opencastproject.serviceregistry.api.HostRegistration;
 import org.opencastproject.serviceregistry.api.IncidentL10n;
 import org.opencastproject.serviceregistry.api.IncidentService;
 import org.opencastproject.serviceregistry.api.IncidentServiceException;
@@ -50,24 +44,15 @@ import org.opencastproject.util.DateTimeSupport;
 import org.opencastproject.util.NotFoundException;
 import org.opencastproject.util.RestUtil;
 import org.opencastproject.util.SmartIterator;
-import org.opencastproject.util.SolrUtils;
 import org.opencastproject.util.data.Tuple;
 import org.opencastproject.util.doc.rest.RestParameter;
 import org.opencastproject.util.doc.rest.RestQuery;
 import org.opencastproject.util.doc.rest.RestResponse;
 import org.opencastproject.util.doc.rest.RestService;
-import org.opencastproject.workflow.api.WorkflowDatabaseException;
-import org.opencastproject.workflow.api.WorkflowInstance;
-import org.opencastproject.workflow.api.WorkflowInstance.WorkflowState;
-import org.opencastproject.workflow.api.WorkflowOperationInstance;
-import org.opencastproject.workflow.api.WorkflowQuery;
-import org.opencastproject.workflow.api.WorkflowQuery.Sort;
 import org.opencastproject.workflow.api.WorkflowService;
-import org.opencastproject.workflow.api.WorkflowSet;
 
 import com.entwinemedia.fn.Fn;
 import com.entwinemedia.fn.Stream;
-import com.entwinemedia.fn.data.json.Field;
 import com.entwinemedia.fn.data.json.JObject;
 import com.entwinemedia.fn.data.json.JValue;
 import com.entwinemedia.fn.data.json.Jsons;
@@ -78,7 +63,6 @@ import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -93,8 +77,6 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
@@ -386,7 +368,7 @@ public class JobEndpoint {
     }
   }
 
-  public List<JValue> getJobsAsJSON(List<JobExtended> jobs) {
+  public List<JValue> getJobsAsJSON(List<Job> jobs) {
     List<JValue> jsonList = new ArrayList<>();
     for (JobExtended jobEx : jobs) {
       Job job = jobEx.getJob();
@@ -418,168 +400,6 @@ public class JobEndpoint {
     }
 
     return jsonList;
-  }
-
-  /**
-   * Returns the list of tasks matching the given query as JSON Object
-   *
-   * @param query
-   *          The worklfow query
-   * @return The list of matching tasks as JSON Object
-   * @throws JobEndpointException
-   * @throws NotFoundException
-   */
-  public JObject getTasksAsJSON(WorkflowQuery query) throws JobEndpointException, NotFoundException {
-    // Get results
-    WorkflowSet workflowInstances = null;
-    long totalWithoutFilters = 0;
-    List<JValue> jsonList = new ArrayList<>();
-
-    try {
-      workflowInstances = workflowService.getWorkflowInstances(query);
-      totalWithoutFilters = workflowService.countWorkflowInstances();
-    } catch (WorkflowDatabaseException e) {
-      throw new JobEndpointException(String.format("Not able to get the list of job from the database: %s", e),
-              e.getCause());
-    }
-
-    WorkflowInstance[] items = workflowInstances.getItems();
-
-    for (WorkflowInstance instance : items) {
-      long instanceId = instance.getId();
-      // Retrieve submission date with the workflow instance main job
-      Date created;
-      try {
-        created = serviceRegistry.getJob(instanceId).getDateCreated();
-      } catch (ServiceRegistryException e) {
-        throw new JobEndpointException(String.format("Error when retrieving job %s from the service registry: %s",
-                instanceId, e), e.getCause());
-      }
-
-      final String creatorName = instance.getCreatorName();
-
-      jsonList.add(obj(f("id", v(instanceId)), f("title", v(instance.getTitle(), Jsons.BLANK)),
-              f("status", v(WORKFLOW_STATUS_TRANSLATION_PREFIX + instance.getState().toString())),
-              f("submitted", v(created != null ? DateTimeSupport.toUTC(created.getTime()) : "", Jsons.BLANK)),
-              f("submitter", v(creatorName, Jsons.BLANK))));
-    }
-
-    return obj(f("results", arr(jsonList)), f("count", v(workflowInstances.getTotalCount())),
-            f("offset", v(query.getStartPage())), f("limit", v(jsonList.size())), f("total", v(totalWithoutFilters)));
-  }
-
-  /**
-   * Returns the single task with the given Id as JSON Object
-   *
-   * @param id
-   * @return The job as JSON Object
-   * @throws JobEndpointException
-   * @throws NotFoundException
-   */
-  public JObject getTasksAsJSON(long id) throws JobEndpointException, NotFoundException {
-    WorkflowInstance instance = getWorkflowById(id);
-    // Gather user information
-    User user = userDirectoryService.loadUser(instance.getCreatorName());
-    List<Field> userInformation = new ArrayList<>();
-    if (user != null) {
-      userInformation.add(f("username", v(user.getUsername())));
-      userInformation.add(f("name", v(user.getName(), Jsons.BLANK)));
-      userInformation.add(f("email", v(user.getEmail(), Jsons.BLANK)));
-    }
-    // Retrieve submission date with the workflow instance main job
-    Date created;
-    long executionTime = 0;
-    try {
-      Job job = serviceRegistry.getJob(id);
-      created = job.getDateCreated();
-      Date completed = job.getDateCompleted();
-      if (completed == null)
-        completed = new Date();
-
-      executionTime = (completed.getTime() - created.getTime());
-    } catch (ServiceRegistryException e) {
-      throw new JobEndpointException(
-              String.format("Error when retrieving job %s from the service registry: %s", id, e), e.getCause());
-    }
-
-    MediaPackage mp = instance.getMediaPackage();
-
-    List<Field> fields = new ArrayList<>();
-    for (String key : instance.getConfigurationKeys()) {
-      fields.add(f(key, v(instance.getConfiguration(key), Jsons.BLANK)));
-    }
-
-    return obj(f("status", v(WORKFLOW_STATUS_TRANSLATION_PREFIX + instance.getState(), Jsons.BLANK)),
-               f("description", v(instance.getDescription(), Jsons.BLANK)), f("executionTime", v(executionTime, Jsons.BLANK)),
-               f("wiid", v(instance.getId(), Jsons.BLANK)), f("title", v(instance.getTitle(), Jsons.BLANK)),
-               f("wdid", v(instance.getTemplate(), Jsons.BLANK)), f("configuration", obj(fields)),
-               f("submittedAt", v(created != null ? toUTC(created.getTime()) : "", Jsons.BLANK)),
-               f("creator", obj(userInformation)));
-  }
-
-  /**
-   * Returns the list of operations for a given workflow instance
-   *
-   * @param jobId
-   *          the workflow instance id
-   * @return the list of workflow operations as JSON object
-   * @throws JobEndpointException
-   * @throws NotFoundException
-   */
-  public JValue getOperationsAsJSON(long jobId) throws JobEndpointException, NotFoundException {
-    WorkflowInstance instance = getWorkflowById(jobId);
-
-    List<WorkflowOperationInstance> operations = instance.getOperations();
-    List<JValue> operationsJSON = new ArrayList<>();
-
-    for (WorkflowOperationInstance wflOp : operations) {
-      List<Field> fields = new ArrayList<>();
-      for (String key : wflOp.getConfigurationKeys()) {
-        fields.add(f(key, v(wflOp.getConfiguration(key), Jsons.BLANK)));
-      }
-      operationsJSON.add(obj(f("status", v(WORKFLOW_STATUS_TRANSLATION_PREFIX + wflOp.getState(), Jsons.BLANK)), f("title", v(wflOp.getTemplate(), Jsons.BLANK)),
-              f("description", v(wflOp.getDescription(), Jsons.BLANK)), f("id", v(wflOp.getId(), Jsons.BLANK)), f("configuration", obj(fields))));
-    }
-
-    return arr(operationsJSON);
-  }
-
-  /**
-   * Returns the operation with the given id from the given workflow instance
-   *
-   * @param jobId
-   *          the workflow instance id
-   * @param operationPosition
-   *          the operation position
-   * @return the operation as JSON object
-   * @throws JobEndpointException
-   * @throws NotFoundException
-   */
-  public JObject getOperationAsJSON(long jobId, int operationPosition)
-          throws JobEndpointException, NotFoundException {
-    WorkflowInstance instance = getWorkflowById(jobId);
-
-    List<WorkflowOperationInstance> operations = instance.getOperations();
-
-    if (operations.size() > operationPosition) {
-      WorkflowOperationInstance wflOp = operations.get(operationPosition);
-      return obj(f("retry_strategy", v(wflOp.getRetryStrategy(), Jsons.BLANK)),
-              f("execution_host", v(wflOp.getExecutionHost(), Jsons.BLANK)),
-              f("failed_attempts", v(wflOp.getFailedAttempts())),
-              f("max_attempts", v(wflOp.getMaxAttempts())),
-              f("exception_handler_workflow", v(wflOp.getExceptionHandlingWorkflow(), Jsons.BLANK)),
-              f("fail_on_error", v(wflOp.isFailWorkflowOnException())),
-              f("description", v(wflOp.getDescription(), Jsons.BLANK)),
-              f("state", v(WORKFLOW_STATUS_TRANSLATION_PREFIX + wflOp.getState(), Jsons.BLANK)),
-              f("job", v(wflOp.getId(), Jsons.BLANK)),
-              f("name", v(wflOp.getTemplate(), Jsons.BLANK)),
-              f("time_in_queue", v(wflOp.getTimeInQueue(), v(0))),
-              f("started", wflOp.getDateStarted() != null ? v(toUTC(wflOp.getDateStarted().getTime())) : Jsons.BLANK),
-              f("completed", wflOp.getDateCompleted() != null ? v(toUTC(wflOp.getDateCompleted().getTime())) : Jsons.BLANK)
-      );
-    }
-
-    return null;
   }
 
   /**
@@ -645,32 +465,6 @@ public class JobEndpoint {
       return obj(f("title", v(loc.getTitle(), Jsons.BLANK)), f("description", v(loc.getDescription(), Jsons.BLANK)));
     } catch (Exception e) {
       return obj(f("title", v("")), f("description", v("")));
-    }
-  }
-
-  /**
-   * Returns the workflow by the given identifier. This also returns STOPPED workflows, which is the reason for not
-   * using the existing {@link WorkflowService:getWorkflowById()} method.
-   *
-   * @param id
-   *          the workflow identifier
-   * @return the workflow instance
-   * @throws NotFoundException
-   *           it the workflow was not found
-   * @throws JobEndpointException
-   *           if there was an issue reading the workflow from the database
-   */
-  private WorkflowInstance getWorkflowById(long id) throws NotFoundException, JobEndpointException {
-    try {
-      WorkflowSet workflowInstances = workflowService
-              .getWorkflowInstances(new WorkflowQuery().withId(Long.toString(id)));
-      if (workflowInstances.getItems().length == 0)
-        throw new NotFoundException();
-
-      return workflowInstances.getItems()[0];
-    } catch (WorkflowDatabaseException e) {
-      throw new JobEndpointException(String.format("Not able to get the list of job from the database: %s", e),
-              e.getCause());
     }
   }
 

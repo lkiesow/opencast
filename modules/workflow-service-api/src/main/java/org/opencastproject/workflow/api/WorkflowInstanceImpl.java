@@ -38,6 +38,7 @@ import org.opencastproject.workflow.api.WorkflowOperationInstance.OperationState
 import com.entwinemedia.fn.Fn;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -108,6 +109,12 @@ public class WorkflowInstanceImpl implements WorkflowInstance {
   @XmlTransient
   protected boolean initialized = false;
 
+  @XmlElement(name = "dateCreated")
+  private Date dateCreated = null;
+
+  @XmlElement(name = "dateCompleted")
+  private Date dateCompleted = null;
+
   /**
    * Default no-arg constructor needed by JAXB
    */
@@ -143,13 +150,14 @@ public class WorkflowInstanceImpl implements WorkflowInstance {
       this.organizationId = organization.getId();
     this.state = WorkflowState.INSTANTIATED;
     this.mediaPackage = mediaPackage;
-    this.operations = new ArrayList<WorkflowOperationInstance>();
-    this.configurations = new TreeSet<WorkflowConfiguration>();
+    this.operations = new ArrayList<>();
+    this.configurations = new TreeSet<>();
     if (properties != null) {
       for (Entry<String, String> entry : properties.entrySet()) {
         configurations.add(new WorkflowConfigurationImpl(entry.getKey(), entry.getValue()));
       }
     }
+    this.dateCreated = new Date();
     extend(def);
   }
 
@@ -295,7 +303,13 @@ public class WorkflowInstanceImpl implements WorkflowInstance {
    */
   @Override
   public void setState(WorkflowState state) {
+
+    if (dateCompleted == null && state.isTerminated()) {
+      dateCompleted = new Date();
+    }
     this.state = state;
+
+
   }
 
   @Override
@@ -471,6 +485,26 @@ public class WorkflowInstanceImpl implements WorkflowInstance {
   /**
    * {@inheritDoc}
    *
+   * @see org.opencastproject.workflow.api.WorkflowInstance
+   */
+  @Override
+  public Set<WorkflowConfiguration> getCompleteConfiguration() {
+    return configurations;
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * @see org.opencastproject.workflow.api.WorkflowInstance
+   */
+  @Override
+  public void setCompleteConfiguration(Set<WorkflowConfiguration> configurations) {
+    this.configurations = configurations;
+  }
+
+  /**
+   * {@inheritDoc}
+   *
    * @see org.opencastproject.workflow.api.Configurable#removeConfiguration(java.lang.String)
    */
   @Override
@@ -524,7 +558,7 @@ public class WorkflowInstanceImpl implements WorkflowInstance {
 
     WorkflowOperationInstance currentOperation = getCurrentOperation();
     if (currentOperation == null)
-      throw new IllegalStateException("Can't call next on a finished workflow");
+      throw new IllegalStateException("Can't call next on a succeeded workflow");
 
     for (Iterator<WorkflowOperationInstance> opIter = operations.iterator(); opIter.hasNext();) {
       WorkflowOperationInstance op = opIter.next();
@@ -693,4 +727,24 @@ public class WorkflowInstanceImpl implements WorkflowInstance {
       return new WorkflowOperationInstanceImpl(wod, -1);
     }
   };
+
+  @Override
+  public Date getDateCreated() {
+    return dateCreated;
+  }
+
+  @Override
+  public void setDateCreated(Date dateCreated) {
+    this.dateCreated = dateCreated;
+  }
+
+  @Override
+  public Date getDateCompleted() {
+    return dateCompleted;
+  }
+
+  @Override
+  public void setDateCompleted(Date dateCompleted) {
+    this.dateCompleted = dateCompleted;
+  }
 }

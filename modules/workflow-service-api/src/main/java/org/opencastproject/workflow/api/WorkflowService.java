@@ -95,7 +95,8 @@ public interface WorkflowService {
    * @throws WorkflowDatabaseException
    *           if there is a problem accessing the workflow instances from persistence
    */
-  WorkflowSet getWorkflowInstances(WorkflowQuery query) throws WorkflowDatabaseException;
+  List<WorkflowInstance> getWorkflowInstances(WorkflowQuery query)
+          throws WorkflowDatabaseException, UnauthorizedException;
 
   /**
    * Finds workflow instances based on the specified query for administrative access.
@@ -108,7 +109,7 @@ public interface WorkflowService {
    * @throws UnauthorizedException
    *           if the user does not own an administrative role
    */
-  WorkflowSet getWorkflowInstancesForAdministrativeRead(WorkflowQuery q) throws WorkflowDatabaseException,
+  List<WorkflowInstance> getWorkflowInstancesForAdministrativeRead(WorkflowQuery q) throws WorkflowDatabaseException,
           UnauthorizedException;
 
   /**
@@ -168,15 +169,6 @@ public interface WorkflowService {
           throws WorkflowDatabaseException, WorkflowParsingException;
 
   /**
-   * Gets the total number of workflows that have been created to date.
-   *
-   * @return The number of workflow instances, regardless of their state
-   * @throws WorkflowDatabaseException
-   *           if there is a problem accessing the workflow instances in persistence
-   */
-  long countWorkflowInstances() throws WorkflowDatabaseException;
-
-  /**
    * Gets the total number of workflows that have been created to date and that match all of the specified criterias
    * such as the workflow state or the current operation, both of which might be <code>null</code>.
    *
@@ -188,7 +180,8 @@ public interface WorkflowService {
    * @throws WorkflowDatabaseException
    *           if there is a problem accessing the workflow instances in persistence
    */
-  long countWorkflowInstances(WorkflowState state, String operation) throws WorkflowDatabaseException;
+  long countWorkflowInstances(WorkflowState state, String operation)
+          throws WorkflowDatabaseException, UnauthorizedException;
 
   /**
    * Returns the statistics for the workflow service.
@@ -197,7 +190,7 @@ public interface WorkflowService {
    * @throws WorkflowDatabaseException
    *           if there is a problem accessing the workflow instances in persistence
    */
-  WorkflowStatistics getStatistics() throws WorkflowDatabaseException;
+  WorkflowStatisticsReport getStatistics() throws WorkflowDatabaseException, UnauthorizedException;
 
   /**
    * Stops a running workflow instance.
@@ -319,8 +312,9 @@ public interface WorkflowService {
   void cleanupWorkflowInstances(int lifetime, WorkflowInstance.WorkflowState state) throws WorkflowDatabaseException,
           UnauthorizedException;
 
-  /**
-   * @return All configured workflow state mappings
-   */
-  Map<String, Map<String, String>> getWorkflowStateMappings();
+  //TODO
+  List<WorkflowInstance> getWorkflowInstancesByMediaPackage(String mediaPackageId) throws WorkflowDatabaseException;
+
+  //TODO
+  boolean mediaPackageHasActiveWorkflows(String mediaPackageId) throws WorkflowDatabaseException;
 }
