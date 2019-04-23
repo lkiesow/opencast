@@ -532,8 +532,8 @@ angular.module('adminNg.controllers')
           if (!me.checkValidity()) {
             resolve();
           } else {
-            ConflictCheckResource.check($scope.source, me.noConflictsDetected, me.conflictsDetected).$promise.then(
-              function() {
+            ConflictCheckResource.check($scope.source, me.noConflictsDetected, me.conflictsDetected)
+              .$promise.then(function() {
                 resolve();
               }).catch(function(err) {
                 reject();

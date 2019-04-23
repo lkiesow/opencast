@@ -426,8 +426,8 @@ angular.module('adminNg.services.language')
      */
     this.configureFromServer = function (deferred, language) {
       var me = this;
-      $http({method: 'GET', url: '/i18n/languages.json'}).then(
-        function onSuccess(response) {
+      $http({method: 'GET', url: '/i18n/languages.json'})
+        .then(function onSuccess(response) {
           var fallbackDeferred = $q.defer();
           me.configure(response.data, language);
           // load the fallback language
@@ -445,15 +445,12 @@ angular.module('adminNg.services.language')
             // There is no fallback language, lets load the main language
             me.loadLanguageFromServer(me.currentLanguage.code, deferred);
           }
-        },
-      ).catch(
-        function onError(response) {
+        }).catch(function onError(response) {
           // called asynchronously if an error occurs
           // or server returns response with an error status.
           $log.error('fatal, could not load the best language from server');
           return deferred.reject(response.data);
-        }
-      );
+        });
 
       deferred.promise.then(function () {
         $rootScope.$emit('language-changed', me.currentLanguage.code);
