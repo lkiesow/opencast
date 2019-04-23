@@ -84,7 +84,7 @@ angular.module('adminNg.controllers')
         mode = 'optional'; // defaults to optional
       }
       $scope.updateMode = mode;
-    });
+    }).catch(angular.noop);
 
     $scope.changeBaseAcl = function () {
       $scope.baseAcl = SeriesAccessResource.getManagedAcl({id: this.baseAclId}, function () {
@@ -138,7 +138,8 @@ angular.module('adminNg.controllers')
           $scope.roles[role.name] = role.value;
         });
         roleOffset = Object.keys($scope.roles).length;
-      }).finally(function () {
+      }).catch(angular.noop
+      ).finally(function () {
         loading = false;
       });
       return rolePromise;

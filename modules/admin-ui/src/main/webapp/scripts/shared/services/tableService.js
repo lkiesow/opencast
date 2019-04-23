@@ -354,7 +354,7 @@ angular.module('adminNg.services')
 
             me.updatePagination();
             me.updateAllSelected();
-          });
+          }).catch(angular.noop);
         })(me.resource);
 
         if (me.refreshScheduler.on) {

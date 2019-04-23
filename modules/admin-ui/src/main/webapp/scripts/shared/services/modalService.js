@@ -110,7 +110,7 @@ angular.module('adminNg.services.modal')
       $scope.open = false;
 
       // Fetch the modal markup from the partial named after its ID
-      http = $http.get('shared/partials/modals/' + modalId + '.html', {});
+      http = $http.get('shared/partials/modals/' + modalId + '.html').catch(angular.noop);;
 
       http.then(function (html) {
         // Compile modal and overlay and attach them to the DOM.

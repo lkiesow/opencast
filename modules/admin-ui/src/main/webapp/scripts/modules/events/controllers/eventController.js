@@ -451,16 +451,17 @@ angular.module('adminNg.controllers')
           $scope.roles[role.name] = role.value;
         });
         roleOffset = Object.keys($scope.roles).length;
-      }).catch(angular.noop).finally(function () {
+      }).catch(angular.noop
+      ).finally(function () {
         loading = false;
       });
       return rolePromise;
     };
 
     /**
-         * <===============================
-         * START Scheduling related resources
-         */
+     * <===============================
+     * START Scheduling related resources
+     */
 
     /* Get the current client timezone */
     $scope.tz = 'UTC' + (tzOffset < 0 ? '-' : '+') + tzOffset;
