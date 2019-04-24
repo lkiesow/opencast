@@ -34,6 +34,7 @@ describe('adminNg.directives.timelineDirective', function () {
             }
         };
         jasmine.getJSONFixtures().fixturesPath = 'base/app/GET';
+        $httpBackend.whenGET('modules/events/partials/index.html').respond('');
         $rootScope.video = angular.copy(getJSONFixture('admin-ng/tools/c3a4f68d-14d4-47e2-8981-8eb2fb300d3a/editor.json'));
         element = $compile('<div data-admin-ng-timeline="" data-video="video" data-player="player"/></div>')($rootScope);
         element.find('.timeline-track').css({ width: '1000px' });

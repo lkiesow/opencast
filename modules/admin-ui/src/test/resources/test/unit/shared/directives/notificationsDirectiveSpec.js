@@ -1,5 +1,5 @@
 describe('adminNg.directives.adminNgNotifications', function () {
-    var $compile, $rootScope, element, Notifications;
+    var $compile, $rootScope, element, Notifications, $httpBackend;
 
     beforeEach(module('adminNg'));
     beforeEach(module('shared/partials/notification.html'));
@@ -29,13 +29,15 @@ describe('adminNg.directives.adminNgNotifications', function () {
 	$provide.value('AuthService', service);
     }));
 
-    beforeEach(inject(function (_$rootScope_, _$compile_, _Notifications_) {
+    beforeEach(inject(function (_$httpBackend_, _$rootScope_, _$compile_, _Notifications_) {
+        $httpBackend = _$httpBackend_;
         $compile = _$compile_;
         $rootScope = _$rootScope_;
         Notifications = _Notifications_;
     }));
 
     beforeEach(function () {
+        $httpBackend.whenGET('modules/events/partials/index.html').respond('');
         element = $compile('<div admin-ng-notifications=""></div>')($rootScope);
         $rootScope.$digest();
     });
