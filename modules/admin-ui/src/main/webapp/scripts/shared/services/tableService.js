@@ -363,8 +363,8 @@ angular.module('adminNg.services')
       };
 
       /**
-         * Scheduler for the refresh of the fetch
-         */
+       * Scheduler for the refresh of the fetch
+       */
       this.refreshScheduler = {
         on: true,
         newSchedule: function () {
