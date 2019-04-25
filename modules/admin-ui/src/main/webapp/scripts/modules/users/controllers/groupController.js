@@ -59,7 +59,7 @@ angular.module('adminNg.controllers')
             return !_.findWhere($scope.role.selected, {name: role.name});
           });
         }).catch(angular.noop);
-      });
+      }).catch(angular.noop);
     };
 
     var reloadRoles = function () {
