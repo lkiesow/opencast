@@ -16,17 +16,17 @@ describe('adminNg.directives.adminNgNotifications', function () {
     }));
 
     beforeEach(module(function ($provide) {
-	var service = {
-	    getUser: function () {
-		var user = {org: { properties: {
-		    "admin.notification.duration.error": -10,
-		    "admin.notification.duration.success": 50,
-		    "admin.notification.duration.warning": 50
-		}}};
-		return {$promise: {then: function (fn) { fn(user) }}};
-	    }
-	};
-	$provide.value('AuthService', service);
+    var service = {
+        getUser: function () {
+            var user = {org: { properties: {
+                "admin.notification.duration.error": -10,
+                "admin.notification.duration.success": 50,
+                "admin.notification.duration.warning": 50
+            }}};
+            return {$promise: {then: function (fn) { fn(user); return { catch: function() {} }; }}};
+        }
+    };
+    $provide.value('AuthService', service);
     }));
 
     beforeEach(inject(function (_$httpBackend_, _$rootScope_, _$compile_, _Notifications_) {

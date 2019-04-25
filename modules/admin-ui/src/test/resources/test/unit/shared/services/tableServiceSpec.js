@@ -52,6 +52,7 @@ describe('Table', function () {
                         $promise: {
                             then: function (fn) {
                                 fn(data);
+                            return { catch: function() {} };
                             }
                         }
                     };

@@ -16,6 +16,7 @@ describe('Group controller', function () {
         $scope.group = {
             $promise : {
                 then : function() {
+                    return { catch: function() {} };
                 }
             }
         };
