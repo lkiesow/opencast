@@ -21,10 +21,8 @@
 
 package org.opencastproject.ingestdownloadservice.impl;
 
-
 import static java.util.Arrays.asList;
 
-import org.opencastproject.execute.api.ExecuteService;
 import org.opencastproject.ingestdownloadservice.api.IngestDownloadService;
 import org.opencastproject.job.api.AbstractJobProducer;
 import org.opencastproject.job.api.Job;
@@ -43,23 +41,15 @@ import org.opencastproject.serviceregistry.api.ServiceRegistration;
 import org.opencastproject.serviceregistry.api.ServiceRegistry;
 import org.opencastproject.serviceregistry.api.ServiceRegistryException;
 import org.opencastproject.util.UrlSupport;
-import org.opencastproject.workflow.api.WorkflowInstance;
-import org.opencastproject.workflow.api.WorkflowOperationException;
-import org.opencastproject.workflow.api.WorkflowOperationInstance;
-import org.opencastproject.workflow.api.WorkflowOperationResult;
 import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 import org.opencastproject.workspace.api.Workspace;
 
-
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.methods.HttpDelete;
-import org.osgi.service.cm.ConfigurationException;
-import org.osgi.service.cm.ManagedService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,58 +58,151 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.Dictionary;
 import java.util.List;
 
 /**
  * A simple tutorial class to learn about Opencast Services
  */
-public class IngestDownloadServiceImpl extends AbstractJobProducer implements IngestDownloadService, ManagedService {
+public class IngestDownloadServiceImpl extends AbstractJobProducer implements IngestDownloadService {
 
   public enum Operation {
     Download
   }
 
-  /** The module specific logger */
+  /**
+   * The module specific logger
+   */
   private static final Logger logger = LoggerFactory.getLogger(IngestDownloadServiceImpl.class);
 
   /**
-   * The workspace to use in retrieving and storing files.
+   * Reference to the receipt service
+   */
+  private ServiceRegistry serviceRegistry = null;
+
+  /**
+   * The security service
+   */
+  protected SecurityService securityService = null;
+
+  /**
+   * The user directory service
+   */
+  protected UserDirectoryService userDirectoryService = null;
+
+  /**
+   * The organization directory service
+   */
+  protected OrganizationDirectoryService organizationDirectoryService = null;
+
+  /**
+   * The workspace service
    */
   protected Workspace workspace;
 
-  /** Reference to the receipt service */
-  private ServiceRegistry serviceRegistry = null;
-
-
-  /** The http client to use when connecting to remote servers */
+  /**
+   * The http client to use when connecting to remote servers
+   */
   protected TrustedHttpClient client = null;
 
   /**
    * Creates a new abstract job producer for jobs of the given type.
    *
-   * @param jobType the job type
    */
-  public IngestDownloadServiceImpl(String jobType) {
-    super(jobType);
+  public IngestDownloadServiceImpl() {
+    super(JOB_TYPE);
   }
 
   /**
    * Sets the workspace to use.
    *
-   * @param workspace
-   *          the workspace
+   * @param workspace the workspace
    */
   public void setWorkspace(Workspace workspace) {
     this.workspace = workspace;
   }
 
+  /**
+   * Sets the receipt service
+   *
+   * @param serviceRegistry the service registry
+   */
+  public void setServiceRegistry(ServiceRegistry serviceRegistry) {
+    this.serviceRegistry = serviceRegistry;
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * @see org.opencastproject.job.api.AbstractJobProducer#getServiceRegistry()
+   */
   @Override
-  public Job ingestDownload(WorkflowInstance workflowInstance, String sourceFlavors, String sourceTags, boolean deleteExternal, boolean tagsAndFlavor)
-          throws ServiceRegistryException {
+  protected ServiceRegistry getServiceRegistry() {
+    return serviceRegistry;
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * @see org.opencastproject.job.api.AbstractJobProducer#getSecurityService()
+   */
+  @Override
+  protected SecurityService getSecurityService() {
+    return securityService;
+  }
+
+  /**
+   * Callback for setting the security service.
+   *
+   * @param securityService the securityService to set
+   */
+  public void setSecurityService(SecurityService securityService) {
+    this.securityService = securityService;
+  }
+
+  /**
+   * Callback for setting the user directory service.
+   *
+   * @param userDirectoryService the userDirectoryService to set
+   */
+  public void setUserDirectoryService(UserDirectoryService userDirectoryService) {
+    this.userDirectoryService = userDirectoryService;
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * @see org.opencastproject.job.api.AbstractJobProducer#getUserDirectoryService()
+   */
+  @Override
+  protected UserDirectoryService getUserDirectoryService() {
+    return userDirectoryService;
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * @see org.opencastproject.job.api.AbstractJobProducer#getOrganizationDirectoryService()
+   */
+  @Override
+  protected OrganizationDirectoryService getOrganizationDirectoryService() {
+    return organizationDirectoryService;
+  }
+
+  /**
+   * Sets a reference to the organization directory service.
+   *
+   * @param organizationDirectory the organization directory
+   */
+  public void setOrganizationDirectoryService(OrganizationDirectoryService organizationDirectory) {
+    this.organizationDirectoryService = organizationDirectory;
+  }
+
+  @Override
+  public Job ingestDownload(MediaPackage mediaPackage, String sourceFlavors, String sourceTags, boolean deleteExternal,
+          boolean tagsAndFlavor) throws ServiceRegistryException {
 
     List<String> paramList = new ArrayList<String>(5);
-    paramList.add(MediaPackageParser.getAsXml(workflowInstance.getMediaPackage()));
+    paramList.add(MediaPackageParser.getAsXml(mediaPackage));
     paramList.add(sourceFlavors);
     paramList.add(sourceTags);
     paramList.add(Boolean.toString(deleteExternal));
@@ -129,29 +212,8 @@ public class IngestDownloadServiceImpl extends AbstractJobProducer implements In
 
   }
 
-  @Override
-  protected ServiceRegistry getServiceRegistry() {
-    return null;
-  }
-
-  @Override
-  protected SecurityService getSecurityService() {
-    return null;
-  }
-
-  @Override
-  protected UserDirectoryService getUserDirectoryService() {
-    return null;
-  }
-
-  @Override
-  protected OrganizationDirectoryService getOrganizationDirectoryService() {
-    return null;
-  }
-
   protected String process(Job job) throws MediaPackageException {
     List<String> arguments = new ArrayList<String>(job.getArguments());
-
 
     MediaPackage mediaPackage = MediaPackageParser.getFromXml(arguments.get(0));
     String sourceTags = arguments.get(1);
@@ -190,7 +252,7 @@ public class IngestDownloadServiceImpl extends AbstractJobProducer implements In
       }
 
       // Download the external URI
-      File file=null;
+      File file = null;
       try {
         file = workspace.get(element.getURI());
       } catch (Exception e) {
@@ -228,7 +290,8 @@ public class IngestDownloadServiceImpl extends AbstractJobProducer implements In
     logger.debug("Assembling list of external working file repositories");
     List<String> externalWfrBaseUrls = new ArrayList<String>();
     try {
-      for (ServiceRegistration reg : serviceRegistry.getServiceRegistrationsByType(WorkingFileRepository.SERVICE_TYPE)) {
+      for (ServiceRegistration reg : serviceRegistry
+              .getServiceRegistrationsByType(WorkingFileRepository.SERVICE_TYPE)) {
         if (baseUrl.startsWith(reg.getHost())) {
           logger.trace("Skpping local working file repository");
           continue;
@@ -290,9 +353,5 @@ public class IngestDownloadServiceImpl extends AbstractJobProducer implements In
     return StringUtils.trimToEmpty(mediaPackage.toString());
 
   }
-
-  @Override
-  public void updated(Dictionary<String, ?> dictionary) throws ConfigurationException {
-
-  }
 }
+

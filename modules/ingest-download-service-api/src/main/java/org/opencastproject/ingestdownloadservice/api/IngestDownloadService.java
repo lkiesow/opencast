@@ -22,12 +22,10 @@
 package org.opencastproject.ingestdownloadservice.api;
 
 import org.opencastproject.job.api.Job;
+import org.opencastproject.mediapackage.MediaPackage;
 import org.opencastproject.serviceregistry.api.ServiceRegistryException;
-import org.opencastproject.workflow.api.WorkflowInstance;
 
-/**
- * Api for the Hello World Service
- */
+
 public interface IngestDownloadService {
 
   /** Receipt type */
@@ -35,7 +33,7 @@ public interface IngestDownloadService {
 
   /**
    *
-   * @param workflowInstance
+   * @param mediaPackage
    * @param sourceFalvors
    * @param sourceTags
    * @param deleteExternal
@@ -43,6 +41,6 @@ public interface IngestDownloadService {
    * @return
    * @throws ServiceRegistryException
    */
-  Job ingestDownload(WorkflowInstance workflowInstance, String sourceFalvors, String sourceTags, boolean deleteExternal, boolean tagsAndFlavor)
+  Job ingestDownload(MediaPackage mediaPackage, String sourceFalvors, String sourceTags, boolean deleteExternal, boolean tagsAndFlavor)
           throws ServiceRegistryException;
 }

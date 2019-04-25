@@ -22,6 +22,11 @@
 package org.opencastproject.ingestdownloadservice.impl.endpoint;
 
 import org.opencastproject.ingestdownloadservice.api.IngestDownloadService;
+import org.opencastproject.job.api.JobProducer;
+import org.opencastproject.mediapackage.MediaPackage;
+import org.opencastproject.mediapackage.MediaPackageParser;
+import org.opencastproject.rest.AbstractJobProducerEndpoint;
+import org.opencastproject.serviceregistry.api.ServiceRegistry;
 import org.opencastproject.util.doc.rest.RestParameter;
 import org.opencastproject.util.doc.rest.RestQuery;
 import org.opencastproject.util.doc.rest.RestResponse;
@@ -42,8 +47,8 @@ import javax.ws.rs.core.Response;
  * The REST endpoint for the {@link IngestDownloadService} service
  */
 @Path("/")
-@RestService(name = "HelloWorldServiceEndpoint",
-    title = "Hello World Service Endpoint",
+@RestService(name = "IngestDownloadServiceEndpoint",
+    title = "Ingest download rest endpoint",
     abstractText = "This is a tutorial service.",
     notes = {"All paths above are relative to the REST endpoint base (something like http://your.server/files)",
         "If the service is down or not working it will return a status 503, this means the the underlying service is "
@@ -51,7 +56,7 @@ import javax.ws.rs.core.Response;
         "A status code 500 means a general failure has occurred which is not recoverable and was not anticipated."
                 + "In other words, there is a bug! You should file an error report with your server logs from the time"
                 + "when the error occurred: <a href=\"https://opencast.jira.com\">Opencast Issue Tracker</a>" })
-public class IngestDownloadServiceEndpoint {
+public class IngestDownloadServiceEndpoint extends AbstractJobProducerEndpoint {
   /** The logger */
   private static final Logger logger = LoggerFactory.getLogger(IngestDownloadServiceEndpoint.class);
 
@@ -59,58 +64,58 @@ public class IngestDownloadServiceEndpoint {
   protected String docs;
 
   /** The service */
-  protected IngestDownloadService ingestDownloadService;
+  protected IngestDownloadService service;
+  private ServiceRegistry serviceRegistry;
 
-  /**
-   * Simple example service call
-   *
-   * @return The Hello World statement
-   * @throws Exception
-   */
   @GET
-  @Path("helloworld")
-  @Produces(MediaType.TEXT_PLAIN)
-  @RestQuery(name = "helloworld", description = "example service call",
-      reponses = {@RestResponse(description = "Hello World", responseCode = HttpServletResponse.SC_OK),
-        @RestResponse(description = "The underlying service could not output something.",
-            responseCode = HttpServletResponse.SC_INTERNAL_SERVER_ERROR) },
-      returnDescription = "The text that the service returns.")
-  public Response helloWorld() throws Exception {
-    logger.info("REST call for Hello World");
-    return Response.ok().entity(ingestDownloadService.helloWorld()).build();
+  @Path("ingestdownload")
+  @Produces(MediaType.APPLICATION_XML)
+  @RestQuery(name = "ingestdownload",description = "Downloads mediapackage elements to workspace",
+          restParameters = { @RestParameter(description = "mediapackage as xml", isRequired = true, name = "mediapackage",
+                  type = RestParameter.Type.STRING) },
+      reponses =  {@RestResponse(description = "Mediapackage as xml", responseCode = HttpServletResponse.SC_OK)},
+          returnDescription = "Mediapackage as xml with element urls in workspace.")
+  public Response ingestdownload(@FormParam("mediapackage") String mediapackageString,
+          @FormParam("sourceFlavors") String sourceFlavors,
+          @FormParam("sourceTags") String sourceTags,
+          @FormParam("deleteExternal") Boolean deleteExternal,
+          @FormParam("tagsAndFlavor") Boolean tagsAndFlavor) throws Exception {
+    logger.info("starting ingest-download Service");
+    MediaPackage mediapackage = MediaPackageParser.getFromXml(mediapackageString);
+    return Response.ok().entity(
+            service.ingestDownload(mediapackage ,sourceFlavors,sourceTags,deleteExternal,tagsAndFlavor)).build();
+  }
+
+
+  public void setIngestDownloadService(IngestDownloadService service) {
+    this.service = service;
+  }
+
+  @Override
+  public JobProducer getService() {
+    if (service instanceof JobProducer)
+      return (JobProducer) service;
+    else
+      return null;
   }
 
   /**
-   * Simple example service call with parameter
+   * {@inheritDoc}
    *
-   * @param name
-   *          the optional name of the Person to greet
-   * @return A Hello statement with optional name
-   * @throws Exception
+   * @see org.opencastproject.rest.AbstractJobProducerEndpoint#getServiceRegistry()
    */
-  @GET
-  @Path("helloname")
-  @Produces(MediaType.TEXT_PLAIN)
-  @RestQuery(name = "helloname", description = "example service call with parameter",
-      restParameters = { @RestParameter(description = "name to output", isRequired = false, name = "name",
-          type = RestParameter.Type.TEXT) },
-      reponses = {@RestResponse(description = "Hello or Hello Name", responseCode = HttpServletResponse.SC_OK),
-          @RestResponse(description = "The underlying service could not output something.",
-              responseCode = HttpServletResponse.SC_INTERNAL_SERVER_ERROR) },
-      returnDescription = "The text that the service returns.")
-  public Response helloName(@FormParam("name") String name) throws Exception {
-    logger.info("REST call for Hello Name");
-    return Response.ok().entity(ingestDownloadService.helloName(name)).build();
+  @Override
+  public ServiceRegistry getServiceRegistry() {
+    return serviceRegistry;
   }
 
-  @GET
-  @Produces(MediaType.TEXT_HTML)
-  @Path("docs")
-  public String getDocs() {
-    return docs;
-  }
-
-  public void setHelloWorldService(IngestDownloadService service) {
-    this.ingestDownloadService = service;
+  /**
+   * Callback from the OSGi declarative services to set the service registry.
+   *
+   * @param serviceRegistry
+   *          the service registry
+   */
+  protected void setServiceRegistry(ServiceRegistry serviceRegistry) {
+    this.serviceRegistry = serviceRegistry;
   }
 }
