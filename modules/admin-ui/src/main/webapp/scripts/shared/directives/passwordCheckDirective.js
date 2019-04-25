@@ -37,6 +37,7 @@ angular.module('adminNg.directives')
     require: 'ngModel',
     link: function (scope, elem, attrs, ctrl) {
       scope.deregisterWatch = scope.$watch(attrs.adminNgPwCheck, function (confirmPassword) {
+        console.log('123123')
         var isValid = ctrl.$viewValue === confirmPassword;
         ctrl.$setValidity('pwmatch', isValid);
       });
