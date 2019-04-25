@@ -17,18 +17,17 @@
   </properties>
   <dependencies>
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-    </dependency>
-    <dependency>
       <groupId>org.opencastproject</groupId>
-      <artifactId>opencast-workflow-service-api</artifactId>
-      <version>8-SNAPSHOT</version>
-      <scope>compile</scope>
+    <artifactId>opencast-common</artifactId>
+    <version>${project.version}</version>
     </dependency>
   </dependencies>
   <build>
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+      </plugin>
       <plugin>
         <groupId>org.apache.felix</groupId>
         <artifactId>maven-bundle-plugin</artifactId>
@@ -36,7 +35,7 @@
         <configuration>
           <instructions>
             <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
-            <Export-Package>org.opencastproject.ingestdownloadservice.api;version=${project.version}</Export-Package>
+            <Export-Package>org.opencastproject.ingestdownloadservice.api.*;version=${project.version}</Export-Package>
           </instructions>
         </configuration>
       </plugin>

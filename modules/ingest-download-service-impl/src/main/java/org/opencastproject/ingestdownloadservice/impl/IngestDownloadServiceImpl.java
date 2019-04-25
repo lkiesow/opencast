@@ -46,7 +46,6 @@ import org.opencastproject.workspace.api.Workspace;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.methods.HttpDelete;
@@ -216,8 +215,8 @@ public class IngestDownloadServiceImpl extends AbstractJobProducer implements In
     List<String> arguments = new ArrayList<String>(job.getArguments());
 
     MediaPackage mediaPackage = MediaPackageParser.getFromXml(arguments.get(0));
-    String sourceTags = arguments.get(1);
-    String sourceFlavors = arguments.get(2);
+    String sourceFlavors = arguments.get(1);
+    String sourceTags = arguments.get(2);
     boolean deleteExternal = Boolean.parseBoolean(arguments.get(3));
     boolean tagsAndFlavor = Boolean.parseBoolean(arguments.get(4));
     //MediaPackage mediaPackage = workflowInstance.getMediaPackage();
@@ -284,7 +283,7 @@ public class IngestDownloadServiceImpl extends AbstractJobProducer implements In
     }
 
     if (!deleteExternal || externalUris.size() == 0)
-      return mediaPackage.toString();
+      return MediaPackageParser.getAsXml(mediaPackage);
 
     // Find all external working file repository base Urls
     logger.debug("Assembling list of external working file repositories");
@@ -350,7 +349,7 @@ public class IngestDownloadServiceImpl extends AbstractJobProducer implements In
       }
     }
 
-    return StringUtils.trimToEmpty(mediaPackage.toString());
+    return MediaPackageParser.getAsXml(mediaPackage);
 
   }
 }

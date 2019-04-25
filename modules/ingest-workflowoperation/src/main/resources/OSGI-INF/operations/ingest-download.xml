@@ -8,7 +8,8 @@
   <service>
     <provide interface="org.opencastproject.workflow.api.WorkflowOperationHandler"/>
   </service>
-  <reference name="execute" interface="org.opencastproject.ingestdownloadservice"
+  <reference name="IngestDownloadService"
+             interface="org.opencastproject.ingestdownloadservice.api.IngestDownloadService"
              cardinality="1..1" policy="static" bind="setIngestDownloadService"/>
   <reference cardinality="1..1" interface="org.opencastproject.workspace.api.Workspace" name="Workspace"
              policy="static" bind="setWorkspace"/>
