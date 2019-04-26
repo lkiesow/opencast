@@ -127,6 +127,7 @@
     <module>modules/index-service</module>
     <module>modules/ingest-download-service-api</module>
     <module>modules/ingest-download-service-impl</module>
+    <module>modules/ingest-download-service-remote</module>
     <module>modules/ingest-service-api</module>
     <module>modules/ingest-service-impl</module>
     <module>modules/ingest-workflowoperation</module>
