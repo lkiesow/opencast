@@ -21,8 +21,9 @@
 
 package org.opencastproject.ingestdownloadservice.impl;
 
-import org.opencastproject.ingestdownloadservice.api.IngestDownloadService;
+import org.opencastproject.mediapackage.MediaPackage;
 
+import org.easymock.EasyMock;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -31,19 +32,22 @@ import org.junit.Test;
  */
 public class IngestDownloadServiceTest {
 
-  private IngestDownloadService service;
+  private IngestDownloadServiceImpl service;
+  private MediaPackage mediaPackage;
 
   /**
    * Setup for the Hello World Service
    */
   @Before
   public void setUp() {
-    //service = new IngestDownloadServiceImpl();
-
+    service = new IngestDownloadServiceImpl();
+    mediaPackage = EasyMock.createMock(MediaPackage.class);
+    EasyMock.replay(mediaPackage);
   }
 
   @Test
-  public void testHelloWorld() throws Exception {
+  public void testProcess() throws Exception {
+    //service.process()
     //Assert.assertEquals("Hello World", service.helloWorld());
   }
 
