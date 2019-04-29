@@ -21,8 +21,6 @@
 
 package org.opencastproject.ingestdownloadservice.impl;
 
-import static java.util.Arrays.asList;
-
 import org.opencastproject.ingestdownloadservice.api.IngestDownloadService;
 import org.opencastproject.job.api.AbstractJobProducer;
 import org.opencastproject.job.api.Job;
@@ -45,7 +43,7 @@ import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 import org.opencastproject.workspace.api.Workspace;
 
 import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.methods.HttpDelete;
@@ -58,6 +56,7 @@ import java.io.InputStream;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * A simple tutorial class to learn about Opencast Services
@@ -200,7 +199,7 @@ public class IngestDownloadServiceImpl extends AbstractJobProducer implements In
   public Job ingestDownload(MediaPackage mediaPackage, String sourceFlavors, String sourceTags, boolean deleteExternal,
           boolean tagsAndFlavor) throws ServiceRegistryException {
 
-    List<String> paramList = new ArrayList<String>(5);
+    final List<String> paramList = new ArrayList<>(5);
     paramList.add(MediaPackageParser.getAsXml(mediaPackage));
     paramList.add(sourceFlavors);
     paramList.add(sourceTags);
@@ -212,34 +211,33 @@ public class IngestDownloadServiceImpl extends AbstractJobProducer implements In
   }
 
   protected String process(Job job) throws MediaPackageException {
-    List<String> arguments = new ArrayList<String>(job.getArguments());
+    final List<String> arguments = new ArrayList<>(job.getArguments());
 
-    MediaPackage mediaPackage = MediaPackageParser.getFromXml(arguments.get(0));
-    String sourceFlavors = arguments.get(1);
-    String sourceTags = arguments.get(2);
-    boolean deleteExternal = Boolean.parseBoolean(arguments.get(3));
-    boolean tagsAndFlavor = Boolean.parseBoolean(arguments.get(4));
-    //MediaPackage mediaPackage = workflowInstance.getMediaPackage();
+    final MediaPackage mediaPackage = MediaPackageParser.getFromXml(arguments.get(0));
+    final String sourceFlavors = arguments.get(1);
+    final String sourceTags = arguments.get(2);
+    final boolean deleteExternal = Boolean.parseBoolean(arguments.get(3));
+    final boolean tagsAndFlavor = Boolean.parseBoolean(arguments.get(4));
 
     // building elementSelector with tags and flavors
     AbstractMediaPackageElementSelector<MediaPackageElement> elementSelector = new SimpleElementSelector();
-    for (String tag : asList(sourceTags)) {
+    for (String tag : StringUtils.split(sourceTags, ", ")) {
       elementSelector.addTag(tag);
     }
-    for (String flavor : asList(sourceFlavors)) {
+    for (String flavor : StringUtils.split(sourceFlavors, ", ")) {
       elementSelector.addFlavor(flavor);
     }
 
     String baseUrl = workspace.getBaseUri().toString();
 
-    List<URI> externalUris = new ArrayList<URI>();
+    List<URI> externalUris = new ArrayList<>();
     for (MediaPackageElement element : elementSelector.select(mediaPackage, tagsAndFlavor)) {
       if (element.getURI() == null)
         continue;
 
       if (element.getElementType() == MediaPackageElement.Type.Publication) {
         logger.debug("Skipping downloading media package element {} from media package {} "
-                        + "because it is a publication: {}", element.getIdentifier(), mediaPackage.getIdentifier().compact(),
+                        + "because it is a publication: {}", element.getIdentifier(), mediaPackage.getIdentifier(),
                 element.getURI());
         continue;
       }
@@ -251,24 +249,22 @@ public class IngestDownloadServiceImpl extends AbstractJobProducer implements In
       }
 
       // Download the external URI
-      File file = null;
+      File file;
       try {
         file = workspace.get(element.getURI());
       } catch (Exception e) {
         logger.warn("Unable to download the external element {}", element.getURI());
+        continue;
       }
 
       // Put to working file repository and rewrite URI on element
-      InputStream in = null;
-      try {
-        in = new FileInputStream(file);
+      try (InputStream in = new FileInputStream(file)) {
         URI uri = workspace.put(mediaPackage.getIdentifier().compact(), element.getIdentifier(),
                 FilenameUtils.getName(element.getURI().getPath()), in);
         element.setURI(uri);
       } catch (Exception e) {
         logger.warn("Unable to store downloaded element '{}': {}", element.getURI(), e.getMessage());
       } finally {
-        IOUtils.closeQuietly(in);
         try {
           workspace.delete(originalElementUri);
         } catch (Exception e) {
@@ -278,7 +274,7 @@ public class IngestDownloadServiceImpl extends AbstractJobProducer implements In
 
       logger.info("Downloaded the external element {}", originalElementUri);
 
-      // Store origianl URI for deletion
+      // Store original URI for deletion
       externalUris.add(originalElementUri);
     }
 
@@ -287,12 +283,12 @@ public class IngestDownloadServiceImpl extends AbstractJobProducer implements In
 
     // Find all external working file repository base Urls
     logger.debug("Assembling list of external working file repositories");
-    List<String> externalWfrBaseUrls = new ArrayList<String>();
+    List<String> externalWfrBaseUrls = new ArrayList<>();
     try {
       for (ServiceRegistration reg : serviceRegistry
               .getServiceRegistrationsByType(WorkingFileRepository.SERVICE_TYPE)) {
         if (baseUrl.startsWith(reg.getHost())) {
-          logger.trace("Skpping local working file repository");
+          logger.trace("Skipping local working file repository");
           continue;
         }
         externalWfrBaseUrls.add(UrlSupport.concat(reg.getHost(), reg.getPath()));
@@ -302,41 +298,36 @@ public class IngestDownloadServiceImpl extends AbstractJobProducer implements In
       logger.error("Unable to load WFR services from service registry: {}", e.getMessage());
     }
 
+    // try deleting files from external working file reposities
     for (URI uri : externalUris) {
 
       String elementUri = uri.toString();
 
       // Delete external working file repository URI's
-      String wfrBaseUrl = null;
-      for (String url : externalWfrBaseUrls) {
-        if (elementUri.startsWith(url)) {
-          wfrBaseUrl = url;
-          break;
-        }
-      }
+      Optional<String> wfrBaseUrl = externalWfrBaseUrls.parallelStream().filter(elementUri::startsWith).findAny();
 
-      if (wfrBaseUrl == null) {
+      if (!wfrBaseUrl.isPresent()) {
         logger.info("Unable to delete external URI {}, no working file repository found", elementUri);
         continue;
       }
 
-      HttpDelete delete;
-      if (elementUri.startsWith(UrlSupport.concat(wfrBaseUrl, WorkingFileRepository.MEDIAPACKAGE_PATH_PREFIX))) {
-        String wfrDeleteUrl = elementUri.substring(0, elementUri.lastIndexOf("/"));
-        delete = new HttpDelete(wfrDeleteUrl);
-      } else if (elementUri.startsWith(UrlSupport.concat(wfrBaseUrl, WorkingFileRepository.COLLECTION_PATH_PREFIX))) {
-        delete = new HttpDelete(elementUri);
+      final String deleteUrl;
+      if (uri.getPath().startsWith(WorkingFileRepository.MEDIAPACKAGE_PATH_PREFIX)) {
+        deleteUrl = elementUri.substring(0, elementUri.lastIndexOf("/"));
+      } else if (uri.getPath().startsWith(WorkingFileRepository.COLLECTION_PATH_PREFIX)) {
+        deleteUrl = elementUri;
       } else {
         logger.info("Unable to handle working file repository URI {}", elementUri);
         continue;
       }
+      HttpDelete delete = new HttpDelete(deleteUrl);
 
       HttpResponse response = null;
       try {
         response = client.execute(delete);
-        int statusCode = response.getStatusLine().getStatusCode();
+        final int statusCode = response.getStatusLine().getStatusCode();
         if (statusCode == HttpStatus.SC_NO_CONTENT || statusCode == HttpStatus.SC_OK) {
-          logger.info("Sucessfully deleted external URI {}", delete.getURI());
+          logger.info("Successfully deleted external URI {}", delete.getURI());
         } else if (statusCode == HttpStatus.SC_NOT_FOUND) {
           logger.info("External URI {} has already been deleted", delete.getURI());
         } else {
