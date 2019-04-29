@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <scr:component xmlns:scr="http://www.osgi.org/xmlns/scr/v1.1.0"
-               name="org.opencastproject.ingestdownload.remote.IngestDownloadServiceRmoteImpl"
+               name="org.opencastproject.ingestdownloadservice.remote.IngestDownloadServiceRmoteImpl"
                immediate="true">
   <implementation
-      class="org.opencastproject.ingestdownload.remote.IngestDownloadServiceRmoteImpl"/>
+      class="org.opencastproject.ingestdownloadservice.remote.IngestDownloadServiceRemoteImpl"/>
   <property name="service.description" value="Calls Ingest Download Service"/>
   <service>
     <provide interface="org.opencastproject.ingestdownloadservice.api.IngestDownloadService"/>

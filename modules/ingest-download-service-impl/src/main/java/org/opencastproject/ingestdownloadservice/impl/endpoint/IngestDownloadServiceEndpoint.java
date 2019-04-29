@@ -22,6 +22,8 @@
 package org.opencastproject.ingestdownloadservice.impl.endpoint;
 
 import org.opencastproject.ingestdownloadservice.api.IngestDownloadService;
+import org.opencastproject.job.api.JaxbJob;
+import org.opencastproject.job.api.Job;
 import org.opencastproject.job.api.JobProducer;
 import org.opencastproject.mediapackage.MediaPackage;
 import org.opencastproject.mediapackage.MediaPackageParser;
@@ -37,7 +39,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.FormParam;
-import javax.ws.rs.GET;
+import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
@@ -67,23 +69,46 @@ public class IngestDownloadServiceEndpoint extends AbstractJobProducerEndpoint {
   protected IngestDownloadService service;
   private ServiceRegistry serviceRegistry;
 
-  @GET
+  @POST
   @Path("ingestdownload")
-  @Produces(MediaType.APPLICATION_XML)
+  @Produces(MediaType.TEXT_XML)
   @RestQuery(name = "ingestdownload",description = "Downloads mediapackage elements to workspace",
           restParameters = { @RestParameter(description = "mediapackage as xml", isRequired = true, name = "mediapackage",
-                  type = RestParameter.Type.STRING) },
+                  type = RestParameter.Type.TEXT),
+          @RestParameter(description = "sourceFlavors as String seperated by , ", isRequired = false, name = "sourceFlavors",
+          type = RestParameter.Type.STRING),
+          @RestParameter(description = "sourceTags as String seperated by", isRequired = false, name = "sourceTags",
+          type = RestParameter.Type.STRING),
+          @RestParameter(description = "Boolean true / false", isRequired = false, name = "deleteExternal",
+          type = RestParameter.Type.STRING),
+          @RestParameter(description = "tagsAndFlavor true / false", isRequired = false, name = "tagsAndFlavor",
+          type = RestParameter.Type.STRING),
+          },
       reponses =  {@RestResponse(description = "Mediapackage as xml", responseCode = HttpServletResponse.SC_OK)},
           returnDescription = "Mediapackage as xml with element urls in workspace.")
   public Response ingestdownload(@FormParam("mediapackage") String mediapackageString,
           @FormParam("sourceFlavors") String sourceFlavors,
           @FormParam("sourceTags") String sourceTags,
-          @FormParam("deleteExternal") Boolean deleteExternal,
-          @FormParam("tagsAndFlavor") Boolean tagsAndFlavor) throws Exception {
+          @FormParam("deleteExternal") String deleteExternal,
+          @FormParam("tagsAndFlavor") String tagsAndFlavor) throws Exception {
     logger.info("starting ingest-download Service");
     MediaPackage mediapackage = MediaPackageParser.getFromXml(mediapackageString);
-    return Response.ok().entity(
-            service.ingestDownload(mediapackage ,sourceFlavors,sourceTags,deleteExternal,tagsAndFlavor)).build();
+    Boolean boolTagsAndFlavor = false;
+    Boolean boolDeleteExternal = false;
+    //set Defaults
+    if (sourceFlavors.isEmpty()) { sourceFlavors = "*/*"; }
+    if (!tagsAndFlavor.isEmpty()) { boolTagsAndFlavor = Boolean.parseBoolean(tagsAndFlavor); }
+    if (!deleteExternal.isEmpty()) { boolDeleteExternal = Boolean.parseBoolean(deleteExternal); }
+    Job retJob = null;
+
+    try {
+      retJob = service.ingestDownload(mediapackage ,sourceFlavors,sourceTags,boolDeleteExternal,boolTagsAndFlavor);
+      return Response.ok().entity(new JaxbJob(retJob)
+            ).build();
+    } catch (Exception e) {
+      logger.warn("Unable to start IngestDownload: " + e.getMessage());
+      return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+    }
   }
 
 

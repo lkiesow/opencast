@@ -84,7 +84,7 @@ public class IngestDownloadServiceRemoteImpl extends RemoteBase implements Inges
 
         logger.info("Downloading Source form mediapackge: {} to workspace", mediaPackage.getIdentifier());
 
-        post = new HttpPost("/ingestdownloadservice/ingestdownload");
+        post = new HttpPost("/ingestdownload");
         post.setEntity(new UrlEncodedFormEntity(formStringParams, "UTF-8"));
         response = getResponse(post);
 
