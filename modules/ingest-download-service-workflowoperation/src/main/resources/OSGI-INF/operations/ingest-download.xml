@@ -11,4 +11,7 @@
   <reference name="IngestDownloadService"
              interface="org.opencastproject.ingestdownloadservice.api.IngestDownloadService"
              bind="setIngestDownloadService"/>
+  <reference name="ServiceRegistry"
+             interface="org.opencastproject.serviceregistry.api.ServiceRegistry"
+             bind="setServiceRegistry"/>
 </scr:component>

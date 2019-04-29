@@ -38,6 +38,7 @@ import org.opencastproject.security.api.UserDirectoryService;
 import org.opencastproject.serviceregistry.api.ServiceRegistration;
 import org.opencastproject.serviceregistry.api.ServiceRegistry;
 import org.opencastproject.serviceregistry.api.ServiceRegistryException;
+import org.opencastproject.util.NotFoundException;
 import org.opencastproject.util.UrlSupport;
 import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 import org.opencastproject.workspace.api.Workspace;
@@ -52,6 +53,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.util.ArrayList;
@@ -80,27 +82,27 @@ public class IngestDownloadServiceImpl extends AbstractJobProducer implements In
   /**
    * The security service
    */
-  protected SecurityService securityService = null;
+  private SecurityService securityService = null;
 
   /**
    * The user directory service
    */
-  protected UserDirectoryService userDirectoryService = null;
+  private UserDirectoryService userDirectoryService = null;
 
   /**
    * The organization directory service
    */
-  protected OrganizationDirectoryService organizationDirectoryService = null;
+  private OrganizationDirectoryService organizationDirectoryService = null;
 
   /**
    * The workspace service
    */
-  protected Workspace workspace;
+  private Workspace workspace;
 
   /**
    * The http client to use when connecting to remote servers
    */
-  protected TrustedHttpClient client = null;
+  private TrustedHttpClient client = null;
 
   /**
    * Creates a new abstract job producer for jobs of the given type.
@@ -210,7 +212,8 @@ public class IngestDownloadServiceImpl extends AbstractJobProducer implements In
 
   }
 
-  protected String process(Job job) throws MediaPackageException {
+  @Override
+  protected String process(Job job) throws MediaPackageException, IOException {
     final List<String> arguments = new ArrayList<>(job.getArguments());
 
     final MediaPackage mediaPackage = MediaPackageParser.getFromXml(arguments.get(0));
@@ -228,23 +231,22 @@ public class IngestDownloadServiceImpl extends AbstractJobProducer implements In
       elementSelector.addFlavor(flavor);
     }
 
-    String baseUrl = workspace.getBaseUri().toString();
+    final String baseUrl = workspace.getBaseUri().toString();
 
     List<URI> externalUris = new ArrayList<>();
     for (MediaPackageElement element : elementSelector.select(mediaPackage, tagsAndFlavor)) {
-      if (element.getURI() == null)
-        continue;
-
-      if (element.getElementType() == MediaPackageElement.Type.Publication) {
-        logger.debug("Skipping downloading media package element {} from media package {} "
-                        + "because it is a publication: {}", element.getIdentifier(), mediaPackage.getIdentifier(),
-                element.getURI());
+      if (element.getURI() == null) {
         continue;
       }
 
-      URI originalElementUri = element.getURI();
-      if (originalElementUri.toString().startsWith(baseUrl)) {
-        logger.info("Skipping downloading already existing element {}", originalElementUri);
+      if (element.getElementType() == MediaPackageElement.Type.Publication) {
+        logger.debug("Skipping publication {} from media package {}", element.getIdentifier(),
+                     mediaPackage.getIdentifier());
+        continue;
+      }
+
+      if (element.getURI().toString().startsWith(baseUrl)) {
+        logger.info("Skipping already existing element {}", element.getURI());
         continue;
       }
 
@@ -252,30 +254,29 @@ public class IngestDownloadServiceImpl extends AbstractJobProducer implements In
       File file;
       try {
         file = workspace.get(element.getURI());
-      } catch (Exception e) {
+      } catch (NotFoundException e) {
         logger.warn("Unable to download the external element {}", element.getURI());
         continue;
       }
 
       // Put to working file repository and rewrite URI on element
+      final URI originalUri = element.getURI();
       try (InputStream in = new FileInputStream(file)) {
-        URI uri = workspace.put(mediaPackage.getIdentifier().compact(), element.getIdentifier(),
-                FilenameUtils.getName(element.getURI().getPath()), in);
+        final String filename = FilenameUtils.getName(element.getURI().getPath());
+        final URI uri = workspace.put(mediaPackage.getIdentifier().compact(), element.getIdentifier(), filename, in);
         element.setURI(uri);
-      } catch (Exception e) {
-        logger.warn("Unable to store downloaded element '{}': {}", element.getURI(), e.getMessage());
       } finally {
         try {
-          workspace.delete(originalElementUri);
+          workspace.delete(originalUri);
         } catch (Exception e) {
-          logger.warn("Unable to delete ingest-downloaded element {}: {}", element.getURI(), e);
+          logger.warn("Unable to delete ingest-downloaded element {}", element.getURI(), e);
         }
       }
 
-      logger.info("Downloaded the external element {}", originalElementUri);
+      logger.info("Downloaded the external element {}", originalUri);
 
       // Store original URI for deletion
-      externalUris.add(originalElementUri);
+      externalUris.add(originalUri);
     }
 
     if (!deleteExternal || externalUris.size() == 0)
@@ -285,8 +286,8 @@ public class IngestDownloadServiceImpl extends AbstractJobProducer implements In
     logger.debug("Assembling list of external working file repositories");
     List<String> externalWfrBaseUrls = new ArrayList<>();
     try {
-      for (ServiceRegistration reg : serviceRegistry
-              .getServiceRegistrationsByType(WorkingFileRepository.SERVICE_TYPE)) {
+      final String wfrServiceType = WorkingFileRepository.SERVICE_TYPE;
+      for (ServiceRegistration reg : serviceRegistry.getServiceRegistrationsByType(wfrServiceType)) {
         if (baseUrl.startsWith(reg.getHost())) {
           logger.trace("Skipping local working file repository");
           continue;
@@ -295,7 +296,7 @@ public class IngestDownloadServiceImpl extends AbstractJobProducer implements In
       }
       logger.debug("{} external working file repositories found", externalWfrBaseUrls.size());
     } catch (ServiceRegistryException e) {
-      logger.error("Unable to load WFR services from service registry: {}", e.getMessage());
+      logger.error("Unable to load WFR services from service registry", e);
     }
 
     // try deleting files from external working file reposities
@@ -307,7 +308,7 @@ public class IngestDownloadServiceImpl extends AbstractJobProducer implements In
       Optional<String> wfrBaseUrl = externalWfrBaseUrls.parallelStream().filter(elementUri::startsWith).findAny();
 
       if (!wfrBaseUrl.isPresent()) {
-        logger.info("Unable to delete external URI {}, no working file repository found", elementUri);
+        logger.debug("Unable to delete {}, no working file repository found for this URI", elementUri);
         continue;
       }
 
@@ -329,9 +330,9 @@ public class IngestDownloadServiceImpl extends AbstractJobProducer implements In
         if (statusCode == HttpStatus.SC_NO_CONTENT || statusCode == HttpStatus.SC_OK) {
           logger.info("Successfully deleted external URI {}", delete.getURI());
         } else if (statusCode == HttpStatus.SC_NOT_FOUND) {
-          logger.info("External URI {} has already been deleted", delete.getURI());
+          logger.debug("External URI {} has already been deleted", delete.getURI());
         } else {
-          logger.info("Unable to delete external URI {}, status code '{}' returned", delete.getURI(), statusCode);
+          logger.warn("Unable to delete external URI {}, status code '{}' returned", delete.getURI(), statusCode);
         }
       } catch (TrustedHttpClientException e) {
         logger.warn("Unable to execute DELETE request on external URI {}", delete.getURI());
