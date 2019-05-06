@@ -87,10 +87,18 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-resources-plugin</artifactId>
       </plugin>
+
+
       <plugin>
         <groupId>org.apache.karaf.tooling</groupId>
         <artifactId>karaf-maven-plugin</artifactId>
+        <version>${karaf.version}</version>
+        <extensions>true</extensions>
         <configuration>
+          <!-- <libraries> ... </libraries> -->
+          <archiveZip>false</archiveZip>
+          <archiveTarGz>false</archiveTarGz>
+          <!-- <installedFeatures> ... </installedFeatures> -->
           <bootFeatures>
             <!-- Karaf internal features -->
             <feature>aries-blueprint</feature>
@@ -118,6 +126,8 @@
           </bootFeatures>
         </configuration>
       </plugin>
+
+
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-antrun-plugin</artifactId>
