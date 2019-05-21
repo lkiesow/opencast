@@ -145,6 +145,7 @@
     <module>modules/metadata</module>
     <module>modules/metadata-api</module>
     <module>modules/migration</module>
+    <module>modules/monitoring</module>
     <module>modules/mpeg7</module>
     <module>modules/notification-workflowoperation</module>
     <module>modules/oaipmh</module>
