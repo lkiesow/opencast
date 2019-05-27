@@ -1,14 +1,10 @@
-TransferMetadataWorkflowOperationHandler
-========================================
+Transfer Metadata Workflow Operation
+====================================
 
 Description
 -----------
 
-The timeline previews operation creates preview images for the given track that can be shown when hovering above the
-timeline. It will generate the in `image-count` specified number of preview images, that will all be saved in one large
-image file. You can use the `source-flavor` to specify for which video the preview images will be generated. In the
-engage player only the preview images of one video are shown (the first that is found), so to make sure the correct
-preview images are shown, better generate them only for one video.
+The transfer metadata operation allows to transfer arbitrary metadata fields from one metadata catalog to another one.
 
 Parameter Table
 ---------------

@@ -32,23 +32,21 @@ import org.opencastproject.util.XmlNamespaceContext;
 import org.opencastproject.workflow.api.AbstractWorkflowOperationHandler;
 import org.opencastproject.workflow.api.WorkflowInstance;
 import org.opencastproject.workflow.api.WorkflowOperationException;
+import org.opencastproject.workflow.api.WorkflowOperationInstance;
 import org.opencastproject.workflow.api.WorkflowOperationResult;
 import org.opencastproject.workflow.api.WorkflowOperationResult.Action;
 import org.opencastproject.workspace.api.Workspace;
 
-import com.entwinemedia.fn.Fn;
-import com.entwinemedia.fn.P1Lazy;
-import com.entwinemedia.fn.data.Opt;
-
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.BooleanUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.stream.Collectors;
 
 // TODO JavaDoc
@@ -69,6 +67,8 @@ import java.util.stream.Collectors;
  */
 public class TransferMetadataWorkflowOperationHandler extends AbstractWorkflowOperationHandler {
 
+  private static Logger logger = LoggerFactory.getLogger(TransferMetadataWorkflowOperationHandler.class);
+
   /**
    * {@inheritDoc}
    *
@@ -81,14 +81,14 @@ public class TransferMetadataWorkflowOperationHandler extends AbstractWorkflowOp
     logger.debug("Running transfer-metadata workflow operation");
 
     MediaPackage mediaPackage = workflowInstance.getMediaPackage();
-    Configuration configuration = new Configuration(workflowInstance);
+    Configuration configuration = new Configuration(workflowInstance.getCurrentOperation());
 
-    // TODO I hate this pattern
+    // select source metadata catalog
     Metadata sourceMetadata;
     try {
       sourceMetadata = new Metadata(mediaPackage, configuration.sourceFlavor);
     } catch (Metadata.NoMetadataFoundException e) {
-      // TODO Log?
+      logger.debug("No catalog with flavor {}. Skipping operation.", configuration.sourceFlavor);
       return createResult(mediaPackage, Action.SKIP);
     }
     Metadata targetMetadata;
@@ -104,31 +104,24 @@ public class TransferMetadataWorkflowOperationHandler extends AbstractWorkflowOp
     }
     // TODO Does this do the right thing when the field does not exist in the source?
     // TODO This is a hack because extended metadata fields with multiple values don't work at the moment
-    configuration.concatDelimiter.fold(new Fn<String, Void>() {
-      @Override
-      public Void apply(String concatDelimiter) {
-        targetMetadata.dcCatalog.set(configuration.targetElement,
-                sourceMetadata.dcCatalog.get(configuration.sourceElement).stream()
-                        .map(DublinCoreValue::getValue)
-                        .collect(Collectors.joining(concatDelimiter)));
-        return null;
-      }
-    }, new P1Lazy<Void>() {
-      @Override
-      public Void get1() {
-        targetMetadata.dcCatalog.set(configuration.targetElement,
-                sourceMetadata.dcCatalog.get(configuration.sourceElement));
-        return null;
-      }
-    });
-
-    // TODO Maybe it's a bad idea to reach into these `Metadata` objects like this
-    // TODO It is shitty that we even have to provide the prefix twice
-    //   Actually this should just be written as configured evem when there are no fields
-    for (String targetPrefix: configuration.targetPrefix) {
-      targetMetadata.dcCatalog.addBindings(XmlNamespaceContext.mk(targetPrefix,
-              configuration.targetElement.getNamespaceURI()));
+    if (configuration.concatDelimiter == null) {
+      final List<DublinCoreValue> values = sourceMetadata.dcCatalog.get(configuration.sourceElement);
+      targetMetadata.dcCatalog.set(configuration.targetElement, values);
+    } else {
+      final String value = sourceMetadata.dcCatalog.get(configuration.sourceElement)
+              .stream()
+              .map(DublinCoreValue::getValue)
+              .collect(Collectors.joining(configuration.concatDelimiter));
+      targetMetadata.dcCatalog.set(configuration.targetElement, value);
     }
+
+    // set prefix used for the target element's namespace
+    if (configuration.targetPrefix != null) {
+      final XmlNamespaceContext namespace = XmlNamespaceContext.mk(configuration.targetPrefix,
+              configuration.targetElement.getNamespaceURI());
+      targetMetadata.dcCatalog.addBindings(namespace);
+    }
+
     try {
       targetMetadata.save();
     } catch (IOException e) {
@@ -143,64 +136,83 @@ public class TransferMetadataWorkflowOperationHandler extends AbstractWorkflowOp
     private final Catalog catalog;
     private final DublinCoreCatalog dcCatalog;
 
-    // TODO I don't like that this constructor does multiple things ...
-    Metadata(MediaPackage mediaPackage, MediaPackageElementFlavor flavor) throws NoMetadataFoundException {
+    /**
+     * Initialize Metadata object by selecting a specified metadata catalog from a given media package.
+     *
+     * @param mediaPackage
+     *          Media package to work on
+     * @param flavor
+     *          Flavor specifying the catalog to select
+     * @throws NoMetadataFoundException
+     *          Could not find catalog with given flavor
+     */
+    Metadata(final MediaPackage mediaPackage, final MediaPackageElementFlavor flavor) throws NoMetadataFoundException {
       this.mediaPackage = mediaPackage;
 
       Catalog[] catalogs = mediaPackage.getCatalogs(flavor);
       if (catalogs.length < 1) {
         throw new NoMetadataFoundException();
-      } else {
-        if (catalogs.length > 1) {
-          // TODO Is "using the first one" even right?
-          //   Who determines this order?
-          logger.warn("More than one metadata dcCatalog of flavor {} found; using the first one", flavor);
-        }
-        catalog = catalogs[0];
-        // TODO Error handling?!
-        dcCatalog = DublinCoreUtil.loadDublinCore(workspace, catalogs[0]);
       }
+
+      if (catalogs.length > 1) {
+        logger.warn("More than one metadata catalog of flavor {} found; using the first one", flavor);
+      }
+      catalog = catalogs[0];
+      dcCatalog = DublinCoreUtil.loadDublinCore(workspace, catalog);
     }
 
-    // TODO What about localization?!
-
-    public void save() throws IOException {
-      // TODO Error handling
+    /**
+     * Save the modified metadata and update the media package to refer to the new catalog.
+     *
+     * @throws IOException
+     *          Error storing the metadata catalog
+     */
+    private void save() throws IOException {
       String filename = FilenameUtils.getName(catalog.getURI().toString());
       InputStream stream = IOUtils.toInputStream(dcCatalog.toXmlString(), StandardCharsets.UTF_8);
-      URI newCatalogURI = workspace.put(mediaPackage.getIdentifier().toString(), catalog.getIdentifier(), filename,
-              stream);
-      catalog.setURI(newCatalogURI);
+      catalog.setURI(workspace.put(mediaPackage.getIdentifier().toString(), catalog.getIdentifier(), filename, stream));
       catalog.setChecksum(null);
     }
 
-    // TODO Also do you want nested classes this much?
-    //   Maybe split the whole thing up in the end
+    /**
+     * Exception to throw if no catalog with a specified flavor exists in the media package.
+     */
     class NoMetadataFoundException extends Exception {
     }
   }
 
-  // TODO Forcing!
+  /**
+   * Storage for this operation's configuration
+   */
   private class Configuration {
     private final MediaPackageElementFlavor sourceFlavor;
     private final MediaPackageElementFlavor targetFlavor;
     private final EName sourceElement;
     private final EName targetElement;
     private final boolean force;
-    private final Opt<String> concatDelimiter;
-    private final Opt<String> targetPrefix;
+    private final String concatDelimiter;
+    private final String targetPrefix;
 
-    Configuration(WorkflowInstance workflowInstance)
-            throws WorkflowOperationException {
-      // TODO What if stuff is not found?
-      sourceFlavor = MediaPackageElementFlavor.parseFlavor(getConfig(workflowInstance, "source-flavor"));
-      // TODO Maybe default the target to the source?
-      targetFlavor = MediaPackageElementFlavor.parseFlavor(getConfig(workflowInstance, "target-flavor"));
-      sourceElement = EName.fromString(getConfig(workflowInstance, "source-element"));
-      targetElement = EName.fromString(getConfig(workflowInstance, "target-element"));
-      force = getOptConfig(workflowInstance, "force").isSome();
-      concatDelimiter = getOptConfig(workflowInstance, "concat");
-      targetPrefix = getOptConfig(workflowInstance, "target-prefix");
+    /**
+     * Load configuration from given operation.
+     *
+     * @param operation
+     *          Operation to load configuration from
+     * @throws IllegalArgumentException
+     *          Invalid configuration
+     */
+    Configuration(WorkflowOperationInstance operation)
+            throws IllegalArgumentException {
+      // Will throw IllegalArgumentException if not defined
+      sourceFlavor = MediaPackageElementFlavor.parseFlavor(operation.getConfiguration("source-flavor"));
+      targetFlavor = MediaPackageElementFlavor.parseFlavor(operation.getConfiguration("target-flavor"));
+      sourceElement = EName.fromString(operation.getConfiguration("source-element"));
+      targetElement = EName.fromString(operation.getConfiguration("target-element"));
+
+      // optional arguments
+      force = BooleanUtils.toBoolean(operation.getConfiguration("force"));
+      concatDelimiter = operation.getConfiguration("concat");
+      targetPrefix = operation.getConfiguration("target-prefix");
     }
   }
 
