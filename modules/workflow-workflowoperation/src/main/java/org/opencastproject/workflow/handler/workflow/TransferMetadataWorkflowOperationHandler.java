@@ -32,6 +32,7 @@ import org.opencastproject.util.XmlNamespaceContext;
 import org.opencastproject.workflow.api.AbstractWorkflowOperationHandler;
 import org.opencastproject.workflow.api.WorkflowInstance;
 import org.opencastproject.workflow.api.WorkflowOperationException;
+import org.opencastproject.workflow.api.WorkflowOperationHandler;
 import org.opencastproject.workflow.api.WorkflowOperationInstance;
 import org.opencastproject.workflow.api.WorkflowOperationResult;
 import org.opencastproject.workflow.api.WorkflowOperationResult.Action;
@@ -40,6 +41,8 @@ import org.opencastproject.workspace.api.Workspace;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.BooleanUtils;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,25 +52,23 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.stream.Collectors;
 
-// TODO JavaDoc
-// TODO Rename to something like `MapMetadataWOH`?
-// TODO Change the package when you bundle this
-// TODO Error handling
-// TODO Proper logging
-// TODO Do you have to register the configuration somehow?
-//   There is a method you can overload
-// TODO Write tests
-// TODO Clean up "IDE spaces"
-// TODO Add comments
-// TODO Do you have to do cleanup?
-//   When exceptions fly?
-
 /**
  * The workflow definition for handling "transfer-metadata" operations
  */
+@Component(
+    property = {
+            "service.description=Transfer metadata fields between catalogs",
+            "workflow.operation=transfer-metadata"
+    },
+    immediate = true,
+    service = WorkflowOperationHandler.class
+)
 public class TransferMetadataWorkflowOperationHandler extends AbstractWorkflowOperationHandler {
 
   private static Logger logger = LoggerFactory.getLogger(TransferMetadataWorkflowOperationHandler.class);
+
+  /** Reference to the workspace */
+  private Workspace workspace = null;
 
   /**
    * {@inheritDoc}
@@ -98,21 +99,24 @@ public class TransferMetadataWorkflowOperationHandler extends AbstractWorkflowOp
       throw new WorkflowOperationException(e);
     }
 
-    // TODO Rename field or element
+    // fail if the target exists and we did not configure to override it
     if (targetMetadata.dcCatalog.get(configuration.targetElement).size() > 0 && !configuration.force) {
       throw new WorkflowOperationException("The target metadata field already exists and forcing was not configured");
     }
-    // TODO Does this do the right thing when the field does not exist in the source?
-    // TODO This is a hack because extended metadata fields with multiple values don't work at the moment
+
+    // either transfer all values or generate one field by joining all values.
+    // all language information will get lost if we join the values.
     if (configuration.concatDelimiter == null) {
       final List<DublinCoreValue> values = sourceMetadata.dcCatalog.get(configuration.sourceElement);
       targetMetadata.dcCatalog.set(configuration.targetElement, values);
+      logger.info("Transferred {} metadata elements", values.size());
     } else {
       final String value = sourceMetadata.dcCatalog.get(configuration.sourceElement)
               .stream()
               .map(DublinCoreValue::getValue)
               .collect(Collectors.joining(configuration.concatDelimiter));
       targetMetadata.dcCatalog.set(configuration.targetElement, value);
+      logger.info("Transferred concatenated metadata element(s)");
     }
 
     // set prefix used for the target element's namespace
@@ -125,7 +129,7 @@ public class TransferMetadataWorkflowOperationHandler extends AbstractWorkflowOp
     try {
       targetMetadata.save();
     } catch (IOException e) {
-      throw new WorkflowOperationException(e);
+      throw new WorkflowOperationException("Error saving updated metadata catalog", e);
     }
 
     return createResult(mediaPackage, Action.CONTINUE);
@@ -203,7 +207,8 @@ public class TransferMetadataWorkflowOperationHandler extends AbstractWorkflowOp
      */
     Configuration(WorkflowOperationInstance operation)
             throws IllegalArgumentException {
-      // Will throw IllegalArgumentException if not defined
+      // required
+      // will throw IllegalArgumentException if not defined
       sourceFlavor = MediaPackageElementFlavor.parseFlavor(operation.getConfiguration("source-flavor"));
       targetFlavor = MediaPackageElementFlavor.parseFlavor(operation.getConfiguration("target-flavor"));
       sourceElement = EName.fromString(operation.getConfiguration("source-element"));
@@ -216,14 +221,10 @@ public class TransferMetadataWorkflowOperationHandler extends AbstractWorkflowOp
     }
   }
 
-  /** Reference to the workspace */
-  private Workspace workspace = null;
-
   /** OSGi callback to inject the workspace */
+  @Reference
   public void setWorkspace(Workspace workspace) {
     this.workspace = workspace;
   }
 
-  /** The logging facility */
-  private static final Logger logger = LoggerFactory.getLogger(TransferMetadataWorkflowOperationHandler.class);
 }
