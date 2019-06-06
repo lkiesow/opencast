@@ -152,9 +152,17 @@ public class OpencastLdapAuthoritiesPopulator implements LdapAuthoritiesPopulato
         // Should the attribute not be defined, the returned array is null
         if (attributeValues != null) {
           for (String attributeValue : attributeValues) {
-            logger.error("ldap attribute value: {}", attributeValue);
+            String value = attributeValue;
+            if ("CN=STUD,OU=GRUPPEN,DC=MUGAD,DC=MEDUNIGRAZ,DC=AT".equalsIgnoreCase(value)) {
+              logger.error("translating CN=STUD,OU=GRUPPEN,DC=MUGAD,DC=MEDUNIGRAZ,DC=AT to STUD");
+              value = "ROLE_GROUP_STUD";
+            } else if ("CN=PERS,OU=GRUPPEN,DC=MUGAD,DC=MEDUNIGRAZ,DC=AT".equalsIgnoreCase(value)) {
+              logger.error("translating CN=PERS,OU=GRUPPEN,DC=MUGAD,DC=MEDUNIGRAZ,DC=AT to PERS");
+              value = "ROLE_GROUP_PERS";
+            }
+            logger.error("ldap attribute value: {}", value);
             // The attribute value may be a single authority (a single role) or a list of roles
-            addAuthorities(authorities, attributeValue.split(","));
+            addAuthorities(authorities, value.split(","));
           }
         } else {
           debug("({}) Could not find any attribute named '{}' in user '{}'", attributeName, userData.getDn());

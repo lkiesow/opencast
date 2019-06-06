@@ -331,7 +331,21 @@ public class LdapUserProviderInstance implements UserProvider, CachingUserProvid
 
       // Get the roles and add the extra roles
       Collection<GrantedAuthority> authorities = new HashSet<>();
-      authorities.addAll(userDetails.getAuthorities());
+      //authorities.addAll(userDetails.getAuthorities());
+      for (GrantedAuthority authority: userDetails.getAuthorities()) {
+        switch (authority.getAuthority()) {
+          case "CN=STUD,OU=GRUPPEN,DC=MUGAD,DC=MEDUNIGRAZ,DC=AT":
+            logger.error("translating CN=STUD,OU=GRUPPEN,DC=MUGAD,DC=MEDUNIGRAZ,DC=AT to STUD");
+            authorities.add(new SimpleGrantedAuthority("GROUP_STUD"));
+            break;
+          case "CN=PERS,OU=GRUPPEN,DC=MUGAD,DC=MEDUNIGRAZ,DC=AT":
+            logger.error("translating CN=PERS,OU=GRUPPEN,DC=MUGAD,DC=MEDUNIGRAZ,DC=AT to PERS");
+            authorities.add(new SimpleGrantedAuthority("GROUP_PERS"));
+            break;
+          default:
+            authorities.add(authority);
+        }
+      }
       authorities.addAll(setExtraRoles);
       logger.error("authorities: {}", authorities);
 
