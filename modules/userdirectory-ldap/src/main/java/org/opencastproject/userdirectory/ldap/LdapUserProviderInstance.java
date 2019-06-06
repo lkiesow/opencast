@@ -38,6 +38,8 @@ import com.google.common.util.concurrent.UncheckedExecutionException;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.ldap.core.AttributesMapper;
+import org.springframework.ldap.core.LdapTemplate;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -61,6 +63,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import javax.management.InstanceNotFoundException;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
+import javax.naming.NamingException;
+import javax.naming.directory.Attributes;
 
 /**
  * A UserProvider that reads user roles from LDAP entries.
@@ -166,6 +170,19 @@ public class LdapUserProviderInstance implements UserProvider, CachingUserProvid
     FilterBasedLdapUserSearch userSearch = new FilterBasedLdapUserSearch(searchBase, searchFilter, contextSource);
     userSearch.setReturningAttributes(roleAttributesGlob.split(","));
     delegate = new LdapUserDetailsService(userSearch);
+
+    // http://tugrulaslan.com/listing-active-directory-users-spring-ldap/
+    LdapTemplate ldapTemplate = new LdapTemplate(contextSource);
+    ldapTemplate.setIgnorePartialResultException(true);
+    List search = ldapTemplate.search("", "(objectClass=person)", new AttributesMapper() {
+      @Override
+      public Object mapFromAttributes(Attributes attributes) throws NamingException {
+        return attributes.toString();
+      }
+    });
+    for (Object x: search) {
+      logger.error("search: {}", x);
+    }
 
     if (StringUtils.isNotBlank(roleAttributesGlob)) {
       LdapUserDetailsMapper mapper = new LdapUserDetailsMapper();
