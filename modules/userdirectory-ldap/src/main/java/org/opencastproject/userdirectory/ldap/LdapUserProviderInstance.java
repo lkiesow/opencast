@@ -333,6 +333,7 @@ public class LdapUserProviderInstance implements UserProvider, CachingUserProvid
       Collection<GrantedAuthority> authorities = new HashSet<>();
       authorities.addAll(userDetails.getAuthorities());
       authorities.addAll(setExtraRoles);
+      logger.error("authorities: {}", authorities);
 
       Set<JaxbRole> roles = new HashSet<>();
       /*

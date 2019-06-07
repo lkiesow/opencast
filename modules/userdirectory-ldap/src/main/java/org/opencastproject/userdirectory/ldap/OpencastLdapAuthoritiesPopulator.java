@@ -152,6 +152,7 @@ public class OpencastLdapAuthoritiesPopulator implements LdapAuthoritiesPopulato
         // Should the attribute not be defined, the returned array is null
         if (attributeValues != null) {
           for (String attributeValue : attributeValues) {
+            logger.error("ldap attribute value: {}", attributeValue);
             // The attribute value may be a single authority (a single role) or a list of roles
             addAuthorities(authorities, attributeValue.split(","));
           }
@@ -271,6 +272,8 @@ public class OpencastLdapAuthoritiesPopulator implements LdapAuthoritiesPopulato
                   .toUpperCase();
         else
           authority = StringUtils.trimToEmpty(value).replaceAll(ROLE_CLEAN_REGEXP, ROLE_CLEAN_REPLACEMENT);
+
+        logger.error("addAuthorities -> {}", authority);
 
         // Ignore the empty parts
         if (!authority.isEmpty()) {
