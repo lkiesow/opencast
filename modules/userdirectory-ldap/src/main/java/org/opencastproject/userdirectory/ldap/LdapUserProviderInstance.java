@@ -56,6 +56,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -64,6 +65,7 @@ import javax.management.InstanceNotFoundException;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 import javax.naming.NamingException;
+import javax.naming.directory.Attribute;
 import javax.naming.directory.Attributes;
 
 /**
@@ -174,12 +176,15 @@ public class LdapUserProviderInstance implements UserProvider, CachingUserProvid
     // http://tugrulaslan.com/listing-active-directory-users-spring-ldap/
     LdapTemplate ldapTemplate = new LdapTemplate(contextSource);
     ldapTemplate.setIgnorePartialResultException(true);
-    List search = ldapTemplate.search("", "(objectClass=person)", new AttributesMapper() {
+    logger.error("start ldap search");
+    List search = ldapTemplate.search("OU=pers,OU=usr,DC=mugad,DC=medunigraz,DC=at", "(objectClass=Person)", new AttributesMapper() {
       @Override
       public Object mapFromAttributes(Attributes attributes) throws NamingException {
-        return attributes.toString();
+        final Attribute attribute = attributes.get("cn");
+        return Objects.toString(attribute, "<null>");
       }
     });
+    logger.error("end ldap search");
     for (Object x: search) {
       logger.error("search: {}", x);
     }
@@ -418,7 +423,7 @@ public class LdapUserProviderInstance implements UserProvider, CachingUserProvid
   public Iterator<User> findUsers(String query, int offset, int limit) {
     if (query == null)
       throw new IllegalArgumentException("Query must be set");
-    logger.error("findUsers");
+    logger.error("findUsers({}, {}, {})", query, offset, limit);
     // TODO implement a LDAP wildcard search
     // FIXME We return the current user, rather than an empty list, to make sure the current user's role is displayed in
     // the admin UI (MH-12526).
@@ -436,7 +441,7 @@ public class LdapUserProviderInstance implements UserProvider, CachingUserProvid
     // TODO implement LDAP get all users
     // FIXME We return the current user, rather than an empty list, to make sure the current user's role is displayed in
     // the admin UI (MH-12526).
-    logger.error("getUsers");
+    logger.error("getUsers()");
     User currentUser = securityService.getUser();
     if (loadUser(currentUser.getUsername()) != null) {
       List<User> retVal = new ArrayList<>();
@@ -450,7 +455,7 @@ public class LdapUserProviderInstance implements UserProvider, CachingUserProvid
   public long countUsers() {
     // TODO implement LDAP count users
     // FIXME Because of MH-12526, we return conditionally 1 when the previous methods return the current user
-    logger.error("countUsers");
+    logger.error("countUsers()");
     if (loadUser(securityService.getUser().getUsername()) != null) {
       return 1;
     }
