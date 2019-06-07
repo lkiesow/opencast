@@ -418,6 +418,7 @@ public class LdapUserProviderInstance implements UserProvider, CachingUserProvid
   public Iterator<User> findUsers(String query, int offset, int limit) {
     if (query == null)
       throw new IllegalArgumentException("Query must be set");
+    logger.error("findUsers");
     // TODO implement a LDAP wildcard search
     // FIXME We return the current user, rather than an empty list, to make sure the current user's role is displayed in
     // the admin UI (MH-12526).
@@ -435,6 +436,7 @@ public class LdapUserProviderInstance implements UserProvider, CachingUserProvid
     // TODO implement LDAP get all users
     // FIXME We return the current user, rather than an empty list, to make sure the current user's role is displayed in
     // the admin UI (MH-12526).
+    logger.error("getUsers");
     User currentUser = securityService.getUser();
     if (loadUser(currentUser.getUsername()) != null) {
       List<User> retVal = new ArrayList<>();
@@ -448,6 +450,7 @@ public class LdapUserProviderInstance implements UserProvider, CachingUserProvid
   public long countUsers() {
     // TODO implement LDAP count users
     // FIXME Because of MH-12526, we return conditionally 1 when the previous methods return the current user
+    logger.error("countUsers");
     if (loadUser(securityService.getUser().getUsername()) != null) {
       return 1;
     }
