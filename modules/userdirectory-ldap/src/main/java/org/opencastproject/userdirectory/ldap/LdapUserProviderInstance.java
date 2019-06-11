@@ -50,7 +50,6 @@ import org.springframework.security.ldap.userdetails.LdapUserDetailsMapper;
 import org.springframework.security.ldap.userdetails.LdapUserDetailsService;
 
 import java.lang.management.ManagementFactory;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -64,9 +63,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import javax.management.InstanceNotFoundException;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
-import javax.naming.NamingException;
 import javax.naming.directory.Attribute;
-import javax.naming.directory.Attributes;
 
 /**
  * A UserProvider that reads user roles from LDAP entries.
@@ -92,6 +89,7 @@ public class LdapUserProviderInstance implements UserProvider, CachingUserProvid
 
   /** A cache of users, which lightens the load on the LDAP server */
   private LoadingCache<String, Object> cache = null;
+  private LoadingCache<String, Object> listCache = null;
 
   /** A token to store in the miss cache */
   protected Object nullToken = new Object();
@@ -107,6 +105,8 @@ public class LdapUserProviderInstance implements UserProvider, CachingUserProvid
 
   /** A Set of prefixes. When a role starts with any of these, the role prefix defined above will not be prepended */
   private Set<String> setExcludePrefixes = new HashSet<>();
+
+  private LdapTemplate ldapTemplate;
 
   /**
    * Constructs an ldap user provider with the needed settings.
@@ -174,17 +174,16 @@ public class LdapUserProviderInstance implements UserProvider, CachingUserProvid
     delegate = new LdapUserDetailsService(userSearch);
 
     // http://tugrulaslan.com/listing-active-directory-users-spring-ldap/
-    LdapTemplate ldapTemplate = new LdapTemplate(contextSource);
+    ldapTemplate = new LdapTemplate(contextSource);
     ldapTemplate.setIgnorePartialResultException(true);
     logger.error("start ldap search");
-    List search = ldapTemplate.search("OU=pers,OU=usr,DC=mugad,DC=medunigraz,DC=at", "(objectClass=Person)", new AttributesMapper() {
-      @Override
-      public Object mapFromAttributes(Attributes attributes) throws NamingException {
-        final Attribute attribute = attributes.get("cn");
-        return Objects.toString(attribute, "<null>");
-      }
-    });
+    List search = ldapTemplate.search("OU=pers,OU=usr,DC=mugad,DC=medunigraz,DC=at", "(objectClass=Person)",
+            (AttributesMapper) attributes -> {
+              final Attribute attribute = attributes.get("cn");
+              return Objects.toString(attribute != null ? attribute.get() : null, "<null>");
+            });
     logger.error("end ldap search");
+    logger.error("ldap search results: {}", search.size());
     for (Object x: search) {
       logger.error("search: {}", x);
     }
@@ -257,6 +256,14 @@ public class LdapUserProviderInstance implements UserProvider, CachingUserProvid
               public Object load(String id) throws Exception {
                 User user = loadUserFromLdap(id);
                 return user == null ? nullToken : user;
+              }
+            });
+    listCache = CacheBuilder.newBuilder().maximumSize(cacheSize).expireAfterWrite(30, TimeUnit.MINUTES)
+            .build(new CacheLoader<String, Object>() {
+              @Override
+              public Object load(String id) {
+                List<User> users = loadAllUsers();
+                return users == null ? nullToken : users;
               }
             });
 
@@ -424,6 +431,8 @@ public class LdapUserProviderInstance implements UserProvider, CachingUserProvid
     if (query == null)
       throw new IllegalArgumentException("Query must be set");
     logger.error("findUsers({}, {}, {})", query, offset, limit);
+    return getUsers();
+    /*
     // TODO implement a LDAP wildcard search
     // FIXME We return the current user, rather than an empty list, to make sure the current user's role is displayed in
     // the admin UI (MH-12526).
@@ -434,6 +443,7 @@ public class LdapUserProviderInstance implements UserProvider, CachingUserProvid
       return retVal.iterator();
     }
     return Collections.emptyIterator();
+    */
   }
 
   @Override
@@ -442,6 +452,39 @@ public class LdapUserProviderInstance implements UserProvider, CachingUserProvid
     // FIXME We return the current user, rather than an empty list, to make sure the current user's role is displayed in
     // the admin UI (MH-12526).
     logger.error("getUsers()");
+
+    List<User> users = (List<User>) listCache.getUnchecked("");
+    if (users == null) {
+      return Collections.emptyIterator();
+    }
+    return users.iterator();
+
+    /*
+    Thread currentThread = Thread.currentThread();
+    ClassLoader originalClassloader = currentThread.getContextClassLoader();
+    try {
+      currentThread.setContextClassLoader(LdapUserProviderFactory.class.getClassLoader());
+      final JaxbOrganization jaxbOrganization = JaxbOrganization.fromOrganization(organization);
+      ldapTemplate.setIgnorePartialResultException(true);
+      List search = ldapTemplate.search("OU=pers,OU=usr,DC=mugad,DC=medunigraz,DC=at", "(objectClass=Person)",
+              (AttributesMapper) attributes -> {
+                final Attribute attribute = attributes.get("cn");
+                final String username = Objects.toString(attribute != null ? attribute.get() : null, "<null>");
+                return new JaxbUser(username, PROVIDER_NAME, jaxbOrganization, Collections.emptySet());
+              });
+      return search.iterator();
+    } finally {
+      currentThread.setContextClassLoader(originalClassloader);
+    }
+    */
+
+    /*
+    logger.error("end ldap search");
+    logger.error("ldap search results: {}", search.size());
+    for (Object x: search) {
+      logger.error("search: {}", x);
+    }
+
     User currentUser = securityService.getUser();
     if (loadUser(currentUser.getUsername()) != null) {
       List<User> retVal = new ArrayList<>();
@@ -449,6 +492,7 @@ public class LdapUserProviderInstance implements UserProvider, CachingUserProvid
       return retVal.iterator();
     }
     return Collections.emptyIterator();
+    */
   }
 
   @Override
@@ -466,4 +510,26 @@ public class LdapUserProviderInstance implements UserProvider, CachingUserProvid
   public void invalidate(String userName) {
     cache.invalidate(userName);
   }
+
+  public List<User> loadAllUsers() {
+    logger.error("loadAllUsers()");
+
+    Thread currentThread = Thread.currentThread();
+    ClassLoader originalClassloader = currentThread.getContextClassLoader();
+    try {
+      currentThread.setContextClassLoader(LdapUserProviderFactory.class.getClassLoader());
+      final JaxbOrganization jaxbOrganization = JaxbOrganization.fromOrganization(organization);
+      ldapTemplate.setIgnorePartialResultException(true);
+      List search = ldapTemplate.search("OU=pers,OU=usr,DC=mugad,DC=medunigraz,DC=at", "(objectClass=Person)",
+              (AttributesMapper) attributes -> {
+                final Attribute attribute = attributes.get("cn");
+                final String username = Objects.toString(attribute != null ? attribute.get() : null, "<null>");
+                return new JaxbUser(username, PROVIDER_NAME, jaxbOrganization, Collections.emptySet());
+              });
+      return search;
+    } finally {
+      currentThread.setContextClassLoader(originalClassloader);
+    }
+  }
+
 }
