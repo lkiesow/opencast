@@ -430,18 +430,18 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
     final EncodingProfile profile = getProfile(profileId);
     final EncoderEngine encoderEngine = getEncoderEngine();
 
-    // conditional settings based on frame width
-    final int width = Arrays.stream(mediaTrack.getStreams())
+    // conditional settings based on frame height
+    final int height = Arrays.stream(mediaTrack.getStreams())
             .filter((stream -> stream instanceof VideoStream))
-            .map(stream -> ((VideoStream) stream).getFrameWidth())
+            .map(stream -> ((VideoStream) stream).getFrameHeight())
             .findFirst()
             .orElse(0);
     Map<String, String> properties = new HashMap<>();
     for (String key: profile.getExtensions().keySet()) {
-      if (key.startsWith("if-width-geq-")) {
-        final int widthCondition = Integer.parseInt(key.substring("if-width-geq-".length()));
-        if (widthCondition < width) {
-          properties.put("width-geq-" + widthCondition, profile.getExtension(key));
+      if (key.startsWith("if-height-geq-")) {
+        final int heightCondition = Integer.parseInt(key.substring("if-height-geq-".length()));
+        if (heightCondition <= height) {
+          properties.put(key, profile.getExtension(key));
         }
       }
     }
