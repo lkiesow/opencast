@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definition xmlns="http://workflow.opencastproject.org">
+
+  <id>audio</id>
+  <title>Audio Only Workflow</title>
+  <tags>
+    <tag>upload</tag>
+    <tag>schedule</tag>
+  </tags>
+  <displayOrder>100</displayOrder>
+  <description>
+    A workflow for audio-only distribution.
+  </description>
+
+  <configuration_panel>
+    <![CDATA[
+      <div id="workflow-configuration">
+        <ul>
+          <li>
+            <input id="publish" name="publish" type="checkbox" class="configField" value="true" checked=checked />
+            <label for="publish">Opencast Media Module</label>
+          </li>
+        </ul>
+      </div>
+    ]]>
+  </configuration_panel>
+
+  <operations>
+
+    <operation
+        id="defaults"
+        description="Applying default configuration values">
+      <configurations>
+        <configuration key="publish">true</configuration>
+      </configurations>
+    </operation>
+
+    <!-- Apply ACL from series to the mediapackage -->
+    <operation
+        id="series"
+        exception-handler-workflow="partial-error"
+        description="Applying access control entries from series">
+      <configurations>
+        <configuration key="apply-acl">true</configuration>
+      </configurations>
+    </operation>
+
+    <!-- Tag all assets to be archived. This is quite unnecessary for this workflow but the default publish workflow
+         expects the assets to be tagged and will fail due to no dublincore/episode catalog being archives which is a
+         requirement of the archive workflow operation. Hence, we do this extra work and get the compatibility in return. -->
+    <operation
+        id="tag"
+        exception-handler-workflow="partial-error"
+        description="Tagging media package elements for archival">
+      <configurations>
+        <configuration key="source-flavors">*/*</configuration>
+        <configuration key="target-tags">+archive</configuration>
+      </configurations>
+    </operation>
+
+    <!-- Inspect the media -->
+    <operation
+        id="inspect"
+        fail-on-error="true"
+        exception-handler-workflow="partial-error"
+        description="Inspecting audio and video streams">
+      <configurations>
+        <configuration key="overwrite">false</configuration>
+        <configuration key="accept-no-media">false</configuration>
+      </configurations>
+    </operation>
+
+    <!-- encode video -->
+
+    <operation
+        id="encode"
+        exception-handler-workflow="partial-error"
+        description="Encoding video">
+      <configurations>
+        <configuration key="source-flavor">*/source</configuration>
+        <configuration key="target-flavor">*/preview</configuration>
+        <configuration key="target-tags">engage-download,engage-streaming,rss,atom</configuration>
+        <configuration key="encoding-profile">audio</configuration>
+      </configurations>
+    </operation>
+
+    <!-- Publish preview internal -->
+    <operation
+        id="publish-configure"
+        exception-handler-workflow="partial-error"
+        description="Publish to preview publication channel">
+      <configurations>
+        <configuration key="source-flavors">*/preview</configuration>
+        <configuration key="channel-id">internal</configuration>
+        <configuration key="url-pattern">http://localhost:8080/admin-ng/index.html#/events/events/${event_id}/tools/editor</configuration>
+        <configuration key="check-availability">true</configuration>
+      </configurations>
+    </operation>
+
+    <!-- Publish to engage player -->
+    <operation
+        id="publish-engage"
+        if="${publish}"
+        max-attempts="2"
+        exception-handler-workflow="partial-error"
+        description="Publishing to Engage">
+      <configurations>
+        <configuration key="download-source-flavors">dublincore/*,security/*</configuration>
+        <configuration key="download-source-tags">engage-download</configuration>
+        <configuration key="streaming-source-tags">engage-streaming</configuration>
+        <configuration key="check-availability">true</configuration>
+      </configurations>
+    </operation>
+
+    <!-- Publish to OAI-PMH -->
+    <operation
+        id="publish-oaipmh"
+        if="${publish}"
+        exception-handler-workflow="partial-error"
+        description="Publish to OAI-PMH Default Repository">
+      <configurations>
+        <configuration key="download-flavors">dublincore/*,security/*</configuration>
+        <configuration key="download-tags">engage-download</configuration>
+        <configuration key="streaming-tags">engage-streaming</configuration>
+        <configuration key="check-availability">true</configuration>
+        <configuration key="repository">default</configuration>
+      </configurations>
+    </operation>
+
+    <!-- Archive the current state of the media package -->
+    <operation
+        id="snapshot"
+        exception-handler-workflow="partial-error"
+        description="Archiving">
+      <configurations>
+        <configuration key="source-tags">archive</configuration>
+      </configurations>
+    </operation>
+
+    <!-- Cleanup the working file repository -->
+
+    <operation
+      id="cleanup"
+      fail-on-error="false"
+      description="Cleaning up">
+      <configurations>
+        <configuration key="preserve-flavors">security/*</configuration>
+        <configuration key="delete-external">true</configuration>
+      </configurations>
+    </operation>
+
+  </operations>
+</definition>
+
