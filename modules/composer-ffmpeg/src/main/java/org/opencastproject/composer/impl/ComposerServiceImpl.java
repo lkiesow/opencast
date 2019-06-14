@@ -49,6 +49,7 @@ import org.opencastproject.mediapackage.MediaPackageElementFlavor;
 import org.opencastproject.mediapackage.MediaPackageElementParser;
 import org.opencastproject.mediapackage.MediaPackageException;
 import org.opencastproject.mediapackage.Track;
+import org.opencastproject.mediapackage.VideoStream;
 import org.opencastproject.mediapackage.identifier.IdBuilder;
 import org.opencastproject.mediapackage.identifier.IdBuilderFactory;
 import org.opencastproject.security.api.OrganizationDirectoryService;
@@ -429,13 +430,29 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
     final EncodingProfile profile = getProfile(profileId);
     final EncoderEngine encoderEngine = getEncoderEngine();
 
+    // conditional settings based on frame width
+    final int width = Arrays.stream(mediaTrack.getStreams())
+            .filter((stream -> stream instanceof VideoStream))
+            .map(stream -> ((VideoStream) stream).getFrameWidth())
+            .findFirst()
+            .orElse(0);
+    Map<String, String> properties = new HashMap<>();
+    for (String key: profile.getExtensions().keySet()) {
+      if (key.startsWith("if-width-geq-")) {
+        final int widthCondition = Integer.parseInt(key.substring("if-width-geq-".length()));
+        if (widthCondition < width) {
+          properties.put("width-geq-" + widthCondition, profile.getExtension(key));
+        }
+      }
+    }
+
     // List of encoded tracks
     LinkedList<Track> encodedTracks = new LinkedList<>();
     // Do the work
     int i = 0;
     Map<String, File> source = new HashMap<>();
     source.put("video", mediaFile);
-    List<File> outputFiles = encoderEngine.process(source, profile, null);
+    List<File> outputFiles = encoderEngine.process(source, profile, properties);
     activeEncoder.remove(encoderEngine);
     for (File encodingOutput: outputFiles) {
       // Put the file in the workspace
