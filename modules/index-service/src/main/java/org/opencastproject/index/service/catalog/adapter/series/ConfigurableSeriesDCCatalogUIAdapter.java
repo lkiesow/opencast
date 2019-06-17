@@ -52,10 +52,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Dictionary;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.stream.Collectors;
 
 /**
  * A series catalog UI adapter that is managed by a configuration.
@@ -224,10 +227,10 @@ public class ConfigurableSeriesDCCatalogUIAdapter implements SeriesCatalogUIAdap
         return getSeriesService().addSeriesElement(seriesId, flavor.getType(), dcData);
       }
     } catch (IOException e) {
-      logger.error("Error while serializing the dublin core catalog to XML: {}", ExceptionUtils.getStackTrace(e));
+      logger.error("Error while serializing the dublin core catalog to XML", e);
       return false;
     } catch (SeriesException e) {
-      logger.error("Error while saving the series element: {}", ExceptionUtils.getStackTrace(e));
+      logger.error("Error while saving the series element", e);
       return false;
     }
   }
@@ -239,9 +242,9 @@ public class ConfigurableSeriesDCCatalogUIAdapter implements SeriesCatalogUIAdap
         logger.warn("Skipping field {} because it is not defined in the properties file.", field);
       }
       try {
-        dublinCoreMetadata.addField(dublinCoreProperties.get(field), "", listProvidersService);
+        dublinCoreMetadata.addField(dublinCoreProperties.get(field), Collections.emptyList(), listProvidersService);
       } catch (Exception e) {
-        logger.error("Skipping metadata field '{}' because of error: {}", field, ExceptionUtils.getStackTrace(e));
+        logger.error("Skipping metadata field '{}' because of error", field, e);
       }
     }
   }
@@ -257,10 +260,13 @@ public class ConfigurableSeriesDCCatalogUIAdapter implements SeriesCatalogUIAdap
         }
         if (namespace.equalsIgnoreCase(propertyKey.getNamespaceURI())
                 && metadataField.getInputID().equalsIgnoreCase(propertyKey.getLocalName())) {
-          for (DublinCoreValue dublinCoreValue : dc.get(propertyKey)) {
+          List<DublinCoreValue> values = dc.get(propertyKey);
+          if (!values.isEmpty()) {
             emptyFields.remove(metdataFieldKey);
             try {
-              dublinCoreMetadata.addField(metadataField, dublinCoreValue.getValue(), listProvidersService);
+              dublinCoreMetadata.addField(metadataField, values.stream()
+                      .map(DublinCoreValue::getValue)
+                      .collect(Collectors.toList()), listProvidersService);
             } catch (IllegalArgumentException e) {
               logger.error("Skipping metadata field '{}' because of error: {}", metadataField.getInputID(),
                       ExceptionUtils.getStackTrace(e));

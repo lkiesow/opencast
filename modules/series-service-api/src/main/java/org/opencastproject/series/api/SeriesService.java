@@ -55,6 +55,7 @@ public interface SeriesService {
    */
   DublinCoreCatalog updateSeries(DublinCoreCatalog dc) throws SeriesException, UnauthorizedException;
 
+
   /**
    * Updates access control rules for specified series. Not specifying series ID or trying to update series with null
    * value will throw IllegalArgumentException.
@@ -73,6 +74,28 @@ public interface SeriesService {
    */
   boolean updateAccessControl(String seriesID, AccessControlList accessControl) throws NotFoundException,
           SeriesException, UnauthorizedException;
+
+  /**
+   * Updates access control rules for specified series. Allows to set the override parameter that controls whether the
+   * episode ACLs of the contained media packages will be removed on update. Not specifying series ID or trying to update series with null
+   * value will throw IllegalArgumentException.
+   *
+   * @param seriesID
+   *          series to be updated
+   * @param accessControl
+   *          {@link AccessControlList} defining access control rules
+   * @param overrideEpisodeAcl
+   *          Whether the new series acl should override the episode acl
+   * @return true if ACL was updated and false it if was created
+   * @throws NotFoundException
+   *           if series with given ID cannot be found
+   * @throws UnauthorizedException
+   *           if the current user is not authorized to perform this action
+   * @throws SeriesException
+   *           if exception occurred
+   */
+  boolean updateAccessControl(String seriesID, AccessControlList accessControl, boolean overrideEpisodeAcl)
+          throws NotFoundException, SeriesException, UnauthorizedException;
 
   /**
    * Removes series
@@ -209,33 +232,6 @@ public interface SeriesService {
   boolean deleteSeriesElement(String seriesId, String type) throws SeriesException;
 
   int getSeriesCount() throws SeriesException;
-
-  /**
-   * Returns the opt out status of series with the given series id
-   *
-   * @param seriesId
-   *          the series id
-   * @return the opt out status
-   * @throws NotFoundException
-   *           if there is no series with specified series ID
-   * @throws SeriesException
-   *           if exception occurred
-   */
-  boolean isOptOut(String seriesId) throws NotFoundException, SeriesException;
-
-  /**
-   * Updates a series' opt out status.
-   *
-   * @param seriesId
-   *          The id of the series to update the opt out status of.
-   * @param optOut
-   *          Whether to opt out this series or not.
-   * @throws NotFoundException
-   *           if there is no series with specified series ID
-   * @throws SeriesException
-   *           if exception occurred
-   */
-  void updateOptOutStatus(String seriesId, boolean optOut) throws NotFoundException, SeriesException;
 
   /**
    * Returns the properties for a series.

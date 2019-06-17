@@ -21,6 +21,8 @@
 
 package org.opencastproject.workspace.impl;
 
+import org.opencastproject.security.api.Organization;
+import org.opencastproject.security.api.SecurityService;
 import org.opencastproject.security.api.TrustedHttpClient;
 import org.opencastproject.security.api.TrustedHttpClient.RequestRunner;
 import org.opencastproject.security.util.StandAloneTrustedHttpClientImpl;
@@ -28,20 +30,17 @@ import org.opencastproject.util.NotFoundException;
 import org.opencastproject.util.PathSupport;
 import org.opencastproject.util.UrlSupport;
 import org.opencastproject.util.data.Either;
-import org.opencastproject.util.data.Function;
 import org.opencastproject.util.data.Option;
 import org.opencastproject.workingfilerepository.api.WorkingFileRepository;
 
 import com.entwinemedia.fn.Prelude;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.StatusLine;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.easymock.EasyMock;
-import org.easymock.IAnswer;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -54,6 +53,7 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 
 import javax.servlet.http.HttpServletResponse;
 
@@ -69,7 +69,7 @@ public class WorkspaceImplTest {
   public TemporaryFolder testFolder = new TemporaryFolder();
 
   @Before
-  public void setUp() throws Exception {
+  public void setUp() {
     workspace = new WorkspaceImpl(workspaceRoot, false);
     workspace.activate(null);
   }
@@ -92,6 +92,13 @@ public class WorkspaceImplTest {
             "target/test-classes/../test-classes/../test-classes/../test-classes/../test-classes/../test-classes/../test-classes/../test-classes/../test-classes/../test-classes/../test-classes/../test-classes/../test-classes/../test-classes/../test-classes/../test-classes/opencast_header.gif");
     URL urlToSource = source.toURI().toURL();
 
+    Organization organization = EasyMock.createMock(Organization.class);
+    EasyMock.expect(organization.getId()).andReturn("org1").anyTimes();
+    SecurityService securityService = EasyMock.createMock(SecurityService.class);
+    EasyMock.expect(securityService.getOrganization()).andReturn(organization).anyTimes();
+    EasyMock.replay(securityService, organization);
+    workspace.setSecurityService(securityService);
+
     final TrustedHttpClient httpClient = EasyMock.createNiceMock(TrustedHttpClient.class);
     HttpEntity entity = EasyMock.createNiceMock(HttpEntity.class);
     EasyMock.expect(entity.getContent()).andReturn(new FileInputStream(source));
@@ -101,15 +108,11 @@ public class WorkspaceImplTest {
     EasyMock.expect(response.getEntity()).andReturn(entity);
     EasyMock.expect(response.getStatusLine()).andReturn(statusLine).anyTimes();
     EasyMock.replay(response, entity, statusLine);
-    EasyMock.expect(httpClient.execute((HttpUriRequest) EasyMock.anyObject())).andReturn(response);
-    EasyMock.expect(httpClient.runner((HttpUriRequest) EasyMock.anyObject())).andAnswer(
-            new IAnswer<TrustedHttpClient.RequestRunner<Object>>() {
-              @Override
-              public RequestRunner<Object> answer() throws Throwable {
-                HttpUriRequest req = (HttpUriRequest) EasyMock.getCurrentArguments()[0];
-                return StandAloneTrustedHttpClientImpl.runner(httpClient, req);
-              }
-            });
+    EasyMock.expect(httpClient.execute(EasyMock.anyObject(HttpUriRequest.class))).andReturn(response);
+    EasyMock.expect(httpClient.runner(EasyMock.anyObject(HttpUriRequest.class))).andAnswer(() -> {
+      HttpUriRequest req = (HttpUriRequest) EasyMock.getCurrentArguments()[0];
+      return StandAloneTrustedHttpClientImpl.runner(httpClient, req);
+    });
     EasyMock.replay(httpClient);
     workspace.setTrustedHttpClient(httpClient);
     Assert.assertTrue(urlToSource.toString().length() > 255);
@@ -126,13 +129,13 @@ public class WorkspaceImplTest {
   public void testPutCachingWithFilesystemMapping() throws Exception {
     WorkingFileRepository repo = EasyMock.createNiceMock(WorkingFileRepository.class);
     EasyMock.expect(
-            repo.getURI((String) EasyMock.anyObject(), (String) EasyMock.anyObject(), (String) EasyMock.anyObject()))
+            repo.getURI(EasyMock.anyString(), EasyMock.anyString(), EasyMock.anyString()))
             .andReturn(
                     new URI("http://localhost:8080/files" + WorkingFileRepository.MEDIAPACKAGE_PATH_PREFIX
                             + "foo/bar/header.gif"));
     EasyMock.expect(
-            repo.put((String) EasyMock.anyObject(), (String) EasyMock.anyObject(), (String) EasyMock.anyObject(),
-                    (InputStream) EasyMock.anyObject())).andReturn(
+            repo.put(EasyMock.anyString(), EasyMock.anyString(), EasyMock.anyString(),
+                    EasyMock.anyObject(InputStream.class))).andReturn(
             new URI("http://localhost:8080/files" + WorkingFileRepository.MEDIAPACKAGE_PATH_PREFIX
                     + "foo/bar/header.gif"));
     EasyMock.expect(repo.getBaseUri()).andReturn(new URI("http://localhost:8080/files")).anyTimes();
@@ -141,13 +144,9 @@ public class WorkspaceImplTest {
     workspace.setRepository(repo);
 
     // Put a stream into the workspace (and hence, the repository)
-    InputStream in = null;
-    try {
-      in = getClass().getResourceAsStream("/opencast_header.gif");
+    try (InputStream in = getClass().getResourceAsStream("/opencast_header.gif")) {
       Assert.assertNotNull(in);
       workspace.put("foo", "bar", "header.gif", in);
-    } finally {
-      IOUtils.closeQuietly(in);
     }
 
     // Ensure that the file was put into the working file repository
@@ -165,13 +164,13 @@ public class WorkspaceImplTest {
     // First, mock up the collaborating working file repository
     WorkingFileRepository repo = EasyMock.createMock(WorkingFileRepository.class);
     EasyMock.expect(
-            repo.getURI((String) EasyMock.anyObject(), (String) EasyMock.anyObject(), (String) EasyMock.anyObject()))
+            repo.getURI(EasyMock.anyString(), EasyMock.anyString(), EasyMock.anyString()))
             .andReturn(
-                    new URI(UrlSupport.concat(new String[] { "http://localhost:8080", WorkingFileRepository.URI_PREFIX,
-                            WorkingFileRepository.MEDIAPACKAGE_PATH_PREFIX, "foo", "bar", "header.gif" })));
+                    new URI(UrlSupport.concat("http://localhost:8080", WorkingFileRepository.URI_PREFIX,
+                            WorkingFileRepository.MEDIAPACKAGE_PATH_PREFIX, "foo", "bar", "header.gif")));
     EasyMock.expect(
-            repo.put((String) EasyMock.anyObject(), (String) EasyMock.anyObject(), (String) EasyMock.anyObject(),
-                    (InputStream) EasyMock.anyObject())).andReturn(
+            repo.put(EasyMock.anyString(), EasyMock.anyString(), EasyMock.anyString(),
+                    EasyMock.anyObject(InputStream.class))).andReturn(
             new URI("http://localhost:8080/files" + WorkingFileRepository.MEDIAPACKAGE_PATH_PREFIX
                     + "foo/bar/header.gif"));
     EasyMock.expect(repo.getBaseUri()).andReturn(new URI("http://localhost:8080/files")).anyTimes();
@@ -179,13 +178,9 @@ public class WorkspaceImplTest {
     workspace.setRepository(repo);
 
     // Put a stream into the workspace (and hence, the repository)
-    InputStream in = null;
-    try {
-      in = getClass().getResourceAsStream("/opencast_header.gif");
+    try (InputStream in = getClass().getResourceAsStream("/opencast_header.gif")) {
       Assert.assertNotNull(in);
       workspace.put("foo", "bar", "header.gif", in);
-    } finally {
-      IOUtils.closeQuietly(in);
     }
 
     // Ensure that the file was put into the working file repository
@@ -246,7 +241,7 @@ public class WorkspaceImplTest {
   @Test
   public void testGetNoFilename() throws Exception {
     final File expectedFile = testFolder.newFile("test.txt");
-    FileUtils.write(expectedFile, "asdf");
+    FileUtils.write(expectedFile, "asdf", StandardCharsets.UTF_8);
     expectedFile.deleteOnExit();
 
     WorkingFileRepository repo = EasyMock.createNiceMock(WorkingFileRepository.class);
@@ -254,12 +249,16 @@ public class WorkspaceImplTest {
     EasyMock.replay(repo);
     workspace.setRepository(repo);
 
-    RequestRunner<Either<String, Option<File>>> requestRunner = new TrustedHttpClient.RequestRunner<Either<String, Option<File>>>() {
-      @Override
-      public Either<Exception, Either<String, Option<File>>> run(Function<HttpResponse, Either<String, Option<File>>> f) {
-        Either<String, Option<File>> right = Either.right(Option.some(expectedFile));
-        return Either.right(right);
-      }
+    Organization organization = EasyMock.createMock(Organization.class);
+    EasyMock.expect(organization.getId()).andReturn("org1").anyTimes();
+    SecurityService securityService = EasyMock.createMock(SecurityService.class);
+    EasyMock.expect(securityService.getOrganization()).andReturn(organization).anyTimes();
+    EasyMock.replay(securityService, organization);
+    workspace.setSecurityService(securityService);
+
+    RequestRunner<Either<String, Option<File>>> requestRunner = f -> {
+      Either<String, Option<File>> right = Either.right(Option.some(expectedFile));
+      return Either.right(right);
     };
     TrustedHttpClient trustedHttpClient = EasyMock.createNiceMock(TrustedHttpClient.class);
     EasyMock.expect(trustedHttpClient.<Either<String, Option<File>>> runner(EasyMock.anyObject(HttpUriRequest.class)))
@@ -277,7 +276,7 @@ public class WorkspaceImplTest {
     Assert.assertEquals(0L, workspace.getUsedSpace().get().longValue());
 
     File file = new File(PathSupport.concat(new String[] { workspaceRoot, "test", "c1", "bar.mov" }));
-    FileUtils.write(file, "asdf");
+    FileUtils.write(file, "asdf", StandardCharsets.UTF_8);
     file.deleteOnExit();
 
     Assert.assertEquals(4L, workspace.getUsedSpace().get().longValue());
@@ -285,7 +284,7 @@ public class WorkspaceImplTest {
     workspace.cleanup(0);
     Assert.assertEquals(0L, workspace.getUsedSpace().get().longValue());
 
-    FileUtils.write(file, "asdf");
+    FileUtils.write(file, "asdf", StandardCharsets.UTF_8);
     Assert.assertEquals(4L, workspace.getUsedSpace().get().longValue());
 
     workspace.cleanup(100);

@@ -34,7 +34,6 @@ angular.module('adminNg', [
   'ngResource',
   'ngAnimate',
   'ngMessages',
-  'angular-md5',
   'adminNg.controllers',
   'adminNg.services',
   'adminNg.filters',
@@ -117,6 +116,7 @@ angular.module('adminNg', [
 .config(['chosenProvider', function (chosenProvider) {
   chosenProvider.setOption({
     'search_contains': true,
+    'disable_search_threshold': 0
   });
 }])
 .run(['$rootScope', function ($rootScope) {

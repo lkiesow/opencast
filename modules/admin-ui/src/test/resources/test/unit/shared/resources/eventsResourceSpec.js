@@ -29,8 +29,6 @@ describe('Events API Resource', function () {
                 title: 'Test Title',
                 presenters: ['Matt Smith', 'Chuck Norris'],
                 technical_presenters: ['Matt Smith', 'Chuck Norris'],
-                scheduling_status: 'SCHEDULED',
-                review_status: 'REVIEWED',
                 workflow_state: 'processing',
                 series: {
                     id: '78753d04-18a4-4327-9a61-b6d93816a7d2',
@@ -56,8 +54,6 @@ describe('Events API Resource', function () {
                 title: 'Test Title 2',
                 presenters: ['Matt Smith'],
                 technical_presenters: ['Matt Smith'],
-                scheduling_status: 'SCHEDULED',
-                review_status: 'REVIEWED',
                 workflow_state: 'processing',
                 series: {
                     id: '78753d08-18a4-4327-9a61-b6d93816a7d2',
@@ -94,7 +90,7 @@ describe('Events API Resource', function () {
             $httpBackend.flush();
             expect(data.rows.length).toBe(2);
             expect(data.rows[0].title).toBe(sampleJSON.results[0].title);
-            expect(data.rows[0].presenter).toEqual(sampleJSON.results[0].presenters.join(', '));
+            expect(data.rows[0].presenters).toEqual(sampleJSON.results[0].presenters);
             expect(data.rows[0].date).toBe(sampleJSON.results[0].start_date);
             expect(data.rows[0].start_date).toBe('2012-12-02T10:00:00Z');
             expect(data.rows[0].end_date).toBe('2012-12-02T11:15:00Z');
@@ -120,8 +116,6 @@ describe('Events API Resource', function () {
                         title: 'Physics325'
                     },
                     location: 'Room 2',
-                    scheduling_status: 'SCHEDULED',
-                    review_status: 'REVIEWED',
                     workflow_state: 'processing',
                     creation_date: '2012-12-01T08:59:00Z',
                     modification_date: '2012-12-01T08:59:00Z',

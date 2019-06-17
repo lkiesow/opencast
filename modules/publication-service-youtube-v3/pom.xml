@@ -7,7 +7,7 @@
   <parent>
     <groupId>org.opencastproject</groupId>
     <artifactId>base</artifactId>
-    <version>6-SNAPSHOT</version>
+    <version>7-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <properties>
@@ -160,6 +160,7 @@
               com.google.api.*
             </_exportcontents>
             <Import-Package>
+              !javax.annotation,
               !oracle.xml.parser.*,
               !org.jaxen.*,
               !sun.security.util,

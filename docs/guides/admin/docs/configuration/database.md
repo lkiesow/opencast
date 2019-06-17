@@ -68,7 +68,7 @@ create a database called `opencast` by executing:
 
 Then create a user `opencast` with a password and grant it all necessary rights:
 
-    GRANT SELECT,INSERT,UPDATE,DELETE,CREATE,DROP,INDEX,TRIGGER,CREATE TEMPORARY TABLES ON opencast.*
+    GRANT SELECT,INSERT,UPDATE,DELETE,CREATE,DROP,INDEX,TRIGGER,CREATE TEMPORARY TABLES,REFERENCES ON opencast.*
       TO 'opencast'@'localhost' IDENTIFIED BY 'opencast_password';
 
 You can choose another name for the user and database and should use a different password.
@@ -105,6 +105,13 @@ Alternatively, you can import the script directly from the command line:
 
     mysql -u opencast -p opencast < …/docs/scripts/ddl/mysql5.sql
 
+Now, ensure the MariaDB [`wait_timeout`](https://mariadb.com/kb/en/library/server-system-variables/) in `mariadb.cnf`
+or `mysql.cnf` is bigger than `org.opencastproject.db.jdbc.pool.max.idle.time` in Opencast's `custom.properties`.
+Raising the `max_connections` in `mariadb.cnf` parameter might be required, too, depending on your installation's size.
+Reload the configuration into MariaDB, then connect to your database as user `opencast` and verify the values by
+executing `SHOW  VARIABLES LIKE %_timeout;`. A `MySQLNonTransientConnectionException`, for instance “A PooledConnection
+that has already signaled a Connection error is still in use”, in your Opencast logs might indicate a problem with this
+configuration.
 
 ### Step 3: Configure Opencast
 

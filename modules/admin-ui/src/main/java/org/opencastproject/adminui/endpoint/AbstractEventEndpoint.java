@@ -36,6 +36,7 @@ import static javax.servlet.http.HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
 import static javax.servlet.http.HttpServletResponse.SC_NOT_FOUND;
 import static javax.servlet.http.HttpServletResponse.SC_NO_CONTENT;
 import static javax.servlet.http.HttpServletResponse.SC_OK;
+import static javax.servlet.http.HttpServletResponse.SC_SERVICE_UNAVAILABLE;
 import static javax.servlet.http.HttpServletResponse.SC_UNAUTHORIZED;
 import static org.apache.commons.lang3.StringUtils.trimToNull;
 import static org.opencastproject.index.service.util.RestUtils.conflictJson;
@@ -58,14 +59,12 @@ import static org.opencastproject.util.doc.rest.RestParameter.Type.TEXT;
 
 import org.opencastproject.adminui.exception.JobEndpointException;
 import org.opencastproject.adminui.impl.AdminUIConfiguration;
-import org.opencastproject.adminui.impl.index.AdminUISearchIndex;
+import org.opencastproject.adminui.index.AdminUISearchIndex;
 import org.opencastproject.adminui.util.BulkUpdateUtil;
 import org.opencastproject.adminui.util.QueryPreprocessor;
 import org.opencastproject.authorization.xacml.manager.api.AclService;
 import org.opencastproject.authorization.xacml.manager.api.AclServiceException;
-import org.opencastproject.authorization.xacml.manager.api.EpisodeACLTransition;
 import org.opencastproject.authorization.xacml.manager.api.ManagedAcl;
-import org.opencastproject.authorization.xacml.manager.api.TransitionQuery;
 import org.opencastproject.capture.CaptureParameters;
 import org.opencastproject.capture.admin.api.Agent;
 import org.opencastproject.capture.admin.api.CaptureAgentStateService;
@@ -77,7 +76,6 @@ import org.opencastproject.index.service.api.IndexService;
 import org.opencastproject.index.service.api.IndexService.Source;
 import org.opencastproject.index.service.catalog.adapter.MetadataList;
 import org.opencastproject.index.service.catalog.adapter.MetadataList.Locked;
-import org.opencastproject.index.service.catalog.adapter.MetadataUtils;
 import org.opencastproject.index.service.exception.IndexServiceException;
 import org.opencastproject.index.service.impl.index.event.Event;
 import org.opencastproject.index.service.impl.index.event.EventIndexSchema;
@@ -98,6 +96,7 @@ import org.opencastproject.mediapackage.AudioStream;
 import org.opencastproject.mediapackage.Catalog;
 import org.opencastproject.mediapackage.MediaPackage;
 import org.opencastproject.mediapackage.MediaPackageElement;
+import org.opencastproject.mediapackage.MediaPackageException;
 import org.opencastproject.mediapackage.Publication;
 import org.opencastproject.mediapackage.Track;
 import org.opencastproject.mediapackage.VideoStream;
@@ -113,10 +112,12 @@ import org.opencastproject.scheduler.api.Recording;
 import org.opencastproject.scheduler.api.SchedulerException;
 import org.opencastproject.scheduler.api.SchedulerService;
 import org.opencastproject.scheduler.api.TechnicalMetadata;
+import org.opencastproject.scheduler.api.Util;
 import org.opencastproject.security.api.AccessControlList;
 import org.opencastproject.security.api.AccessControlParser;
 import org.opencastproject.security.api.AclScope;
 import org.opencastproject.security.api.AuthorizationService;
+import org.opencastproject.security.api.Organization;
 import org.opencastproject.security.api.SecurityService;
 import org.opencastproject.security.api.UnauthorizedException;
 import org.opencastproject.security.api.User;
@@ -131,11 +132,11 @@ import org.opencastproject.util.RestUtil;
 import org.opencastproject.util.UrlSupport;
 import org.opencastproject.util.data.Option;
 import org.opencastproject.util.data.Tuple;
+import org.opencastproject.util.data.Tuple3;
 import org.opencastproject.util.doc.rest.RestParameter;
 import org.opencastproject.util.doc.rest.RestQuery;
 import org.opencastproject.util.doc.rest.RestResponse;
 import org.opencastproject.util.doc.rest.RestService;
-import org.opencastproject.workflow.api.ConfiguredWorkflowRef;
 import org.opencastproject.workflow.api.RetryStrategy;
 import org.opencastproject.workflow.api.WorkflowDatabaseException;
 import org.opencastproject.workflow.api.WorkflowDefinition;
@@ -158,10 +159,7 @@ import net.fortuna.ical4j.model.property.RRule;
 
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.codehaus.jettison.json.JSONException;
-import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -229,7 +227,6 @@ public abstract class AbstractEventEndpoint {
   public static final String SCHEDULING_START_KEY = "start";
   public static final String SCHEDULING_END_KEY = "end";
   private static final String SCHEDULING_AGENT_CONFIGURATION_KEY = "agentConfiguration";
-  private static final String SCHEDULING_OPT_OUT_KEY = "optOut";
 
   private static final String WORKFLOW_ACTION_STOP = "STOP";
 
@@ -423,10 +420,10 @@ public abstract class AbstractEventEndpoint {
     try {
       eventIdsJsonArray = (JSONArray) parser.parse(eventIdsContent);
     } catch (org.json.simple.parser.ParseException e) {
-      logger.error("Unable to parse '{}' because: {}", eventIdsContent, ExceptionUtils.getStackTrace(e));
+      logger.error("Unable to parse '{}'", eventIdsContent, e);
       return Response.status(Response.Status.BAD_REQUEST).build();
     } catch (ClassCastException e) {
-      logger.error("Unable to cast '{}' because: {}", eventIdsContent, ExceptionUtils.getStackTrace(e));
+      logger.error("Unable to cast '{}'", eventIdsContent, e);
       return Response.status(Response.Status.BAD_REQUEST).build();
     }
 
@@ -488,9 +485,7 @@ public abstract class AbstractEventEndpoint {
     Event event = optEvent.get();
     List<JValue> pubJSON = eventPublicationsToJson(event);
 
-    return okJson(obj(f("publications", arr(pubJSON)), f("optout", v(event.getOptedOut(), Jsons.BLANK)),
-            f("blacklisted", v(event.getBlacklisted(), Jsons.BLANK)),
-            f("review-status", v(event.getReviewStatus(), Jsons.BLANK)),
+    return okJson(obj(f("publications", arr(pubJSON)),
             f("start-date", v(event.getRecordingStartDate(), Jsons.BLANK)),
             f("end-date", v(event.getRecordingEndDate(), Jsons.BLANK))));
   }
@@ -541,14 +536,14 @@ public abstract class AbstractEventEndpoint {
         fields.add(technicalMetadataToJson.apply(getSchedulerService().getTechnicalMetadata(eventId)));
       } catch (final NotFoundException e) {
         if (!ignoreNonScheduled) {
-          logger.warn("Unable to find id {}", eventId, ExceptionUtils.getStackTrace(e));
+          logger.warn("Unable to find id {}", eventId, e);
           return notFound("Cannot find an event with id '%s'.", eventId);
         }
       } catch (final UnauthorizedException e) {
-        logger.warn("Unauthorized access to event ID {}", eventId, ExceptionUtils.getStackTrace(e));
+        logger.warn("Unauthorized access to event ID {}", eventId, e);
         return Response.status(Status.BAD_REQUEST).build();
       } catch (final SchedulerException e) {
-        logger.warn("Scheduler exception accessing event ID {}", eventId, ExceptionUtils.getStackTrace(e));
+        logger.warn("Scheduler exception accessing event ID {}", eventId, e);
         return Response.status(Status.BAD_REQUEST).build();
       }
     }
@@ -578,8 +573,7 @@ public abstract class AbstractEventEndpoint {
     } catch (ParseException e) {
       return RestUtil.R.badRequest("The UTC dates in the scheduling object is not valid");
     } catch (SchedulerException e) {
-      logger.error("Unable to update scheduling technical metadata of event {}: {}", eventId,
-              ExceptionUtils.getStackTrace(e));
+      logger.error("Unable to update scheduling technical metadata of event {}", eventId, e);
       throw new WebApplicationException(e, SC_INTERNAL_SERVER_ERROR);
     } catch (IllegalStateException e) {
       return RestUtil.R.badRequest(e.getMessage());
@@ -627,21 +621,14 @@ public abstract class AbstractEventEndpoint {
         event.getIdentifier(), technicalMetadata.getCaptureAgentConfiguration(), agentConfiguration);
     }
 
-    Opt<Opt<Boolean>> optOut = Opt.none();
-    if (schedulingJson.has(SCHEDULING_OPT_OUT_KEY)) {
-      optOut = Opt.some(Opt.some(schedulingJson.getBoolean(SCHEDULING_OPT_OUT_KEY)));
-      logger.trace("Updating optout status of event '{}' id from '{}' to '{}'",
-        event.getIdentifier(), event.getOptedOut(), optOut);
-    }
-
     if ((start.isSome() || end.isSome())
             && end.getOr(technicalMetadata.getEndDate()).before(start.getOr(technicalMetadata.getStartDate()))) {
       throw new IllegalStateException("The end date is before the start date");
     }
 
-    if (!start.isNone() || !end.isNone() || !agentId.isNone() || !agentConfiguration.isNone() || !optOut.isNone()) {
+    if (!start.isNone() || !end.isNone() || !agentId.isNone() || !agentConfiguration.isNone()) {
       getSchedulerService()
-        .updateEvent(event.getIdentifier(), start, end, agentId, Opt.none(), Opt.none(), Opt.none(), agentConfiguration, optOut, SchedulerService.ORIGIN);
+        .updateEvent(event.getIdentifier(), start, end, agentId, Opt.none(), Opt.none(), Opt.none(), agentConfiguration);
       // We want to keep the bibliographic meta data in sync
       updateBibliographicMetadata(event, agentId, start, end);
     }
@@ -708,7 +695,7 @@ public abstract class AbstractEventEndpoint {
       return Response.ok(org.opencastproject.util.Jsons.arr(commentArr).toJson(), MediaType.APPLICATION_JSON_TYPE)
               .build();
     } catch (EventCommentException e) {
-      logger.error("Unable to get comments from event {}: {}", eventId, ExceptionUtils.getStackTrace(e));
+      logger.error("Unable to get comments from event {}", eventId, e);
       throw new WebApplicationException(e);
     }
   }
@@ -756,7 +743,7 @@ public abstract class AbstractEventEndpoint {
     } catch (NotFoundException e) {
       throw e;
     } catch (Exception e) {
-      logger.error("Could not retrieve comment {}: {}", commentId, ExceptionUtils.getStackTrace(e));
+      logger.error("Could not retrieve comment {}", commentId, e);
       throw new WebApplicationException(e);
     }
   }
@@ -807,7 +794,7 @@ public abstract class AbstractEventEndpoint {
     } catch (NotFoundException e) {
       throw e;
     } catch (Exception e) {
-      logger.error("Unable to update the comments catalog on event {}: {}", eventId, ExceptionUtils.getStackTrace(e));
+      logger.error("Unable to update the comments catalog on event {}", eventId, e);
       throw new WebApplicationException(e);
     }
   }
@@ -841,7 +828,7 @@ public abstract class AbstractEventEndpoint {
 
       Source eventSource = getIndexService().getEventSource(optEvent.get());
       if (eventSource == Source.ARCHIVE) {
-        if (getAclService().applyAclToEpisode(eventId, accessControlList, Option.<ConfiguredWorkflowRef> none())) {
+        if (getAclService().applyAclToEpisode(eventId, accessControlList)) {
           return ok();
         } else {
           logger.warn("Unable to find the event '{}'", eventId);
@@ -860,17 +847,17 @@ public abstract class AbstractEventEndpoint {
         // We could check agent access here if we want to forbid updating ACLs for users without access.
         getSchedulerService().updateEvent(eventId, Opt.<Date> none(), Opt.<Date> none(), Opt.<String> none(),
                 Opt.<Set<String>> none(), some(mediaPackage), Opt.<Map<String, String>> none(),
-                Opt.<Map<String, String>> none(), Opt.<Opt<Boolean>> none(), SchedulerService.ORIGIN);
+                Opt.<Map<String, String>> none());
         return ok();
       }
-    } catch (AclServiceException e) {
+    } catch (AclServiceException | MediaPackageException e) {
       if (e.getCause() instanceof UnauthorizedException) {
         return forbidden();
       }
       logger.error("Error applying acl '{}' to event '{}'", accessControlList, eventId, e);
       return serverError();
     } catch (SchedulerException e) {
-      logger.error("Error applying ACL to scheduled event {} because {}", eventId, ExceptionUtils.getStackTrace(e));
+      logger.error("Error applying ACL to scheduled event {}", eventId, e);
       return serverError();
     }
   }
@@ -905,7 +892,7 @@ public abstract class AbstractEventEndpoint {
       return Response.created(getCommentUrl(eventId, createdComment.getId().get()))
               .entity(createdComment.toJson().toJson()).build();
     } catch (Exception e) {
-      logger.error("Unable to create a comment on the event {}: {}", eventId, ExceptionUtils.getStackTrace(e));
+      logger.error("Unable to create a comment on the event {}", eventId, e);
       throw new WebApplicationException(e);
     }
   }
@@ -936,7 +923,7 @@ public abstract class AbstractEventEndpoint {
     } catch (NotFoundException e) {
       throw e;
     } catch (Exception e) {
-      logger.error("Could not resolve comment {}: {}", commentId, ExceptionUtils.getStackTrace(e));
+      logger.error("Could not resolve comment {}", commentId, e);
       throw new WebApplicationException(e);
     }
   }
@@ -963,8 +950,7 @@ public abstract class AbstractEventEndpoint {
     } catch (NotFoundException e) {
       throw e;
     } catch (Exception e) {
-      logger.error("Unable to delete comment {} on event {}: {}",
-              commentId, eventId, ExceptionUtils.getStackTrace(e));
+      logger.error("Unable to delete comment {} on event {}", commentId, eventId, e);
       throw new WebApplicationException(e);
     }
   }
@@ -1006,8 +992,7 @@ public abstract class AbstractEventEndpoint {
     } catch (NotFoundException e) {
       throw e;
     } catch (Exception e) {
-      logger.warn("Could not remove event comment reply {} from comment {}: {}",
-              replyId, commentId, ExceptionUtils.getStackTrace(e));
+      logger.warn("Could not remove event comment reply {} from comment {}", replyId, commentId, e);
       throw new WebApplicationException(e);
     }
   }
@@ -1057,8 +1042,7 @@ public abstract class AbstractEventEndpoint {
     } catch (NotFoundException e) {
       throw e;
     } catch (Exception e) {
-      logger.warn("Could not update event comment reply {} from comment {}: {}",
-              replyId, commentId, ExceptionUtils.getStackTrace(e));
+      logger.warn("Could not update event comment reply {} from comment {}", replyId, commentId, e);
       throw new WebApplicationException(e);
     }
   }
@@ -1105,34 +1089,9 @@ public abstract class AbstractEventEndpoint {
       getIndexService().updateCommentCatalog(optEvent.get(), comments);
       return Response.ok(updatedComment.toJson().toJson()).build();
     } catch (Exception e) {
-      logger.warn("Could not create event comment reply on comment {}: {}", comment, ExceptionUtils.getStackTrace(e));
+      logger.warn("Could not create event comment reply on comment {}", comment, e);
       throw new WebApplicationException(e);
     }
-  }
-
-  @GET
-  @Path("{eventId}/participation.json")
-  @Produces(MediaType.APPLICATION_JSON)
-  @RestQuery(name = "geteventparticipationinformation", description = "Get the particition information of a event", returnDescription = "The participation information", pathParameters = {
-          @RestParameter(name = "eventId", isRequired = true, description = "The event identifier", type = RestParameter.Type.STRING) }, reponses = {
-                  @RestResponse(responseCode = SC_BAD_REQUEST, description = "The required form params were missing in the request."),
-                  @RestResponse(responseCode = SC_NOT_FOUND, description = "If the event has not been found."),
-                  @RestResponse(responseCode = SC_OK, description = "The access information ") })
-  public Response getEventParticipation(@PathParam("eventId") String eventId) throws Exception {
-    final Event event = getEventOrThrowNotFoundException(eventId);
-
-    Date startDate = new DateTime(event.getTechnicalStartTime()).toDateTime(DateTimeZone.UTC).toDate();
-    Date currentDate = new DateTime().toDateTime(DateTimeZone.UTC).toDate();
-    boolean readOnly = false;
-
-    if (currentDate.after(startDate)) {
-      readOnly = true;
-    }
-
-    Boolean optedOut = event.getOptedOut();
-
-    return okJson(obj(f("opt_out", v(optedOut != null ? optedOut : false)),
-            f("review_status", v(event.getReviewStatus(), BLANK)), f("read_only", v(readOnly))));
   }
 
   @GET
@@ -1161,7 +1120,7 @@ public abstract class AbstractEventEndpoint {
       mc.removeField(series);
       Map<String, String> seriesAccessEventModal = getSeriesService().getUserSeriesByAccess(true);
       Opt<Map<String, String>> map = Opt.some(seriesAccessEventModal);
-      MetadataField<String> newSeries = MetadataUtils.copyMetadataField(series);
+      MetadataField<String> newSeries = new MetadataField(series);
       newSeries.setCollection(map);
       newSeries.setValue(optEvent.get().getSeriesId());
       mc.addField(newSeries);
@@ -1178,10 +1137,10 @@ public abstract class AbstractEventEndpoint {
   @PUT
   @Path("bulk/update")
   @RestQuery(name = "bulkupdate", description = "Update all of the given events at once", restParameters = {
-    @RestParameter(name = "update", isRequired = true, type = RestParameter.Type.TEXT, description = "The list of events and fields to update.")}, reponses = {
+    @RestParameter(name = "update", isRequired = true, type = RestParameter.Type.TEXT, description = "The list of groups with events and fields to update.")}, reponses = {
     @RestResponse(description = "All events have been updated successfully.", responseCode = HttpServletResponse.SC_OK),
     @RestResponse(description = "Could not parse update instructions.", responseCode = HttpServletResponse.SC_BAD_REQUEST),
-    @RestResponse(description = "Faield updating metadata or scheduling information. Some events may have been updated. Details are available in the response body.", responseCode = HttpServletResponse.SC_INTERNAL_SERVER_ERROR),
+    @RestResponse(description = "Field updating metadata or scheduling information. Some events may have been updated. Details are available in the response body.", responseCode = HttpServletResponse.SC_INTERNAL_SERVER_ERROR),
     @RestResponse(description = "The events in the response body were not found. No events were updated.", responseCode = HttpServletResponse.SC_NOT_FOUND)},
     returnDescription = "In case of success, no content is returned. In case of errors while updating the metadata or scheduling information, the errors are returned. In case events were not found, their ids are returned")
   public Response bulkUpdate(@FormParam("update") String updateJson) {
@@ -1193,50 +1152,49 @@ public abstract class AbstractEventEndpoint {
       return badRequest("Cannot parse bulk update instructions");
     }
 
-    // Get all the events to edit
-    final Map<String, Optional<Event>> events = instructions.getEventIds().stream()
-      .collect(Collectors.toMap(id -> id, id -> BulkUpdateUtil.getEvent(getIndexService(), getIndex(), id)));
-
-    // Check for invalid (non-existing) event ids
-    final Set<String> notFoundIds = events.entrySet().stream()
-      .filter(e -> !e.getValue().isPresent())
-      .map(Entry::getKey)
-      .collect(Collectors.toSet());
-    if (!notFoundIds.isEmpty()) {
-      return notFoundJson(JSONUtils.setToJSON(notFoundIds));
-    }
-
     final Map<String, String> metadataUpdateFailures = new HashMap<>();
     final Map<String, String> schedulingUpdateFailures = new HashMap<>();
 
-    events.values().forEach(e -> e.ifPresent(event -> {
+    for (final BulkUpdateUtil.BulkUpdateInstructionGroup groupInstructions : instructions.getGroups()) {
+      // Get all the events to edit
+      final Map<String, Optional<Event>> events = groupInstructions.getEventIds().stream()
+        .collect(Collectors.toMap(id -> id, id -> BulkUpdateUtil.getEvent(getIndexService(), getIndex(), id)));
 
-      JSONObject metadata = null;
-
-      // Update the scheduling information
-      try {
-        if (instructions.getScheduling() != null) {
-          // Since we only have the start/end time, we have to add the correct date(s) for this event.
-          final JSONObject scheduling = BulkUpdateUtil.addSchedulingDates(event, instructions.getScheduling());
-          updateEventScheduling(scheduling.toJSONString(), event);
-          // We have to update the non-technical metadata as well to keep them in sync with the technical ones.
-          metadata = BulkUpdateUtil.toNonTechnicalMetadataJson(scheduling);
-        }
-      } catch (Exception exception) {
-        schedulingUpdateFailures.put(event.getIdentifier(), exception.getMessage());
+      // Check for invalid (non-existing) event ids
+      final Set<String> notFoundIds = events.entrySet().stream().filter(e -> !e.getValue().isPresent()).map(Entry::getKey).collect(Collectors.toSet());
+      if (!notFoundIds.isEmpty()) {
+        return notFoundJson(JSONUtils.setToJSON(notFoundIds));
       }
 
-      // Update the event metadata
-      try {
-        if (instructions.getMetadata() != null || metadata != null) {
-          metadata = BulkUpdateUtil.mergeMetadataFields(metadata, instructions.getMetadata());
-          getIndexService().updateAllEventMetadata(event.getIdentifier(),
-            JSONArray.toJSONString(Collections.singletonList(metadata)), getIndex());
+
+      events.values().forEach(e -> e.ifPresent(event -> {
+
+        JSONObject metadata = null;
+
+        // Update the scheduling information
+        try {
+          if (groupInstructions.getScheduling() != null) {
+            // Since we only have the start/end time, we have to add the correct date(s) for this event.
+            final JSONObject scheduling = BulkUpdateUtil.addSchedulingDates(event, groupInstructions.getScheduling());
+            updateEventScheduling(scheduling.toJSONString(), event);
+            // We have to update the non-technical metadata as well to keep them in sync with the technical ones.
+            metadata = BulkUpdateUtil.toNonTechnicalMetadataJson(scheduling);
+          }
+        } catch (Exception exception) {
+          schedulingUpdateFailures.put(event.getIdentifier(), exception.getMessage());
         }
-      } catch (Exception exception) {
-        metadataUpdateFailures.put(event.getIdentifier(), exception.getMessage());
-      }
-    }));
+
+        // Update the event metadata
+        try {
+          if (groupInstructions.getMetadata() != null || metadata != null) {
+            metadata = BulkUpdateUtil.mergeMetadataFields(metadata, groupInstructions.getMetadata());
+            getIndexService().updateAllEventMetadata(event.getIdentifier(), JSONArray.toJSONString(Collections.singletonList(metadata)), getIndex());
+          }
+        } catch (Exception exception) {
+          metadataUpdateFailures.put(event.getIdentifier(), exception.getMessage());
+        }
+      }));
+    }
 
     // Check if there were any errors updating the metadata or scheduling information
     if (!metadataUpdateFailures.isEmpty() || !schedulingUpdateFailures.isEmpty()) {
@@ -1264,25 +1222,28 @@ public abstract class AbstractEventEndpoint {
       return badRequest("Cannot parse bulk update instructions");
     }
 
-    // Get all the events to check
-    final Map<String, Optional<Event>> events = instructions.getEventIds().stream()
-      .collect(Collectors.toMap(id -> id, id -> BulkUpdateUtil.getEvent(getIndexService(), getIndex(), id)));
-
+    final Map<String, List<JValue>> conflicts = new HashMap<>();
+    final List<Tuple3<String, Optional<Event>, JSONObject>> eventsWithSchedulingOpt = instructions.getGroups().stream()
+      .flatMap(group -> group.getEventIds().stream().map(eventId -> Tuple3
+        .tuple3(eventId, BulkUpdateUtil.getEvent(getIndexService(), getIndex(), eventId), group.getScheduling())))
+      .collect(Collectors.toList());
     // Check for invalid (non-existing) event ids
-    final Set<String> notFoundIds = events.entrySet().stream()
-      .filter(e -> !e.getValue().isPresent())
-      .map(Entry::getKey)
-      .collect(Collectors.toSet());
+    final Set<String> notFoundIds = eventsWithSchedulingOpt.stream().filter(e -> !e.getB().isPresent())
+      .map(Tuple3::getA).collect(Collectors.toSet());
     if (!notFoundIds.isEmpty()) {
       return notFoundJson(JSONUtils.setToJSON(notFoundIds));
     }
-
-    final Map<String, List<JValue>> conflicts = new HashMap<>();
-    events.values().forEach(e -> e.ifPresent(event -> {
+    final List<Tuple<Event, JSONObject>> eventsWithScheduling = eventsWithSchedulingOpt.stream()
+      .map(e -> Tuple.tuple(e.getB().get(), e.getC())).collect(Collectors.toList());
+    final Set<String> changedIds = eventsWithScheduling.stream().map(e -> e.getA().getIdentifier())
+      .collect(Collectors.toSet());
+    for (final Tuple<Event, JSONObject> eventWithGroup : eventsWithScheduling) {
+      final Event event = eventWithGroup.getA();
+      final JSONObject groupScheduling = eventWithGroup.getB();
       try {
-        if (instructions.getScheduling() != null) {
+        if (groupScheduling != null) {
           // Since we only have the start/end time, we have to add the correct date(s) for this event.
-          final JSONObject scheduling = BulkUpdateUtil.addSchedulingDates(event, instructions.getScheduling());
+          final JSONObject scheduling = BulkUpdateUtil.addSchedulingDates(event, groupScheduling);
           final Date start = Date.from(Instant.parse((String) scheduling.get(SCHEDULING_START_KEY)));
           final Date end = Date.from(Instant.parse((String) scheduling.get(SCHEDULING_END_KEY)));
           final String agentId = Optional.ofNullable((String) scheduling.get(SCHEDULING_AGENT_ID_KEY))
@@ -1291,41 +1252,39 @@ public abstract class AbstractEventEndpoint {
           final List<JValue> currentConflicts = new ArrayList<>();
 
           // Check for conflicts between the events themselves
-          events.values().forEach(oe -> oe.ifPresent(otherEvent -> {
-            if (otherEvent.getIdentifier().equals(event.getIdentifier())) {
-              // don't check event against itself
-              return;
-            }
-            final JSONObject otherScheduling = BulkUpdateUtil.addSchedulingDates(otherEvent, instructions.getScheduling());
+          eventsWithScheduling.stream()
+            .filter(otherEvent -> !otherEvent.getA().getIdentifier().equals(event.getIdentifier()))
+            .forEach(otherEvent -> {
+            final JSONObject otherScheduling = BulkUpdateUtil.addSchedulingDates(otherEvent.getA(), otherEvent.getB());
             final Date otherStart = Date.from(Instant.parse((String) otherScheduling.get(SCHEDULING_START_KEY)));
             final Date otherEnd = Date.from(Instant.parse((String) otherScheduling.get(SCHEDULING_END_KEY)));
             final String otherAgentId = Optional.ofNullable((String) otherScheduling.get(SCHEDULING_AGENT_ID_KEY))
-              .orElse(otherEvent.getAgentId());
+              .orElse(otherEvent.getA().getAgentId());
             if (!otherAgentId.equals(agentId)) {
               // different agent -> no conflict
               return;
             }
-            if (start.before(otherEnd) && end.after(otherStart)) {
+            if (Util.schedulingIntervalsOverlap(start, end, otherStart, otherEnd)) {
               // conflict
               currentConflicts.add(convertEventToConflictingObject(DateTimeSupport.toUTC(otherStart.getTime()),
-                DateTimeSupport.toUTC(otherEnd.getTime()), otherEvent.getTitle()));
+                DateTimeSupport.toUTC(otherEnd.getTime()), otherEvent.getA().getTitle()));
             }
-          }));
+          });
 
           // Check for conflicts with other events from the database
           final List<MediaPackage> conflicting = getSchedulerService().findConflictingEvents(agentId, start, end)
             .stream()
-            .filter(mp -> !events.keySet().contains(mp.getIdentifier().toString()))
+            .filter(mp -> !changedIds.contains(mp.getIdentifier().toString()))
             .collect(Collectors.toList());
-          if (conflicting != null && !conflicting.isEmpty()) {
+          if (!conflicting.isEmpty()) {
             currentConflicts.addAll(convertToConflictObjects(event.getIdentifier(), conflicting));
           }
           conflicts.put(event.getIdentifier(), currentConflicts);
         }
-      } catch (SchedulerException | UnauthorizedException | SearchIndexException exception) {
+      } catch (final SchedulerException | UnauthorizedException | SearchIndexException exception) {
         throw new RuntimeException(exception);
       }
-    }));
+    }
 
     if (!conflicts.isEmpty()) {
       final List<JValue> responseJson = new ArrayList<>();
@@ -1532,7 +1491,7 @@ public abstract class AbstractEventEndpoint {
       return notFound("Cannot find an event with id '%s'.", id);
 
     try {
-      if (!optEvent.get().hasRecordingStarted()) {
+      if (optEvent.get().isScheduledEvent() && !optEvent.get().hasRecordingStarted()) {
         List<Field> fields = new ArrayList<Field>();
         Map<String, String> workflowConfig = getSchedulerService().getWorkflowConfig(id);
         for (Entry<String, String> entry : workflowConfig.entrySet()) {
@@ -1566,7 +1525,7 @@ public abstract class AbstractEventEndpoint {
     if (optEvent.isNone())
       return notFound("Cannot find an event with id '%s'.", id);
 
-    if (!optEvent.get().hasRecordingStarted()) {
+    if (optEvent.get().isScheduledEvent() && !optEvent.get().hasRecordingStarted()) {
       try {
 
         JSONObject configJSON;
@@ -1598,8 +1557,7 @@ public abstract class AbstractEventEndpoint {
         checkAgentAccessForAgent(optEvent.get().getAgentId());
 
         getSchedulerService().updateEvent(id, Opt.<Date> none(), Opt.<Date> none(), Opt.<String> none(),
-                Opt.<Set<String>> none(), Opt.<MediaPackage> none(), workflowConfigOpt, caMetadataOpt,
-                Opt.<Opt<Boolean>> none(), SchedulerService.ORIGIN);
+                Opt.<Set<String>> none(), Opt.<MediaPackage> none(), workflowConfigOpt, caMetadataOpt);
         return Response.noContent().build();
       } catch (NotFoundException e) {
         return notFound("Cannot find event %s in scheduler service", id);
@@ -1791,28 +1749,12 @@ public abstract class AbstractEventEndpoint {
       systemAclsJson.add(AccessInformationUtil.serializeManagedAcl(acl));
     }
 
-    // Get the episode ACL
-    final TransitionQuery q = TransitionQuery.query().withId(eventId).withScope(AclScope.Episode);
-    List<EpisodeACLTransition> episodeTransistions;
-    JSONArray transitionsJson = new JSONArray();
-    try {
-      episodeTransistions = getAclService().getTransitions(q).getEpisodeTransistions();
-      for (EpisodeACLTransition trans : episodeTransistions) {
-        transitionsJson.add(AccessInformationUtil.serializeEpisodeACLTransition(trans));
-      }
-    } catch (AclServiceException e) {
-      logger.error(
-              "There was an error while trying to get the ACL transitions for series '{}' from the ACL service: {}",
-              eventId, ExceptionUtils.getStackTrace(e));
-      return RestUtil.R.serverError();
-    }
-
     AccessControlList activeAcl = new AccessControlList();
     try {
       if (optEvent.get().getAccessPolicy() != null)
         activeAcl = AccessControlParser.parseAcl(optEvent.get().getAccessPolicy());
     } catch (Exception e) {
-      logger.error("Unable to parse access policy because: {}", ExceptionUtils.getStackTrace(e));
+      logger.error("Unable to parse access policy", e);
     }
     Option<ManagedAcl> currentAcl = AccessInformationUtil.matchAcls(acls, activeAcl);
 
@@ -1820,7 +1762,6 @@ public abstract class AbstractEventEndpoint {
     episodeAccessJson.put("current_acl", currentAcl.isSome() ? currentAcl.get().getId() : 0L);
     episodeAccessJson.put("acl", AccessControlParser.toJsonSilent(activeAcl));
     episodeAccessJson.put("privileges", AccessInformationUtil.serializePrivilegesByRole(activeAcl));
-    episodeAccessJson.put("transitions", transitionsJson);
     if (StringUtils.isNotBlank(optEvent.get().getWorkflowState())
             && WorkflowUtil.isActive(WorkflowInstance.WorkflowState.valueOf(optEvent.get().getWorkflowState())))
       episodeAccessJson.put("locked", true);
@@ -1830,104 +1771,6 @@ public abstract class AbstractEventEndpoint {
     jsonReturnObj.put("system_acls", systemAclsJson);
 
     return Response.ok(jsonReturnObj.toString()).build();
-  }
-
-  @POST
-  @Path("{eventId}/transitions")
-  @RestQuery(name = "addEventTransition", description = "Adds an ACL transition to an event", returnDescription = "The method doesn't return any content", pathParameters = {
-          @RestParameter(name = "eventId", isRequired = true, description = "The event identifier", type = RestParameter.Type.STRING) }, restParameters = {
-                  @RestParameter(name = "transition", isRequired = true, description = "The transition (JSON object) to add", type = RestParameter.Type.TEXT) }, reponses = {
-                          @RestResponse(responseCode = SC_BAD_REQUEST, description = "The required params were missing in the request."),
-                          @RestResponse(responseCode = SC_NO_CONTENT, description = "The method doesn't return any content"),
-                          @RestResponse(responseCode = SC_NOT_FOUND, description = "If the event has not been found.") })
-  public Response addEventTransition(@PathParam("eventId") String eventId,
-          @FormParam("transition") String transitionStr) throws SearchIndexException {
-    if (StringUtils.isBlank(eventId) || StringUtils.isBlank(transitionStr))
-      return RestUtil.R.badRequest("Missing parameters");
-
-    Opt<Event> optEvent = getIndexService().getEvent(eventId, getIndex());
-    if (optEvent.isNone())
-      return notFound("Cannot find an event with id '%s'.", eventId);
-
-    try {
-      final org.codehaus.jettison.json.JSONObject t = new org.codehaus.jettison.json.JSONObject(transitionStr);
-      Option<ConfiguredWorkflowRef> workflowRef;
-      if (t.has("workflow_id"))
-        workflowRef = Option.some(ConfiguredWorkflowRef.workflow(t.getString("workflow_id")));
-      else
-        workflowRef = Option.none();
-
-      Option<Long> managedAclId;
-      if (t.has("acl_id"))
-        managedAclId = Option.some(t.getLong("acl_id"));
-      else
-        managedAclId = Option.none();
-
-      getAclService().addEpisodeTransition(eventId, managedAclId,
-              new Date(DateTimeSupport.fromUTC(t.getString("application_date"))), workflowRef);
-      return Response.noContent().build();
-    } catch (AclServiceException e) {
-      logger.error("Error while trying to get ACL transitions for event '{}' from ACL service: {}", eventId, e);
-      throw new WebApplicationException(e, SC_INTERNAL_SERVER_ERROR);
-    } catch (JSONException e) {
-      return RestUtil.R.badRequest("The transition object is not valid");
-    } catch (IllegalStateException e) {
-      // That should never happen
-      throw new WebApplicationException(e, SC_INTERNAL_SERVER_ERROR);
-    } catch (ParseException e) {
-      return RestUtil.R.badRequest("The date could not be parsed");
-    }
-  }
-
-  @PUT
-  @Path("{eventId}/transitions/{transitionId}")
-  @RestQuery(name = "updateEventTransition", description = "Updates an ACL transition of an event", returnDescription = "The method doesn't return any content", pathParameters = {
-          @RestParameter(name = "eventId", isRequired = true, description = "The event identifier", type = RestParameter.Type.STRING),
-          @RestParameter(name = "transitionId", isRequired = true, description = "The transition identifier", type = RestParameter.Type.INTEGER) }, restParameters = {
-                  @RestParameter(name = "transition", isRequired = true, description = "The updated transition (JSON object)", type = RestParameter.Type.TEXT) }, reponses = {
-                          @RestResponse(responseCode = SC_BAD_REQUEST, description = "The required params were missing in the request."),
-                          @RestResponse(responseCode = SC_NOT_FOUND, description = "If the event or transtion has not been found."),
-                          @RestResponse(responseCode = SC_NO_CONTENT, description = "The method doesn't return any content") })
-  public Response updateEventTransition(@PathParam("eventId") String eventId,
-          @PathParam("transitionId") long transitionId, @FormParam("transition") String transitionStr)
-                  throws NotFoundException, SearchIndexException {
-    if (StringUtils.isBlank(transitionStr))
-      return RestUtil.R.badRequest("Missing parameters");
-
-    Opt<Event> optEvent = getIndexService().getEvent(eventId, getIndex());
-    if (optEvent.isNone())
-      return notFound("Cannot find an event with id '%s'.", eventId);
-
-    try {
-      final org.codehaus.jettison.json.JSONObject t = new org.codehaus.jettison.json.JSONObject(transitionStr);
-      Option<ConfiguredWorkflowRef> workflowRef;
-      if (t.has("workflow_id"))
-        workflowRef = Option.some(ConfiguredWorkflowRef.workflow(t.getString("workflow_id")));
-      else
-        workflowRef = Option.none();
-
-      Option<Long> managedAclId;
-      if (t.has("acl_id"))
-        managedAclId = Option.some(t.getLong("acl_id"));
-      else
-        managedAclId = Option.none();
-
-      getAclService().updateEpisodeTransition(transitionId, managedAclId,
-              new Date(DateTimeSupport.fromUTC(t.getString("application_date"))), workflowRef);
-      return Response.noContent().build();
-    } catch (JSONException e) {
-      return RestUtil.R.badRequest("The transition object is not valid");
-    } catch (IllegalStateException e) {
-      // That should never happen
-      throw new WebApplicationException(e, SC_INTERNAL_SERVER_ERROR);
-    } catch (AclServiceException e) {
-      logger.error("Unable to update transtion {} of event {}: {}",
-              transitionId, eventId, ExceptionUtils.getStackTrace(e));
-      throw new WebApplicationException(e, SC_INTERNAL_SERVER_ERROR);
-    } catch (ParseException e) {
-      // That should never happen
-      throw new WebApplicationException(e, SC_INTERNAL_SERVER_ERROR);
-    }
   }
 
   // MH-12085 Add manually uploaded assets, multipart file upload has to be a POST
@@ -1956,95 +1799,6 @@ public abstract class AbstractEventEndpoint {
       return RestUtil.R.badRequest(e.getMessage());
     } catch (Exception e) {
       return RestUtil.R.serverError();
-    }
-  }
-
-  @PUT
-  @Path("{eventId}/optout/{optout}")
-  @RestQuery(name = "updateEventOptoutStatus", description = "Updates an event's opt out status.", returnDescription = "The method doesn't return any content", pathParameters = {
-          @RestParameter(name = "eventId", isRequired = true, description = "The event identifier", type = RestParameter.Type.STRING),
-          @RestParameter(name = "optout", isRequired = true, description = "True or false, true to opt out of this recording.", type = RestParameter.Type.BOOLEAN) }, restParameters = {}, reponses = {
-                  @RestResponse(responseCode = SC_NOT_FOUND, description = "The event has not been found"),
-                  @RestResponse(responseCode = SC_UNAUTHORIZED, description = "Not authorized to perform this action"),
-                  @RestResponse(responseCode = SC_NO_CONTENT, description = "The method doesn't return any content") })
-  public Response updateEventOptOut(@PathParam("eventId") String eventId, @PathParam("optout") boolean optout)
-          throws NotFoundException, UnauthorizedException {
-    try {
-      checkAgentAccessForEvent(eventId);
-      getIndexService().changeOptOutStatus(eventId, optout, getIndex());
-      return Response.noContent().build();
-    } catch (SchedulerException e) {
-      logger.error("Unable to updated opt out status for event with id {}", eventId);
-      throw new WebApplicationException(e, SC_INTERNAL_SERVER_ERROR);
-    } catch (SearchIndexException e) {
-      logger.error("Unable to get event with id {}", eventId);
-      throw new WebApplicationException(e, SC_INTERNAL_SERVER_ERROR);
-    }
-  }
-
-  @POST
-  @Path("optouts")
-  @Produces(MediaType.APPLICATION_JSON)
-  @RestQuery(name = "changeOptOuts", description = "Change the opt out status of many events", returnDescription = "A JSON array listing which events were or were not opted out.", restParameters = {
-          @RestParameter(name = "eventIds", description = "A JSON array of ids of the events to opt out or in", defaultValue = "[]", isRequired = true, type = RestParameter.Type.STRING),
-          @RestParameter(name = "optout", description = "Whether to opt out or not either true or false.", defaultValue = "false", isRequired = true, type = RestParameter.Type.BOOLEAN), }, reponses = {
-                  @RestResponse(description = "Returns a JSON object with the results for the different opted out or in elements such as ok, notFound or error.", responseCode = HttpServletResponse.SC_OK),
-                  @RestResponse(description = "Unable to parse boolean value to opt out, or parse JSON array of opt out events", responseCode = HttpServletResponse.SC_BAD_REQUEST) })
-  public Response changeOptOuts(@FormParam("optout") boolean optout, @FormParam("eventIds") String eventIds) {
-    JSONParser parser = new JSONParser();
-    JSONArray eventIdsArray;
-    try {
-      eventIdsArray = (JSONArray) parser.parse(eventIds);
-    } catch (org.json.simple.parser.ParseException e) {
-      logger.warn("Unable to parse event ids {} : {}", eventIds, ExceptionUtils.getStackTrace(e));
-      return Response.status(Status.BAD_REQUEST).build();
-    } catch (NullPointerException e) {
-      logger.warn("Unable to parse event ids because it was null {}", eventIds);
-      return Response.status(Status.BAD_REQUEST).build();
-    } catch (ClassCastException e) {
-      logger.warn("Unable to parse event ids because it was the wrong class {} : {}", eventIds,
-              ExceptionUtils.getStackTrace(e));
-      return Response.status(Status.BAD_REQUEST).build();
-    }
-
-    BulkOperationResult result = new BulkOperationResult();
-
-    for (Object idObject : eventIdsArray) {
-      String eventId = idObject.toString();
-
-      try {
-        getIndexService().changeOptOutStatus(eventId, optout, getIndex());
-        result.addOk(eventId);
-      } catch (NotFoundException e) {
-        result.addNotFound(eventId);
-      } catch (Exception e) {
-        logger.error("Could not update opt out status of event {}: {}", eventId, ExceptionUtils.getStackTrace(e));
-        result.addServerError(eventId);
-      }
-    }
-    return Response.ok(result.toJson()).build();
-  }
-
-  @DELETE
-  @Path("{eventId}/transitions/{transitionId}")
-  @RestQuery(name = "deleteEventTransition", description = "Deletes an ACL transition from an event", returnDescription = "The method doesn't return any content", pathParameters = {
-          @RestParameter(name = "eventId", isRequired = true, description = "The series identifier", type = RestParameter.Type.STRING),
-          @RestParameter(name = "transitionId", isRequired = true, description = "The transition identifier", type = RestParameter.Type.INTEGER) }, reponses = {
-                  @RestResponse(responseCode = SC_NOT_FOUND, description = "If the event or the transition has not been found."),
-                  @RestResponse(responseCode = SC_NO_CONTENT, description = "The method does not return any content") })
-  public Response deleteEventTransition(@PathParam("eventId") String eventId,
-          @PathParam("transitionId") long transitionId) throws NotFoundException, SearchIndexException {
-    Opt<Event> optEvent = getIndexService().getEvent(eventId, getIndex());
-    if (optEvent.isNone())
-      return notFound("Cannot find an event with id '%s'.", eventId);
-
-    try {
-      getAclService().deleteEpisodeTransition(transitionId);
-      return Response.noContent().build();
-    } catch (AclServiceException e) {
-      logger.error("Error while trying to delete transition '{}' from event '{}': {}",
-              transitionId, eventId, ExceptionUtils.getStackTrace(e));
-      throw new WebApplicationException(e, SC_INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -2117,7 +1871,7 @@ public abstract class AbstractEventEndpoint {
         }
       }
     } catch (WorkflowDatabaseException e) {
-      logger.error("Unable to get available workflow definitions: {}", ExceptionUtils.getStackTrace(e));
+      logger.error("Unable to get available workflow definitions", e);
       return RestUtil.R.serverError();
     }
 
@@ -2228,8 +1982,8 @@ public abstract class AbstractEventEndpoint {
       }
       return Response.noContent().build();
     } catch (Exception e) {
-      logger.error("Unable to find conflicting events for {}, {}, {}: {}",
-              device, startDate, endDate, ExceptionUtils.getStackTrace(e));
+      logger.error("Unable to find conflicting events for {}, {}, {}",
+              device, startDate, endDate, e);
       return RestUtil.R.serverError();
     }
   }
@@ -2270,6 +2024,9 @@ public abstract class AbstractEventEndpoint {
   public Response createNewEvent(@Context HttpServletRequest request) {
     try {
       String result = getIndexService().createEvent(request);
+      if (StringUtils.isEmpty(result)) {
+        return RestUtil.R.badRequest("The date range provided did not include any events");
+      }
       return Response.status(Status.CREATED).entity(result).build();
     } catch (IllegalArgumentException e) {
       return RestUtil.R.badRequest(e.getMessage());
@@ -2295,8 +2052,12 @@ public abstract class AbstractEventEndpoint {
     Option<Integer> optOffset = Option.option(offset);
     Option<String> optSort = Option.option(trimToNull(sort));
     ArrayList<JValue> eventsList = new ArrayList<>();
-    EventSearchQuery query = new EventSearchQuery(getSecurityService().getOrganization().getId(),
-            getSecurityService().getUser());
+    final Organization organization = getSecurityService().getOrganization();
+    final User user = getSecurityService().getUser();
+    if (organization == null || user == null) {
+      return Response.status(SC_SERVICE_UNAVAILABLE).build();
+    }
+    EventSearchQuery query = new EventSearchQuery(organization.getId(), user);
 
     // If the limit is set to 0, this is not taken into account
     if (optLimit.isSome() && limit == 0) {
@@ -2321,10 +2082,6 @@ public abstract class AbstractEventEndpoint {
         query.withSeriesId(filters.get(name));
       if (EventListQuery.FILTER_STATUS_NAME.equals(name))
         query.withEventStatus(filters.get(name));
-      if (EventListQuery.FILTER_OPTEDOUT_NAME.equals(name))
-        query.withOptedOut(Boolean.parseBoolean(filters.get(name)));
-      if (EventListQuery.FILTER_REVIEW_STATUS_NAME.equals(name))
-        query.withReviewStatus(filters.get(name));
       if (EventListQuery.FILTER_PUBLISHER_NAME.equals(name))
         query.withPublisher(filters.get(name));
       if (EventListQuery.FILTER_COMMENTS_NAME.equals(name)) {
@@ -2467,13 +2224,8 @@ public abstract class AbstractEventEndpoint {
     fields.add(f("location", v(event.getLocation(), BLANK)));
     fields.add(f("start_date", v(event.getRecordingStartDate(), BLANK)));
     fields.add(f("end_date", v(event.getRecordingEndDate(), BLANK)));
-
-    String schedulingStatus = event.getSchedulingStatus() == null ? null
-            : "EVENTS.EVENTS.SCHEDULING_STATUS." + event.getSchedulingStatus();
     fields.add(f("managedAcl", v(event.getManagedAcl(), BLANK)));
-    fields.add(f("scheduling_status", v(schedulingStatus, BLANK)));
     fields.add(f("workflow_state", v(event.getWorkflowState(), BLANK)));
-    fields.add(f("review_status", v(event.getReviewStatus(), BLANK)));
     fields.add(f("event_status", v(event.getEventStatus())));
     fields.add(f("source", v(getIndexService().getEventSource(event).toString())));
     fields.add(f("has_comments", v(event.hasComments())));
@@ -2600,7 +2352,7 @@ public abstract class AbstractEventEndpoint {
         }
         return URI.create(getUrlSigningService().sign(url.toString(), getUrlSigningExpireDuration(), null, clientIP));
       } catch (UrlSigningException e) {
-        logger.warn("Unable to sign url '{}': {}", url, ExceptionUtils.getStackTrace(e));
+        logger.warn("Unable to sign url '{}'", url, e);
       }
     }
     return url;
@@ -2661,7 +2413,6 @@ public abstract class AbstractEventEndpoint {
       return obj(f("agentId", v(technicalMetadata.getAgentId(), BLANK)), f("agentConfiguration", agentConfig),
               f("start", start), f("end", end), f("eventId", v(technicalMetadata.getEventId(), BLANK)),
               f("presenters", JSONUtils.setToJSON(technicalMetadata.getPresenters())),
-              f("optOut", v(technicalMetadata.isOptOut())),
               f("recording", recordingToJson.apply(technicalMetadata.getRecording())));
     }
   };

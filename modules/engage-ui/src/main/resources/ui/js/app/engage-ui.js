@@ -12,9 +12,8 @@ function($, bootbox, _, alertify) {
 
         // URL's and Endpoints
         var restEndpoint = "/search/";
-        var playerEndpoint = "";
+        var playerEndpoint = "/play/";
         var infoMeURL = "/info/me.json";
-        var defaultPlayerURL = "/engage/ui/watch.html";
         var springSecurityLoginURL = "/j_spring_security_check";
         var springSecurityLogoutURL = "/j_spring_security_logout";
 
@@ -51,10 +50,6 @@ function($, bootbox, _, alertify) {
         var msg_loginFailed = "Failed to log in.";
         var msg_live_in_progress = "Live (in progress)";
         var msg_live_not_in_progress = "Live (not in progress)";
-        var infoMeURL = "/info/me.json";
-        var defaultPlayerURL = "/engage/ui/watch.html";
-        var springSecurityLoginURL = "/j_spring_security_check";
-        var springSecurityLogoutURL = "/j_spring_security_logout";
         var springLoggedInStrCheck = "j_spring_security_check";
         var $navbarEpisodes = "#navbarEpisodes";
         var $navbarSeries = "#navbarSeries";
@@ -102,6 +97,7 @@ function($, bootbox, _, alertify) {
               case "fr": return "fr-FR";
               case "gl": return "gl-ES";
               case "he": return "he-IL";
+              case "it": return "it-IT";
               case "nl": return "nl-NL";
               case "pl": return "pl-PL";
               case "sl": return "sl-SI";
@@ -485,19 +481,11 @@ function($, bootbox, _, alertify) {
                         if (data.org && data.org.properties) {
                             var logo = data.org.properties.logo_mediamodule ? data.org.properties.logo_mediamodule : "";
                             $($headerLogo).attr("src", logo);
-
-                            var player = data.org.properties.player ? data.org.properties.player : defaultPlayerURL;
-                            if (player.charAt(0) != "/")
-                                player = "/" + player;
-
-                            playerEndpoint = player;
                         } else {
                             log("Error: No info data received.");
                             setAnonymousUser();
                         }
                     }
-
-                    log("Chosen player: " + player);
                 }
             })
         }
@@ -691,11 +679,11 @@ function($, bootbox, _, alertify) {
                     $($main_container).append(tile);
 
                     if (canLaunch) {
-                        $("#" + _.escape(data["id"])).attr("href", playerEndpoint + "?id=" + _.escape(data["id"]));
+                        $("#" + _.escape(data["id"])).attr("href", _.escape(playerEndpoint + data["id"]));
 
                         $("#" + _.escape(data["id"])).on("keypress", function(ev) {
                             if (ev.which == 13 || ev.which == 32) {
-                                $(location).attr("href", playerEndpoint + "?id=" + _.escape(data["id"]));
+                                $(location).attr("href", _.escape(playerEndpoint + data["id"]));
                             }
                         });
                     }

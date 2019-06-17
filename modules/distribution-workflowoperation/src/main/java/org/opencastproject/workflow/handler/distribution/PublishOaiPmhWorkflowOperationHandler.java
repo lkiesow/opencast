@@ -29,12 +29,10 @@ import static org.opencastproject.util.data.functions.Strings.trimToNone;
 
 import org.opencastproject.job.api.Job;
 import org.opencastproject.job.api.JobContext;
-import org.opencastproject.mediapackage.Attachment;
 import org.opencastproject.mediapackage.MediaPackage;
 import org.opencastproject.mediapackage.MediaPackageElement;
 import org.opencastproject.mediapackage.MediaPackageElementFlavor;
 import org.opencastproject.mediapackage.MediaPackageElementParser;
-import org.opencastproject.mediapackage.MediaPackageElements;
 import org.opencastproject.mediapackage.MediaPackageException;
 import org.opencastproject.mediapackage.Publication;
 import org.opencastproject.mediapackage.PublicationImpl;
@@ -60,8 +58,6 @@ import java.net.URI;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.SortedMap;
-import java.util.TreeMap;
 import java.util.UUID;
 
 /**
@@ -98,38 +94,6 @@ public class PublishOaiPmhWorkflowOperationHandler extends AbstractWorkflowOpera
    */
   public void setPublicationService(OaiPmhPublicationService publicationService) {
     this.publicationService = publicationService;
-  }
-
-  /** The configuration options for this handler */
-  private static final SortedMap<String, String> CONFIG_OPTIONS;
-
-  static {
-    CONFIG_OPTIONS = new TreeMap<>();
-    CONFIG_OPTIONS.put(DOWNLOAD_FLAVORS,
-            "Distribute any mediapackage elements with one of these (comma separated) flavors to download");
-    CONFIG_OPTIONS.put(DOWNLOAD_TAGS,
-            "Distribute any mediapackage elements with one of these (comma separated) tags to download.");
-    CONFIG_OPTIONS.put(STREAMING_FLAVORS,
-            "Distribute any mediapackage elements with one of these (comma separated) flavors to streaming");
-    CONFIG_OPTIONS.put(STREAMING_TAGS,
-            "Distribute any mediapackage elements with one of these (comma separated) tags to streaming.");
-    CONFIG_OPTIONS.put(CHECK_AVAILABILITY,
-            "( true | false ) defaults to true. Check if the distributed download artifact is available at its URL");
-    CONFIG_OPTIONS.put(REPOSITORY, "The OAI-PMH repository");
-    CONFIG_OPTIONS.put(EXTERNAL_CHANNEL_NAME, "The external element's channel name");
-    CONFIG_OPTIONS.put(EXTERNAL_TEMPLATE,
-            "The external element's URL template (https://www.externalURL.com/watch.html?series={series}&id={event})");
-    CONFIG_OPTIONS.put(EXTERNAL_MIME_TYPE, "The external element's mime type");
-  }
-
-  /**
-   * {@inheritDoc}
-   *
-   * @see org.opencastproject.workflow.api.WorkflowOperationHandler#getConfigurationOptions()
-   */
-  @Override
-  public SortedMap<String, String> getConfigurationOptions() {
-    return CONFIG_OPTIONS;
   }
 
   /** OSGi component activation. */
@@ -217,18 +181,6 @@ public class PublishOaiPmhWorkflowOperationHandler extends AbstractWorkflowOpera
       }
       for (MediaPackageElement elem : streamingElements) {
         streamingElementIds.add(elem.getIdentifier());
-      }
-
-      // Also distribute the security configuration
-      // -----
-      // This was removed in the meantime by a fix for MH-8515, but could now be used again.
-      // -----
-      Attachment[] securityAttachments = mediaPackage.getAttachments(MediaPackageElements.XACML_POLICY);
-      if (securityAttachments != null && securityAttachments.length > 0) {
-        for (Attachment a : securityAttachments) {
-          downloadElementIds.add(a.getIdentifier());
-          streamingElementIds.add(a.getIdentifier());
-        }
       }
 
       Job publishJob = null;

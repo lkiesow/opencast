@@ -56,7 +56,6 @@ import org.opencastproject.serviceregistry.api.ServiceRegistry;
 import org.opencastproject.util.Checksum;
 import org.opencastproject.util.ChecksumType;
 import org.opencastproject.util.NotFoundException;
-import org.opencastproject.util.data.Effect0;
 import org.opencastproject.workflow.api.WorkflowDefinition;
 import org.opencastproject.workflow.api.WorkflowInstance;
 import org.opencastproject.workflow.api.WorkflowInstance.WorkflowState;
@@ -74,7 +73,6 @@ import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.joda.time.DateTime;
 import org.osgi.service.component.ComponentContext;
 import org.slf4j.Logger;
@@ -140,17 +138,18 @@ public class EventsLoader {
    * Callback on component activation.
    */
   protected void activate(ComponentContext cc) throws Exception {
-    boolean loadTestData = BooleanUtils
-            .toBoolean(cc.getBundleContext().getProperty("org.opencastproject.dataloader.testdata"));
 
     String csvPath = StringUtils.trimToNull(cc.getBundleContext().getProperty("org.opencastproject.dataloader.csv"));
+    if (StringUtils.isBlank(csvPath)) {
+      return; // no file is set
+    }
 
     systemUserName = cc.getBundleContext().getProperty(SecurityUtil.PROPERTY_KEY_SYS_USER);
 
     File csv = new File(csvPath);
 
     // Load the demo users, if necessary
-    if (loadTestData && csv.exists() && serviceRegistry.count(null, null) == 0) {
+    if (csv.exists() && serviceRegistry.count(null, null) == 0) {
       // Load events by CSV file
       new Loader(csv).start();
     }
@@ -159,17 +158,9 @@ public class EventsLoader {
   private void addArchiveEntry(final MediaPackage mediaPackage) {
     final User user = securityService.getUser();
     final Organization organization = securityService.getOrganization();
-    singleThreadExecutor.execute(new Runnable() {
-      @Override
-      public void run() {
-        SecurityUtil.runAs(securityService, organization, user, new Effect0() {
-          @Override
-          protected void run() {
-            assetManager.takeSnapshot(DEFAULT_OWNER, mediaPackage);
-          }
-        });
-      }
-    });
+    singleThreadExecutor.execute(() -> SecurityUtil.runAs(securityService, organization, user, () -> {
+      assetManager.takeSnapshot(DEFAULT_OWNER, mediaPackage);
+    }));
   }
 
   private void addWorkflowEntry(MediaPackage mediaPackage) throws Exception {
@@ -194,8 +185,7 @@ public class EventsLoader {
     Date endDate = new DateTime(event.getRecordingDate().getTime()).plusMinutes(event.getDuration()).toDate();
     schedulerService.addEvent(event.getRecordingDate(), endDate, event.getCaptureAgent(),
             Collections.<String> emptySet(), mediaPackage, Collections.<String, String> emptyMap(),
-            Collections.<String, String> emptyMap(), Opt.<Boolean> none(), Opt.some("org.opencastproject.dataloader"),
-            SchedulerService.ORIGIN);
+            Collections.<String, String> emptyMap(), Opt.some("org.opencastproject.dataloader"));
     cleanUpMediaPackage(mediaPackage);
   }
 
@@ -356,16 +346,13 @@ public class EventsLoader {
     public void run() {
       Organization org = new DefaultOrganization();
       User createSystemUser = SecurityUtil.createSystemUser(systemUserName, org);
-      SecurityUtil.runAs(securityService, org, createSystemUser, new Effect0() {
-        @Override
-        protected void run() {
-          try {
-            logger.info("Start populating event test data...");
-            execute(csvParser);
-            logger.info("Finished populating event test data");
-          } catch (Exception e) {
-            logger.error("Unable to populate event test data: {}", ExceptionUtils.getStackTrace(e));
-          }
+      SecurityUtil.runAs(securityService, org, createSystemUser, () -> {
+        try {
+          logger.info("Start populating event test data...");
+          execute(csvParser);
+          logger.info("Finished populating event test data");
+        } catch (Exception e) {
+          logger.error("Unable to populate event test data", e);
         }
       });
     }

@@ -87,7 +87,22 @@ angular.module('adminNg.services')
       };
       this.loadCaptureAgents();
 
+      this.clearConflicts = function () {
+        self.conflicts.splice(0);
+        self.hasConflicts = false;
+      };
+
+      this.removeAllNotifications = function () {
+        self.notification = undefined;
+        self.alreadyEndedNotification = undefined;
+        self.endBeforeStartNotification = undefined;
+        Notifications.removeAll(NOTIFICATION_CONTEXT);
+      };
+
       this.reset = function (opts) {
+
+        self.removeAllNotifications();
+        self.clearConflicts();
 
         self.createStartDate();
         self.weekdays = _.clone(WEEKDAYS);
@@ -303,10 +318,6 @@ angular.module('adminNg.services')
           //                Notifications.remove(self.notification, NOTIFICATION_CONTEXT);
 
           var onSuccess = function () {
-            if (self.notification) {
-              Notifications.remove(self.notification, NOTIFICATION_CONTEXT);
-              self.notification = undefined;
-            }
             release();
           };
           var onError = function (response) {
@@ -325,11 +336,19 @@ angular.module('adminNg.services')
 
           var settings = self.ud[getType()];
           ConflictCheckResource.check(settings, onSuccess, onError);
+        } else {
+          self.clearConflicts();
+          self.removeAllNotifications();
         }
       };
 
       this.checkValidity = function () {
         var data = self.ud[getType()];
+
+        if (self.notification && !self.hasConflicts) {
+          Notifications.remove(self.notification, NOTIFICATION_CONTEXT);
+          self.notification = undefined;
+        }
 
         if (self.alreadyEndedNotification) {
           Notifications.remove(self.alreadyEndedNotification, NOTIFICATION_CONTEXT);
@@ -512,7 +531,11 @@ angular.module('adminNg.services')
             minute: parseInt(endDateTime.format('mm'))
           };
 
-          defaults.presentableWeekdays = chosenSlot.format('dd');
+          if (orgProperties['admin.event.new.preselect_day'] === 'false') {
+            defaults.presentableWeekdays = '';
+          } else {
+            defaults.presentableWeekdays = chosenSlot.format('dd');
+          }
 
           if (self.captureAgents.length === 0) {
             //No capture agents, so user can only upload files

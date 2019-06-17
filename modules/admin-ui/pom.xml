@@ -7,7 +7,7 @@
   <parent>
     <groupId>org.opencastproject</groupId>
     <artifactId>base</artifactId>
-    <version>6-SNAPSHOT</version>
+    <version>7-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <properties>
@@ -99,11 +99,6 @@
     </dependency>
     <dependency>
       <groupId>org.opencastproject</groupId>
-      <artifactId>opencast-distribution-workflowoperation</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.opencastproject</groupId>
       <artifactId>opencast-event-comment</artifactId>
       <version>${project.version}</version>
       <scope>provided</scope>
@@ -141,11 +136,6 @@
     <dependency>
       <groupId>org.opencastproject</groupId>
       <artifactId>opencast-smil-api</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.opencastproject</groupId>
-      <artifactId>opencast-messages</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
@@ -297,6 +287,17 @@
       <artifactId>opencast-ingest-service-api</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.opencastproject</groupId>
+      <artifactId>opencast-rest-test-environment</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.opencastproject</groupId>
+      <artifactId>opencast-admin-ui-index</artifactId>
+      <version>${project.version}</version>
     </dependency>
   </dependencies>
   <profiles>
@@ -452,6 +453,7 @@
             <Import-Package>
               net.fortuna.ical4j.*,
               org.opencastproject.index.service.message,
+              org.opencastproject.adminui.index,
               javax.ws.rs;version=2.0.1,
               javax.ws.rs.core;version=2.0.1,
               *
@@ -466,7 +468,6 @@
               org.opencastproject.adminui.endpoint;version=${project.version},
               org.opencastproject.adminui.exception;version=${project.version},
               org.opencastproject.adminui.impl;version=${project.version},
-              org.opencastproject.adminui.impl.index;version=${project.version},
               org.opencastproject.adminui.userdirectory;version=${project.version},
               org.opencastproject.adminui.usersettings;version=${project.version},
               org.opencastproject.adminui.usersettings.persistence;version=${project.version},
@@ -482,16 +483,7 @@
               OSGI-INF/job_endpoint.xml,
               OSGI-INF/language-service.xml,
               OSGI-INF/languages_endpoint.xml,
-              OSGI-INF/message-receiver-acl.xml,
-              OSGI-INF/message-receiver-assetmanager.xml,
-              OSGI-INF/message-receiver-comment.xml,
-              OSGI-INF/message-receiver-group.xml,
-              OSGI-INF/message-receiver-scheduler.xml,
-              OSGI-INF/message-receiver-series.xml,
-              OSGI-INF/message-receiver-theme.xml,
-              OSGI-INF/message-receiver-workflow.xml,
               OSGI-INF/presets_endpoint.xml,
-              OSGI-INF/search-index.xml,
               OSGI-INF/server_endpoint.xml,
               OSGI-INF/series_endpoint.xml,
               OSGI-INF/services_endpoint.xml,

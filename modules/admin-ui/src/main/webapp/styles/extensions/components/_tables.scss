@@ -28,6 +28,14 @@
     }
 }
 
+.main-tbl .metadata-entry {
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    padding: 0 5px;
+    margin-right: 5px;
+    display: inline-block;
+}
+
 .action-bar {
     @include clearfix();
     border: 1px solid $main-border-color;

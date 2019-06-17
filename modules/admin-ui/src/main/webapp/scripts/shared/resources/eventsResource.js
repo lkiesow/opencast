@@ -45,13 +45,12 @@ angular.module('adminNg.resources')
         var row = {};
         row.id = r.id;
         row.title = r.title;
-        row.presenter = r.presenters.join(', ');
+        row.presenters = r.presenters;
         row.technical_presenter = r.technical_presenters.join(', ');
         if (angular.isDefined(r.series)) {
           row.series_name = r.series.title;
           row.series_id = r.series.id;
         }
-        row.review_status = r.review_status;
         row.event_status_raw = r.event_status;
         $translate(r.event_status).then(function (translation) {
           row.event_status = translation;

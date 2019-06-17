@@ -51,7 +51,7 @@ angular.module('adminNg.services')
           // preserve default value, if set
           if (field.hasOwnProperty('value') && field.value) {
             field.presentableValue = me.extractPresentableValue(field);
-            me.ud[mainMetadataName].fields[field.id] = field;
+            me.ud[mainMetadataName].fields[i] = field;
           }
           // just hooking the tab index up here, as this is already running through all elements
           field.tabindex = i + 1;
@@ -84,49 +84,39 @@ angular.module('adminNg.services')
     };
 
     this.extractPresentableValue = function (field) {
-      var actualValue = field.value;
       var presentableValue = '';
-      if (field.collection) {
-        if (angular.isArray(actualValue)) {
-          angular.forEach(actualValue, function (item, index) {
-            presentableValue += item;
-            if ((index + 1) < actualValue.length) {
-              presentableValue += ', ';
-            }
-          });
-          field.presentableValue = presentableValue;
-        } else {
-          if (field.collection.hasOwnProperty(actualValue)) {
-            presentableValue = field.collection[actualValue];
+      if (field.value !== undefined && field.value !== '' && field.value !== null) {
+        if (angular.isArray(field.value)) {
+          presentableValue = field.value.join(', ');
+        } else if (field.collection) {
+          // We need to lookup the presentable value in the collection
+          if (field.collection.hasOwnProperty(field.value)) {
+            presentableValue = field.collection[field.value];
           } else {
-            // this should work in older browsers, albeit looking clumsy
+            // This should work in older browsers, albeit looking clumsy
             var matchingKey = Object.keys(field.collection)
-              .filter(function(key) {return field.collection[key] === actualValue;})[0];
+              .filter(function(key) {return field.collection[key] === field.value;})[0];
             presentableValue = field.type === 'ordered_text'
               ? JSON.parse(matchingKey)['label']
               : matchingKey;
           }
+        } else {
+          presentableValue = field.value;
         }
-      } else {
-        presentableValue = actualValue;
       }
       return presentableValue;
     };
 
     this.save = function (scope) {
-      //FIXME: This should be nicer, rather propagate the id and values
-      //instead of looking for them in the parent scope.
-      var params = scope.$parent.params,
-          fieldId = params.id,
-          value = params.value;
+      //FIXME: This should be nicer, rather propagate the id and values instead of looking for them in the parent scope.
+      var field = scope.$parent.params;
+      field.presentableValue = me.extractPresentableValue(field);
 
-      params.presentableValue = me.extractPresentableValue(params);
-
-      me.ud[mainMetadataName].fields[fieldId] = params;
-
-      if (angular.isDefined(me.requiredMetadata[fieldId])) {
-        me.updateRequiredMetadata(fieldId, value);
+      if (angular.isDefined(me.requiredMetadata[field.id])) {
+        me.updateRequiredMetadata(field.id, field.value);
       }
+
+      me.ud[mainMetadataName].fields[field.tabindex - 1] = field;
     };
 
     this.reset = function () {

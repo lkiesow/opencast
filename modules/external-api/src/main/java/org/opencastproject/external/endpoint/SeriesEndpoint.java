@@ -29,7 +29,7 @@ import static com.entwinemedia.fn.data.json.Jsons.v;
 import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.apache.commons.lang3.StringUtils.trimToNull;
-import static org.apache.commons.lang3.exception.ExceptionUtils.getStackTrace;
+import static org.opencastproject.external.common.ApiVersion.VERSION_1_2_0;
 import static org.opencastproject.util.DateTimeSupport.toUTC;
 import static org.opencastproject.util.RestUtil.getEndpointUrl;
 import static org.opencastproject.util.doc.rest.RestParameter.Type.STRING;
@@ -37,12 +37,11 @@ import static org.opencastproject.util.doc.rest.RestParameter.Type.STRING;
 import org.opencastproject.external.common.ApiMediaType;
 import org.opencastproject.external.common.ApiResponses;
 import org.opencastproject.external.common.ApiVersion;
-import org.opencastproject.external.impl.index.ExternalIndex;
+import org.opencastproject.external.index.ExternalIndex;
 import org.opencastproject.external.util.AclUtils;
 import org.opencastproject.external.util.ExternalMetadataUtils;
 import org.opencastproject.index.service.api.IndexService;
 import org.opencastproject.index.service.catalog.adapter.MetadataList;
-import org.opencastproject.index.service.catalog.adapter.MetadataUtils;
 import org.opencastproject.index.service.exception.IndexServiceException;
 import org.opencastproject.index.service.impl.index.event.EventIndexSchema;
 import org.opencastproject.index.service.impl.index.series.Series;
@@ -87,7 +86,6 @@ import com.entwinemedia.fn.data.json.JValue;
 import com.entwinemedia.fn.data.json.Jsons.Functions;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -106,6 +104,7 @@ import java.util.TreeMap;
 
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.DELETE;
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
@@ -120,7 +119,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
 @Path("/")
-@Produces({ ApiMediaType.JSON, ApiMediaType.VERSION_1_0_0, ApiMediaType.VERSION_1_1_0 })
+@Produces({ ApiMediaType.JSON, ApiMediaType.VERSION_1_0_0, ApiMediaType.VERSION_1_1_0, ApiMediaType.VERSION_1_2_0 })
 @RestService(name = "externalapiseries", title = "External API Series Service", notes = {}, abstractText = "Provides resources and operations related to the series")
 public class SeriesEndpoint {
 
@@ -332,7 +331,7 @@ public class SeriesEndpoint {
         }
       }).toList()));
     } catch (Exception e) {
-      logger.warn("Could not perform search query: {}", ExceptionUtils.getStackTrace(e));
+      logger.warn("Could not perform search query", e);
       throw new WebApplicationException(Response.Status.INTERNAL_SERVER_ERROR);
     }
   }
@@ -366,8 +365,9 @@ public class SeriesEndpoint {
                 f("created", v(createdDate != null ? toUTC(createdDate.getTime()) : null, BLANK)),
                 f("contributors", arr($(s.getContributors()).map(Functions.stringToJValue))),
                 f("organizers", arr($(s.getOrganizers()).map(Functions.stringToJValue))),
-                f("publishers", arr($(s.getPublishers()).map(Functions.stringToJValue))),
-                f("opt_out", v(s.isOptedOut())));
+                // For compatibility (MH-13405)
+                f("opt_out", false),
+                f("publishers", arr($(s.getPublishers()).map(Functions.stringToJValue))));
       }
       else {
         responseContent = obj(
@@ -380,11 +380,12 @@ public class SeriesEndpoint {
                 f("created", v(createdDate != null ? toUTC(createdDate.getTime()) : null, BLANK)),
                 f("contributors", arr($(s.getContributors()).map(Functions.stringToJValue))),
                 f("organizers", arr($(s.getOrganizers()).map(Functions.stringToJValue))),
+                // For compatibility (MH-13405)
+                f("opt_out", false),
                 f("publishers", arr($(s.getPublishers()).map(Functions.stringToJValue))),
                 f("language", v(s.getLanguage(), BLANK)),
                 f("license", v(s.getLicense(), BLANK)),
-                f("rightsholder", v(s.getRightsHolder(), BLANK)),
-                f("opt_out", v(s.isOptedOut())));
+                f("rightsholder", v(s.getRightsHolder(), BLANK)));
       }
       return ApiResponses.Json.ok(requestedVersion, responseContent);
     }
@@ -479,55 +480,55 @@ public class SeriesEndpoint {
 
     MetadataField<?> title = metadata.getOutputFields().get(DublinCore.PROPERTY_TITLE.getLocalName());
     metadata.removeField(title);
-    MetadataField<String> newTitle = MetadataUtils.copyMetadataField(title);
+    MetadataField<String> newTitle = new MetadataField(title);
     newTitle.setValue(series.getTitle());
     metadata.addField(newTitle);
 
     MetadataField<?> subject = metadata.getOutputFields().get(DublinCore.PROPERTY_SUBJECT.getLocalName());
     metadata.removeField(subject);
-    MetadataField<String> newSubject = MetadataUtils.copyMetadataField(subject);
+    MetadataField<String> newSubject = new MetadataField(subject);
     newSubject.setValue(series.getSubject());
     metadata.addField(newSubject);
 
     MetadataField<?> description = metadata.getOutputFields().get(DublinCore.PROPERTY_DESCRIPTION.getLocalName());
     metadata.removeField(description);
-    MetadataField<String> newDescription = MetadataUtils.copyMetadataField(description);
+    MetadataField<String> newDescription = new MetadataField(description);
     newDescription.setValue(series.getDescription());
     metadata.addField(newDescription);
 
     MetadataField<?> language = metadata.getOutputFields().get(DublinCore.PROPERTY_LANGUAGE.getLocalName());
     metadata.removeField(language);
-    MetadataField<String> newLanguage = MetadataUtils.copyMetadataField(language);
+    MetadataField<String> newLanguage = new MetadataField(language);
     newLanguage.setValue(series.getLanguage());
     metadata.addField(newLanguage);
 
     MetadataField<?> rightsHolder = metadata.getOutputFields().get(DublinCore.PROPERTY_RIGHTS_HOLDER.getLocalName());
     metadata.removeField(rightsHolder);
-    MetadataField<String> newRightsHolder = MetadataUtils.copyMetadataField(rightsHolder);
+    MetadataField<String> newRightsHolder = new MetadataField(rightsHolder);
     newRightsHolder.setValue(series.getRightsHolder());
     metadata.addField(newRightsHolder);
 
     MetadataField<?> license = metadata.getOutputFields().get(DublinCore.PROPERTY_LICENSE.getLocalName());
     metadata.removeField(license);
-    MetadataField<String> newLicense = MetadataUtils.copyMetadataField(license);
+    MetadataField<String> newLicense = new MetadataField(license);
     newLicense.setValue(series.getLicense());
     metadata.addField(newLicense);
 
     MetadataField<?> organizers = metadata.getOutputFields().get(DublinCore.PROPERTY_CREATOR.getLocalName());
     metadata.removeField(organizers);
-    MetadataField<String> newOrganizers = MetadataUtils.copyMetadataField(organizers);
+    MetadataField<String> newOrganizers = new MetadataField(organizers);
     newOrganizers.setValue(StringUtils.join(series.getOrganizers(), ", "));
     metadata.addField(newOrganizers);
 
     MetadataField<?> contributors = metadata.getOutputFields().get(DublinCore.PROPERTY_CONTRIBUTOR.getLocalName());
     metadata.removeField(contributors);
-    MetadataField<String> newContributors = MetadataUtils.copyMetadataField(contributors);
+    MetadataField<String> newContributors = new MetadataField(contributors);
     newContributors.setValue(StringUtils.join(series.getContributors(), ", "));
     metadata.addField(newContributors);
 
     MetadataField<?> publishers = metadata.getOutputFields().get(DublinCore.PROPERTY_PUBLISHER.getLocalName());
     metadata.removeField(publishers);
-    MetadataField<String> newPublishers = MetadataUtils.copyMetadataField(publishers);
+    MetadataField<String> newPublishers = new MetadataField(publishers);
     newPublishers.setValue(StringUtils.join(series.getPublishers(), ", "));
     metadata.addField(newPublishers);
 
@@ -540,7 +541,7 @@ public class SeriesEndpoint {
 
     MetadataField<?> uid = metadata.getOutputFields().get(DublinCore.PROPERTY_IDENTIFIER.getLocalName());
     metadata.removeField(uid);
-    MetadataField<String> newUID = MetadataUtils.copyMetadataField(uid);
+    MetadataField<String> newUID = new MetadataField(uid);
     newUID.setValue(series.getIdentifier());
     metadata.addField(newUID);
 
@@ -598,10 +599,9 @@ public class SeriesEndpoint {
     try {
       updatedFields = RequestUtils.getKeyValueMap(metadataJSON);
     } catch (ParseException e) {
-      logger.debug("Unable to update series '{}' with metadata type '{}' and content '{}' because: {}",
-              id, type, metadataJSON, ExceptionUtils.getStackTrace(e));
+      logger.debug("Unable to update series '{}' with metadata type '{}' and content '{}'", id, type, metadataJSON, e);
       return RestUtil.R.badRequest(String.format("Unable to parse metadata fields as json from '%s' because '%s'",
-              metadataJSON, ExceptionUtils.getStackTrace(e)));
+              metadataJSON, e.getMessage()));
     } catch (IllegalArgumentException e) {
       return RestUtil.R.badRequest(e.getMessage());
     }
@@ -725,7 +725,12 @@ public class SeriesEndpoint {
     for (final Series series : indexService.getSeries(id, externalIndex)) {
       // The ACL is stored as JSON string in the index. Parse it and extract the part we want to have in the API.
       JSONObject acl = (JSONObject) parser.parse(series.getAccessPolicy());
-      return ApiResponses.Json.ok(requestedVersion, ((JSONArray) ((JSONObject) acl.get("acl")).get("ace")).toJSONString());
+
+      if (!((JSONObject) acl.get("acl")).containsKey("ace")) {
+        return ApiResponses.notFound("Cannot find acl for series with id '%s'.", id);
+      } else {
+        return ApiResponses.Json.ok(requestedVersion, ((JSONArray) ((JSONObject) acl.get("acl")).get("ace")).toJSONString());
+      }
     }
 
     return ApiResponses.notFound("Cannot find an series with id '%s'.", id);
@@ -766,7 +771,7 @@ public class SeriesEndpoint {
     } catch (NotFoundException e) {
       return ApiResponses.notFound("Cannot find a series with id '%s'.", id);
     } catch (Exception e) {
-      logger.error("Unable to delete the series '{}' due to: {}", id, ExceptionUtils.getStackTrace(e));
+      logger.error("Unable to delete the series '{}' due to", id, e);
       return Response.serverError().build();
     }
   }
@@ -786,12 +791,10 @@ public class SeriesEndpoint {
       MetadataList metadataList = indexService.updateAllSeriesMetadata(seriesID, metadataJSON, externalIndex);
       return ApiResponses.Json.ok(acceptHeader, metadataList.toJSON());
     } catch (IllegalArgumentException e) {
-      logger.debug("Unable to update series '{}' with metadata '{}' because: {}",
-              seriesID, metadataJSON, ExceptionUtils.getStackTrace(e));
+      logger.debug("Unable to update series '{}' with metadata '{}'", seriesID, metadataJSON, e);
       return RestUtil.R.badRequest(e.getMessage());
     } catch (IndexServiceException e) {
-      logger.error("Unable to update series '{}' with metadata '{}' because: {}",
-              seriesID, metadataJSON, ExceptionUtils.getStackTrace(e));
+      logger.error("Unable to update series '{}' with metadata '{}'", seriesID, metadataJSON, e);
       return RestUtil.R.serverError();
     }
   }
@@ -818,14 +821,13 @@ public class SeriesEndpoint {
     try {
       metadataList = deserializeMetadataList(metadataParam);
     } catch (ParseException e) {
-      logger.debug("Unable to parse series metadata '{}' because: {}", metadataParam, ExceptionUtils.getStackTrace(e));
-      return R.badRequest(String.format("Unable to parse metadata because '%s'", e.toString()));
+      logger.debug("Unable to parse series metadata '{}'", metadataParam, e);
+      return R.badRequest(String.format("Unable to parse metadata because '%s'", e.getMessage()));
     } catch (NotFoundException e) {
       // One of the metadata fields could not be found in the catalogs or one of the catalogs cannot be found.
       return R.badRequest(e.getMessage());
     } catch (IllegalArgumentException e) {
-      logger.debug("Unable to create series with metadata '{}' because: {}", metadataParam,
-              ExceptionUtils.getStackTrace(e));
+      logger.debug("Unable to create series with metadata '{}'", metadataParam, e);
       return R.badRequest(e.getMessage());
     }
     Map<String, String> options = new TreeMap<>();
@@ -842,11 +844,10 @@ public class SeriesEndpoint {
     try {
       acl = AclUtils.deserializeJsonToAcl(aclParam, false);
     } catch (ParseException e) {
-      logger.debug("Unable to parse acl '{}' because: '{}'", aclParam, ExceptionUtils.getStackTrace(e));
+      logger.debug("Unable to parse acl '{}'", aclParam, e);
       return R.badRequest(String.format("Unable to parse acl '%s' because '%s'", aclParam, e.getMessage()));
     } catch (IllegalArgumentException e) {
-      logger.debug("Unable to create new series with acl '{}' because: '{}'", aclParam,
-              ExceptionUtils.getStackTrace(e));
+      logger.debug("Unable to create new series with acl '{}'", aclParam, e);
       return R.badRequest(e.getMessage());
     }
 
@@ -855,8 +856,8 @@ public class SeriesEndpoint {
       return ApiResponses.Json.created(acceptHeader, URI.create(getSeriesUrl(seriesId)),
                                        obj(f("identifier", v(seriesId, BLANK))));
     } catch (IndexServiceException e) {
-      logger.error("Unable to create series with metadata '{}', acl '{}', theme '{}' because: ",
-              metadataParam, aclParam, themeIdParam, ExceptionUtils.getStackTrace(e));
+      logger.error("Unable to create series with metadata '{}', acl '{}', theme '{}'",
+              metadataParam, aclParam, themeIdParam, e);
       throw new WebApplicationException(e, Status.INTERNAL_SERVER_ERROR);
     }
   }
@@ -941,20 +942,28 @@ public class SeriesEndpoint {
   @Path("{seriesId}/acl")
   @RestQuery(name = "updateseriesacl", description = "Updates a series' access policy.", returnDescription = "", pathParameters = {
           @RestParameter(name = "seriesId", description = "The series id", isRequired = true, type = STRING) }, restParameters = {
-                  @RestParameter(name = "acl", isRequired = true, description = "Access policy", type = STRING) }, reponses = {
+                  @RestParameter(name = "acl", isRequired = true, description = "Access policy", type = STRING),
+                  @RestParameter(name = "override", isRequired = false, description = "If true the series ACL will take precedence over any existing episode ACL", type = STRING)}, reponses = {
                           @RestResponse(description = "The access control list for the specified series is updated.", responseCode = HttpServletResponse.SC_OK),
                           @RestResponse(description = "The specified series does not exist.", responseCode = HttpServletResponse.SC_NOT_FOUND) })
   public Response updateSeriesAcl(@HeaderParam("Accept") String acceptHeader, @PathParam("seriesId") String seriesID,
-          @FormParam("acl") String aclJson) throws NotFoundException, SeriesException, UnauthorizedException {
+          @FormParam("acl") String aclJson, @DefaultValue("false") @FormParam("override") boolean override)
+          throws NotFoundException, SeriesException, UnauthorizedException {
     if (isBlank(aclJson))
       return R.badRequest("Missing form parameter 'acl'");
+
+    final ApiVersion requestedVersion = ApiMediaType.parse(acceptHeader).getVersion();
+    if (requestedVersion.isSmallerThan(VERSION_1_2_0)) {
+      // override was added in version 1.2.0 and should be ignored for smaller versions
+      override = false;
+    }
 
     JSONParser parser = new JSONParser();
     JSONArray acl;
     try {
       acl = (JSONArray) parser.parse(aclJson);
     } catch (ParseException e) {
-      logger.debug("Could not parse ACL ({}): {}", aclJson, getStackTrace(e));
+      logger.debug("Could not parse ACL ({})", aclJson, e);
       return R.badRequest("Could not parse ACL");
     }
 
@@ -966,7 +975,7 @@ public class SeriesEndpoint {
       }
     }).toList();
 
-    seriesService.updateAccessControl(seriesID, new AccessControlList(accessControlEntries));
+    seriesService.updateAccessControl(seriesID, new AccessControlList(accessControlEntries), override);
     return ApiResponses.Json.ok(acceptHeader, aclJson);
   }
 
@@ -989,7 +998,7 @@ public class SeriesEndpoint {
     try {
       props = (JSONObject) parser.parse(propertiesJson);
     } catch (ParseException e) {
-      logger.debug("Could not parse properties ({}): {}", propertiesJson, getStackTrace(e));
+      logger.debug("Could not parse properties ({})", propertiesJson, e);
       return R.badRequest("Could not parse series properties");
     }
 
@@ -1027,10 +1036,10 @@ public class SeriesEndpoint {
         try {
           createdFromDate = new Date(DateTimeSupport.fromUTC(createdFrom));
         } catch (IllegalStateException e) {
-          logger.error("Unable to parse createdFrom parameter '{}':{}", createdFrom, ExceptionUtils.getStackTrace(e));
+          logger.error("Unable to parse createdFrom parameter '{}'", createdFrom, e);
           throw new IllegalArgumentException("Unable to parse createdFrom parameter.");
         } catch (java.text.ParseException e) {
-          logger.error("Unable to parse createdFrom parameter '{}':{}", createdFrom, ExceptionUtils.getStackTrace(e));
+          logger.error("Unable to parse createdFrom parameter '{}'", createdFrom, e);
           throw new IllegalArgumentException("Unable to parse createdFrom parameter.");
         }
       }
@@ -1039,10 +1048,10 @@ public class SeriesEndpoint {
         try {
           createdToDate = new Date(DateTimeSupport.fromUTC(createdTo));
         } catch (IllegalStateException e) {
-          logger.error("Unable to parse createdTo parameter '{}':{}", createdTo, ExceptionUtils.getStackTrace(e));
+          logger.error("Unable to parse createdTo parameter '{}'", createdTo, e);
           throw new IllegalArgumentException("Unable to parse createdTo parameter.");
         } catch (java.text.ParseException e) {
-          logger.error("Unable to parse createdTo parameter '{}':{}", createdTo, ExceptionUtils.getStackTrace(e));
+          logger.error("Unable to parse createdTo parameter '{}'", createdTo, e);
           throw new IllegalArgumentException("Unable to parse createdTo parameter.");
         }
       }
