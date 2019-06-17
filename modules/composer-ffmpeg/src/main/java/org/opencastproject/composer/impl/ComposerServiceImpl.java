@@ -23,6 +23,7 @@ package org.opencastproject.composer.impl;
 
 import static java.lang.String.format;
 import static org.apache.commons.lang3.exception.ExceptionUtils.getStackTrace;
+import static org.opencastproject.composer.impl.EncoderEngine.CMD_SUFFIX;
 import static org.opencastproject.serviceregistry.api.Incidents.NO_DETAILS;
 import static org.opencastproject.util.data.Option.none;
 import static org.opencastproject.util.data.Option.some;
@@ -438,8 +439,8 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
             .orElse(0);
     Map<String, String> properties = new HashMap<>();
     for (String key: profile.getExtensions().keySet()) {
-      if (key.startsWith("if-height-geq-")) {
-        final int heightCondition = Integer.parseInt(key.substring("if-height-geq-".length()));
+      if (key.startsWith(CMD_SUFFIX + ".if-height-geq-")) {
+        final int heightCondition = Integer.parseInt(key.substring((CMD_SUFFIX + ".if-height-geq-").length()));
         if (heightCondition <= height) {
           properties.put(key, profile.getExtension(key));
         }
@@ -725,7 +726,7 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
               upperLaidOutElement, upperVideoFile, watermarkOption, watermarkFile, backgroundColor, audioSourceName);
 
       Map<String, String> properties = new HashMap<>();
-      properties.put(EncoderEngine.CMD_SUFFIX + ".compositeCommand", compositeCommand);
+      properties.put(CMD_SUFFIX + ".compositeCommand", compositeCommand);
       List<File> output;
       try {
         Map<String, File> source = new HashMap<>();
@@ -888,7 +889,7 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
     }
 
     Map<String, String> properties = new HashMap<>();
-    properties.put(EncoderEngine.CMD_SUFFIX + ".concatCommand", concatCommand);
+    properties.put(CMD_SUFFIX + ".concatCommand", concatCommand);
 
     File output;
     try {
