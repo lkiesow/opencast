@@ -176,16 +176,18 @@ public class LdapUserProviderInstance implements UserProvider, CachingUserProvid
     // http://tugrulaslan.com/listing-active-directory-users-spring-ldap/
     ldapTemplate = new LdapTemplate(contextSource);
     ldapTemplate.setIgnorePartialResultException(true);
-    logger.error("start ldap search");
-    List search = ldapTemplate.search("OU=pers,OU=usr,DC=mugad,DC=medunigraz,DC=at", "(objectClass=Person)",
-            (AttributesMapper) attributes -> {
-              final Attribute attribute = attributes.get("cn");
-              return Objects.toString(attribute != null ? attribute.get() : null, "<null>");
-            });
-    logger.error("end ldap search");
-    logger.error("ldap search results: {}", search.size());
-    for (Object x: search) {
-      logger.error("search: {}", x);
+    if (logger.isDebugEnabled()) {
+      logger.debug("start ldap search");
+      List search = ldapTemplate.search("OU=pers,OU=usr,DC=mugad,DC=medunigraz,DC=at", "(objectClass=Person)",
+              (AttributesMapper) attributes -> {
+                final Attribute attribute = attributes.get("cn");
+                return Objects.toString(attribute != null ? attribute.get() : null, "<null>");
+              });
+      logger.debug("end ldap search");
+      logger.debug("ldap search results: {}", search.size());
+      for (Object x : search) {
+        logger.debug("search: {}", x);
+      }
     }
 
     if (StringUtils.isNotBlank(roleAttributesGlob)) {
@@ -364,19 +366,20 @@ public class LdapUserProviderInstance implements UserProvider, CachingUserProvid
       for (GrantedAuthority authority: userDetails.getAuthorities()) {
         switch (authority.getAuthority()) {
           case "CN=STUD,OU=GRUPPEN,DC=MUGAD,DC=MEDUNIGRAZ,DC=AT":
-            logger.error("translating CN=STUD,OU=GRUPPEN,DC=MUGAD,DC=MEDUNIGRAZ,DC=AT to STUD");
+            logger.debug("translating CN=STUD,OU=GRUPPEN,DC=MUGAD,DC=MEDUNIGRAZ,DC=AT to STUD");
             authorities.add(new SimpleGrantedAuthority("GROUP_STUD"));
             break;
           case "CN=PERS,OU=GRUPPEN,DC=MUGAD,DC=MEDUNIGRAZ,DC=AT":
-            logger.error("translating CN=PERS,OU=GRUPPEN,DC=MUGAD,DC=MEDUNIGRAZ,DC=AT to PERS");
+            logger.debug("translating CN=PERS,OU=GRUPPEN,DC=MUGAD,DC=MEDUNIGRAZ,DC=AT to PERS");
             authorities.add(new SimpleGrantedAuthority("GROUP_PERS"));
+            authorities.add(new SimpleGrantedAuthority("GROUP_STUD"));
             break;
           default:
             authorities.add(authority);
         }
       }
       authorities.addAll(setExtraRoles);
-      logger.error("authorities: {}", authorities);
+      logger.debug("authorities: {}", authorities);
 
       Set<JaxbRole> roles = new HashSet<>();
       /*
