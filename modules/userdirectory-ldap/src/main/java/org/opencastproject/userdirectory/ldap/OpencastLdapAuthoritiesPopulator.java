@@ -154,13 +154,14 @@ public class OpencastLdapAuthoritiesPopulator implements LdapAuthoritiesPopulato
           for (String attributeValue : attributeValues) {
             String value = attributeValue;
             if ("CN=STUD,OU=GRUPPEN,DC=MUGAD,DC=MEDUNIGRAZ,DC=AT".equalsIgnoreCase(value)) {
-              logger.error("translating CN=STUD,OU=GRUPPEN,DC=MUGAD,DC=MEDUNIGRAZ,DC=AT to STUD");
+              logger.debug("translating CN=STUD,OU=GRUPPEN,DC=MUGAD,DC=MEDUNIGRAZ,DC=AT to STUD");
               value = "ROLE_GROUP_STUD";
             } else if ("CN=PERS,OU=GRUPPEN,DC=MUGAD,DC=MEDUNIGRAZ,DC=AT".equalsIgnoreCase(value)) {
-              logger.error("translating CN=PERS,OU=GRUPPEN,DC=MUGAD,DC=MEDUNIGRAZ,DC=AT to PERS");
+              logger.debug("translating CN=PERS,OU=GRUPPEN,DC=MUGAD,DC=MEDUNIGRAZ,DC=AT to PERS");
               value = "ROLE_GROUP_PERS";
+              value = "ROLE_GROUP_STUD";
             }
-            logger.error("ldap attribute value: {}", value);
+            logger.debug("ldap attribute value: {}", value);
             // The attribute value may be a single authority (a single role) or a list of roles
             addAuthorities(authorities, value.split(","));
           }
