@@ -268,6 +268,8 @@ public class LdapUserProviderInstance implements UserProvider, CachingUserProvid
                 return users == null ? nullToken : users;
               }
             });
+    List<User> users = (List<User>) listCache.getUnchecked("");
+    logger.info("Loaded and cached {} users", users.size());
 
     registerMBean(pid);
   }
@@ -433,7 +435,6 @@ public class LdapUserProviderInstance implements UserProvider, CachingUserProvid
   public Iterator<User> findUsers(String query, int offset, int limit) {
     if (query == null)
       throw new IllegalArgumentException("Query must be set");
-    logger.error("findUsers({}, {}, {})", query, offset, limit);
     return getUsers();
     /*
     // TODO implement a LDAP wildcard search
@@ -454,12 +455,13 @@ public class LdapUserProviderInstance implements UserProvider, CachingUserProvid
     // TODO implement LDAP get all users
     // FIXME We return the current user, rather than an empty list, to make sure the current user's role is displayed in
     // the admin UI (MH-12526).
-    logger.error("getUsers()");
+    logger.error("getUsers() called");
 
     List<User> users = (List<User>) listCache.getUnchecked("");
     if (users == null) {
       return Collections.emptyIterator();
     }
+    logger.error("getUsers() returned {} users", users.size());
     return users.iterator();
 
     /*
