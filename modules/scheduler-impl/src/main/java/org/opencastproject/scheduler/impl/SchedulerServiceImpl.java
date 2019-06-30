@@ -88,7 +88,6 @@ import org.opencastproject.scheduler.impl.persistence.ExtendedEventDto;
 import org.opencastproject.security.api.AccessControlList;
 import org.opencastproject.security.api.AccessControlUtil;
 import org.opencastproject.security.api.AuthorizationService;
-import org.opencastproject.security.api.DefaultOrganization;
 import org.opencastproject.security.api.Organization;
 import org.opencastproject.security.api.OrganizationDirectoryService;
 import org.opencastproject.security.api.SecurityService;
@@ -121,10 +120,8 @@ import net.fortuna.ical4j.model.property.RRule;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.text.WordUtils;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
-import org.osgi.framework.ServiceException;
 import org.osgi.service.cm.ConfigurationException;
 import org.osgi.service.cm.ManagedService;
 import org.osgi.service.component.ComponentContext;
@@ -1402,7 +1399,8 @@ public class SchedulerServiceImpl extends AbstractIndexProducer implements Sched
     );
   }
 
-  private List<SchedulerItem> updateAddEventItems(Opt<AccessControlList> acl, Opt<DublinCoreCatalog> dublinCore, Opt<Date> startTime, Opt<Date> endTime, Opt<Set<String>> presenters,
+  private List<SchedulerItem> updateAddEventItems(Opt<AccessControlList> acl, Opt<DublinCoreCatalog> dublinCore,
+          Opt<Date> startTime, Opt<Date> endTime, Opt<Set<String>> presenters,
           Opt<String> agentId, Opt<Map<String, String>> properties) {
     List<SchedulerItem> items = new ArrayList<>();
     if (acl.isSome()) {
@@ -1592,85 +1590,66 @@ public class SchedulerServiceImpl extends AbstractIndexProducer implements Sched
   }
 
   @Override
-  public void repopulate(final String indexName) {
+  public void repopulate(final String indexName) throws SchedulerServiceDatabaseException {
     notEmpty(indexName, "indexName");
 
-    final String destinationId = SchedulerItem.SCHEDULER_QUEUE_PREFIX + WordUtils.capitalize(indexName);
-    final Organization organization = new DefaultOrganization();
-    final User user = SecurityUtil.createSystemUser(systemUserName, organization);
-    SecurityUtil.runAs(securityService, organization, user, () -> {
-      int current = 0;
+    int current = 0;
 
+    final List<ExtendedEventDto> events = persistence.getEvents();
+
+    /*
       AQueryBuilder query = assetManager.createQuery();
       AResult result = query
               .select(query.snapshot())
               .where(query.owner().eq(SNAPSHOT_OWNER).and(query.version().isLatest()))
               .run();
-      final int total = (int) Math.min(result.getSize(), Integer.MAX_VALUE);
-      logger.info(
-              "Re-populating '{}' index with scheduled events. There are {} scheduled events to add to the index.",
-              indexName, total);
-      final int responseInterval = (total < 100) ? 1 : (total / 100);
+    */
+    final int total = events.size();
+    logger.info("Re-populating '{}' index with {} scheduled events", indexName, total);
+    final int responseInterval = (total < 100) ? 1 : (total / 100);
+    for (ExtendedEventDto event: events) {
+      current++;
       try {
-        for (ARecord record : result.getRecords()) {
-          current++;
-          if (record.getSnapshot().isNone()) {
-            logger.warn("Doesn't found a media package for an scheuled event {}", record.getMediaPackageId());
-            continue;
-          }
-          final Snapshot snapshot = record.getSnapshot().get();
-          Opt<ExtendedEventDto> optExtEvt = persistence.getEvent(record.getMediaPackageId(), snapshot.getOrganizationId());
-          if (optExtEvt.isNone()) {
-            logger.warn("Could not find extended event for scheduled event {} of organization {}",
-                record.getMediaPackageId(),
-                snapshot.getOrganizationId()
-            );
-            continue;
-          }
-          try {
-            Organization org = orgDirectoryService.getOrganization(snapshot.getOrganizationId());
-            User orgSystemUser = SecurityUtil.createSystemUser(systemUserName, org);
-            securityService.setOrganization(org);
-            securityService.setUser(orgSystemUser);
+        final Organization org = orgDirectoryService.getOrganization(event.getOrganization());
+        final User orgSystemUser = SecurityUtil.createSystemUser(systemUserName, org);
+        securityService.setOrganization(org);
+        securityService.setUser(orgSystemUser);
 
-            final ExtendedEventDto extEvt = optExtEvt.get();
-            String agentId = extEvt.getCaptureAgentId();
-            Date start = extEvt.getStartDate();
-            Date end = extEvt.getEndDate();
-            Set<String> presenters = getPresenters(Opt.nul(extEvt.getPresenters()).getOr(""));
-            Map<String, String> caMetadata = deserializeExtendedEventProperties(extEvt.getCaptureAgentProperties());
-            Opt<String> recordingStatus = Opt.nul(extEvt.getRecordingState());
-            Opt<Long> lastHeard = Opt.nul(extEvt.getRecordingLastHeard());
+        final String agentId = event.getCaptureAgentId();
+        final Date start = event.getStartDate();
+        final Date end = event.getEndDate();
+        final Set<String> presenters = getPresenters(Opt.nul(event.getPresenters()).getOr(""));
+        final Map<String, String> caMetadata = deserializeExtendedEventProperties(event.getCaptureAgentProperties());
+        final Opt<String> recordingStatus = Opt.nul(event.getRecordingState());
+        final Opt<Long> lastHeard = Opt.nul(event.getRecordingLastHeard());
 
-            Opt<AccessControlList> acl = loadEpisodeAclFromAsset(snapshot);
-            Opt<DublinCoreCatalog> dublinCore = loadEpisodeDublinCoreFromAsset(snapshot);
+        SecurityUtil.runAs(securityService, org, orgSystemUser, () -> {
+          AQueryBuilder query = assetManager.createQuery();
+          final AResult result = query.select(query.snapshot())
+                  .where(query.mediaPackageId(event.getMediaPackageId()).and(query.version().isLatest())).run();
+          final Snapshot snapshot = result.getRecords().head().get().getSnapshot().get();
+          final Opt<AccessControlList> acl = loadEpisodeAclFromAsset(snapshot);
+          final Opt<DublinCoreCatalog> dublinCore = loadEpisodeDublinCoreFromAsset(snapshot);
 
-            final List<SchedulerItem> schedulerItems = new ArrayList<>(
-                    updateAddEventItems(acl, dublinCore, Opt.some(start), Opt.some(end),
-                            Opt.some(presenters), Opt.some(agentId), Opt.some(caMetadata)));
-            if (recordingStatus.isSome() && lastHeard.isSome()) {
-              schedulerItems.addAll(recordingUpdateMessages(new RecordingImpl(record.getMediaPackageId(), recordingStatus.get(), lastHeard.get())));
-            }
-            sendSchedulerMessage(new SchedulerItemList(record.getMediaPackageId(), schedulerItems.toArray(new SchedulerItem[0])));
-          } finally {
-            securityService.setOrganization(organization);
-            securityService.setUser(user);
+          final List<SchedulerItem> schedulerItems = new ArrayList<>(
+                  updateAddEventItems(acl, dublinCore, Opt.some(start), Opt.some(end), Opt.some(presenters), Opt.some(agentId), Opt.some(caMetadata)));
+          if (recordingStatus.isSome() && lastHeard.isSome()) {
+            schedulerItems.addAll(recordingUpdateMessages(
+                    new RecordingImpl(event.getMediaPackageId(), recordingStatus.get(), lastHeard.get())));
           }
-          if (((current % responseInterval) == 0) || (current == total)) {
-            messageSender.sendObjectMessage(IndexProducer.RESPONSE_QUEUE, MessageSender.DestinationType.Queue,
-                    IndexRecreateObject.update(indexName, IndexRecreateObject.Service.Scheduler, total, current));
-          }
+          sendSchedulerMessage(new SchedulerItemList(event.getMediaPackageId(), schedulerItems.toArray(new SchedulerItem[0])));
+        });
+        if (((current % responseInterval) == 0) || (current == total)) {
+          messageSender.sendObjectMessage(IndexProducer.RESPONSE_QUEUE, MessageSender.DestinationType.Queue,
+                  IndexRecreateObject.update(indexName, IndexRecreateObject.Service.Scheduler, total, current));
         }
       } catch (Exception e) {
-        logger.warn("Unable to index scheduled instances:", e);
-        throw new ServiceException(e.getMessage());
+        logger.error("Failed to send scheduler update for event {}. Skipping.", event.getMediaPackageId());
       }
-    });
+    }
 
-    SecurityUtil.runAs(securityService, organization, user, () -> {
-      messageSender.sendObjectMessage(IndexProducer.RESPONSE_QUEUE, MessageSender.DestinationType.Queue,
-              IndexRecreateObject.end(indexName, IndexRecreateObject.Service.Scheduler));
-    });
+    messageSender.sendObjectMessage(IndexProducer.RESPONSE_QUEUE, MessageSender.DestinationType.Queue,
+            IndexRecreateObject.end(indexName, IndexRecreateObject.Service.Scheduler));
   }
 
   @Override

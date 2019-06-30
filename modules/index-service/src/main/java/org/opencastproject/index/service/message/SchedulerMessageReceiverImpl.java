@@ -66,10 +66,10 @@ public class SchedulerMessageReceiverImpl extends BaseMessageReceiverImpl<Schedu
     Event event;
     String organization = getSecurityService().getOrganization().getId();
     User user = getSecurityService().getUser();
+    logger.debug("Received message of type {} for event {}", schedulerItem.getType(), mediaPackageId);
+
     switch (schedulerItem.getType()) {
       case UpdateCatalog:
-        logger.debug("Received Update Catalog");
-
         // Load or create the corresponding recording event
         try {
           event = getOrCreateEvent(mediaPackageId, organization, user, getSearchIndex());
@@ -93,8 +93,6 @@ public class SchedulerMessageReceiverImpl extends BaseMessageReceiverImpl<Schedu
         updateEvent(event);
         break;
       case UpdateAcl:
-        logger.debug("Received Update ACL");
-
         // Load the corresponding recording event
         try {
           event = EventIndexUtils.getOrCreateEvent(mediaPackageId, organization, user,
