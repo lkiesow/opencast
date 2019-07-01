@@ -333,9 +333,11 @@ public class SchedulerServiceDatabaseImpl implements SchedulerServiceDatabase {
   @Override
   public List<ExtendedEventDto> getEvents() throws SchedulerServiceDatabaseException {
     EntityManager em = null;
+    final String organization = securityService.getOrganization().getId();
     try {
       em = emf.createEntityManager();
-      TypedQuery<ExtendedEventDto> query = em.createNamedQuery("ExtendedEvent.findAll", ExtendedEventDto.class);
+      TypedQuery<ExtendedEventDto> query = em.createNamedQuery("ExtendedEvent.findAll", ExtendedEventDto.class)
+                      .setParameter("org", organization);
       return query.getResultList();
     } catch (Exception e) {
       throw new SchedulerServiceDatabaseException(e);
