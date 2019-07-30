@@ -21,24 +21,18 @@
 
 package org.opencastproject.workflow.handler.videoeditor;
 
-import org.opencastproject.job.api.Job;
 import org.opencastproject.mediapackage.Catalog;
 import org.opencastproject.mediapackage.MediaPackage;
 import org.opencastproject.mediapackage.MediaPackageBuilder;
 import org.opencastproject.mediapackage.MediaPackageBuilderFactory;
 import org.opencastproject.mediapackage.MediaPackageElement;
 import org.opencastproject.mediapackage.MediaPackageElementFlavor;
-import org.opencastproject.mediapackage.MediaPackageElementParser;
 import org.opencastproject.mediapackage.MediaPackageException;
 import org.opencastproject.mediapackage.Track;
 import org.opencastproject.mediapackage.selector.TrackSelector;
-import org.opencastproject.serviceregistry.api.ServiceRegistry;
-import org.opencastproject.serviceregistry.api.ServiceRegistryException;
 import org.opencastproject.smil.api.SmilException;
 import org.opencastproject.smil.api.SmilService;
-import org.opencastproject.smil.entity.api.Smil;
 import org.opencastproject.util.NotFoundException;
-import org.opencastproject.videoeditor.api.ProcessFailedException;
 import org.opencastproject.videoeditor.api.VideoEditorService;
 import org.opencastproject.workflow.api.WorkflowInstance;
 import org.opencastproject.workflow.api.WorkflowInstanceImpl;
@@ -55,13 +49,11 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.xml.sax.SAXException;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -279,64 +271,6 @@ public class VideoEditorWorkflowOperationHandlerTest {
       Assert.assertTrue("Mediapackage schould contain a derived track with flavor subtype "
               + targetFlavorSubtypeProperty,
               derivedElements[0].getFlavor().getSubtype().equals(targetFlavorSubtypeProperty));
-    }
-  }
-
-  @Test
-  public void testEditorResume() throws WorkflowOperationException, URISyntaxException, NotFoundException, IOException,
-          ProcessFailedException, ServiceRegistryException, MediaPackageException {
-    // filled smil file
-    URI episodeSmilURI = VideoEditorWorkflowOperationHandlerTest.class.getResource("/editor_smil_filled.smil").toURI();
-    File episodeSmilFile = new File(episodeSmilURI);
-
-    // setup mock services
-    EasyMock.expect(workspaceMock.get((URI) EasyMock.anyObject())).andReturn(episodeSmilFile);
-    EasyMock.expect(
-            workspaceMock.put((String) EasyMock.anyObject(), (String) EasyMock.anyObject(),
-                    (String) EasyMock.anyObject(), (InputStream) EasyMock.anyObject())).andReturn(episodeSmilURI);
-    EasyMock.expect(
-            workspaceMock.moveTo((URI) EasyMock.anyObject(), (String) EasyMock.anyObject(),
-                    (String) EasyMock.anyObject(), (String) EasyMock.anyObject())).andReturn(
-            URI.create("http://localhost:8080/foo/trimmed.mp4"));
-
-    Job job = EasyMock.createNiceMock(Job.class);
-    EasyMock.expect(job.getPayload()).andReturn(MediaPackageElementParser.getAsXml(mpSmil.getTracks()[0])).anyTimes();
-    EasyMock.expect(job.getStatus()).andReturn(Job.Status.FINISHED);
-
-    ServiceRegistry serviceRegistry = EasyMock.createNiceMock(ServiceRegistry.class);
-    videoEditorWorkflowOperationHandler.setServiceRegistry(serviceRegistry);
-    EasyMock.expect(serviceRegistry.getJob(EasyMock.anyLong())).andReturn(job);
-
-    EasyMock.expect(videoEditorServiceMock.processSmil((Smil) EasyMock.anyObject())).andReturn(Arrays.asList(job));
-
-    EasyMock.replay(workspaceMock, job, serviceRegistry, videoEditorServiceMock);
-
-    WorkflowInstanceImpl workflowInstance = getWorkflowInstance(mpSmil, getDefaultConfiguration(true));
-    // run test
-    WorkflowOperationResult result = videoEditorWorkflowOperationHandler.resume(workflowInstance, null, null);
-    Assert.assertNotNull(
-            "VideoEditor workflow operation returns null but should be an instantiated WorkflowOperationResult", result);
-
-    EasyMock.verify(workspaceMock, job, serviceRegistry, videoEditorServiceMock);
-
-    // verify trimmed track derived from source track
-    WorkflowOperationInstance worflowOperationInstance = workflowInstance.getCurrentOperation();
-    String targetFlavorSubtypeProperty = worflowOperationInstance.getConfiguration("target-flavor-subtype");
-    String sourceFlavorsProperty = worflowOperationInstance.getConfiguration("source-flavors");
-
-    TrackSelector trackSelector = new TrackSelector();
-    trackSelector.addFlavor(sourceFlavorsProperty);
-    Collection<Track> sourceTracks = trackSelector.select(result.getMediaPackage(), false);
-    Assert.assertTrue("Mediapackage does not contain any tracks matching flavor " + sourceFlavorsProperty,
-            sourceTracks != null && !sourceTracks.isEmpty());
-
-    for (Track sourceTrack : sourceTracks) {
-      MediaPackageElementFlavor targetFlavor = MediaPackageElementFlavor.flavor(sourceTrack.getFlavor().getType(),
-              targetFlavorSubtypeProperty);
-
-      Track[] targetTracks = result.getMediaPackage().getTracks(targetFlavor);
-      Assert.assertTrue("Media package doesn't contain track with flavor " + targetFlavor.toString(),
-              targetTracks != null && targetTracks.length > 0);
     }
   }
 }
