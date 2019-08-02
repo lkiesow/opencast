@@ -21,13 +21,19 @@
 
 package org.opencastproject.fsresources;
 
+import org.opencastproject.security.api.SecurityService;
+import org.opencastproject.security.api.StaticFileAuthorization;
 import org.opencastproject.util.ConfigurationException;
 import org.opencastproject.util.MimeTypes;
 
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.osgi.service.component.ComponentContext;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.ReferenceCardinality;
+import org.osgi.service.component.annotations.ReferencePolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,11 +43,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Objects;
 import java.util.StringTokenizer;
+import java.util.regex.Pattern;
 import java.util.zip.CRC32;
 
 import javax.servlet.Servlet;
-import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -53,10 +61,10 @@ import javax.servlet.http.HttpServletResponse;
  */
 @Component(
     property = {
-            "service.description=Opencast Download Resources",
-            "alias=/static",
-            "httpContext.id=opencast.httpcontext",
-            "httpContext.shared=true"
+        "service.description=Opencast Download Resources",
+        "alias=/static",
+        "httpContext.id=opencast.httpcontext",
+        "httpContext.shared=true"
     },
     immediate = true,
     service = Servlet.class
@@ -70,6 +78,8 @@ public class StaticResourceServlet extends HttpServlet {
   /** The logger */
   private static final Logger logger = LoggerFactory.getLogger(StaticResourceServlet.class);
 
+  private static final String PROP_AUTH_REQUIRED = "authentication.required";
+
   /** static initializer */
   static {
     FULL_RANGE = new ArrayList<>();
@@ -78,10 +88,45 @@ public class StaticResourceServlet extends HttpServlet {
   /** The filesystem directory to serve files fro */
   private String distributionDirectory;
 
+  private boolean authRequired = true;
+
+  private SecurityService securityService = null;
+
+  private List<StaticFileAuthorization> authorizations = new ArrayList<>();
+
   /**
    * No-arg constructor
    */
   public StaticResourceServlet() {
+  }
+
+  @Reference(
+      cardinality = ReferenceCardinality.MULTIPLE,
+      policy = ReferencePolicy.DYNAMIC
+  )
+  public void addStaticFileAuthorization(final StaticFileAuthorization authorization) {
+    authorizations.add(authorization);
+    logger.info("Added static file authorization for {}", (Object) authorization.getProtectedUrlPattern());
+  }
+
+  public void removeStaticFileAuthorization(final StaticFileAuthorization authorization) {
+    authorizations.remove(authorization);
+    logger.info("Removed static file authorization for {}", (Object) authorization.getProtectedUrlPattern());
+  }
+
+  private boolean isAuthorized(final String path) {
+    // Check with authorization plug-ins
+    for (StaticFileAuthorization auth: authorizations) {
+      for (Pattern pattern: auth.getProtectedUrlPattern()) {
+        logger.debug("Testing pattern `{}`", pattern);
+        if (pattern.matcher(path).matches()) {
+          logger.debug("Using regexp `{}` for authorization check", pattern);
+          return auth.verifyUrlAccess(path);
+        }
+      }
+    }
+    logger.debug("No authorization plug-in matches");
+    return false;
   }
 
   /**
@@ -92,7 +137,11 @@ public class StaticResourceServlet extends HttpServlet {
    */
   @Activate
   public void activate(ComponentContext cc) {
-    if (cc != null) {
+    if (cc == null) {
+      authRequired = true;
+    } else {
+      authRequired = BooleanUtils.toBoolean(Objects.toString(cc.getProperties().get(PROP_AUTH_REQUIRED), "true"));
+
       distributionDirectory = cc.getBundleContext().getProperty("org.opencastproject.download.directory");
       if (StringUtils.isEmpty(distributionDirectory)) {
         final String storageDir = cc.getBundleContext().getProperty("org.opencastproject.storage.dir");
@@ -101,11 +150,36 @@ public class StaticResourceServlet extends HttpServlet {
         }
       }
     }
+    logger.debug("Authentication check enabled: {}", authRequired);
 
     if (StringUtils.isEmpty(distributionDirectory)) {
       throw new ConfigurationException("Distribution directory not set");
     }
     logger.info("Serving static files from '{}'", distributionDirectory);
+  }
+
+  @Override
+  protected void doHead(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+    logger.debug("Looking for static resource '{}'", req.getRequestURI());
+    String path = req.getPathInfo();
+    if (path == null || path.contains("..")) {
+      resp.sendError(HttpServletResponse.SC_FORBIDDEN);
+      return;
+    }
+
+    if (authRequired && !isAuthorized(path)) {
+      resp.sendError(HttpServletResponse.SC_FORBIDDEN);
+      logger.debug("Not authorized");
+      return;
+    }
+
+    final File file = new File(distributionDirectory, path);
+    if (!file.isFile() || !file.canRead()) {
+      logger.debug("unable to find file '{}', returning HTTP 404", file);
+      return;
+    }
+
+    resp.setContentLength((int) file.length());
   }
 
   /**
@@ -115,11 +189,17 @@ public class StaticResourceServlet extends HttpServlet {
    *      javax.servlet.http.HttpServletResponse)
    */
   @Override
-  protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+  protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
     logger.debug("Looking for static resource '{}'", req.getRequestURI());
     String path = req.getPathInfo();
     if (path == null || path.contains("..")) {
       resp.sendError(HttpServletResponse.SC_FORBIDDEN);
+      return;
+    }
+
+    if (authRequired && !isAuthorized(path)) {
+      resp.sendError(HttpServletResponse.SC_FORBIDDEN);
+      logger.debug("Not authorized");
       return;
     }
 
