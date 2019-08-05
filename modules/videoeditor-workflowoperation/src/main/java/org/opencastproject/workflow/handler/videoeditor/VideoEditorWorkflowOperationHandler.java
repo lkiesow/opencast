@@ -32,6 +32,7 @@ import org.opencastproject.mediapackage.MediaPackageElementBuilderFactory;
 import org.opencastproject.mediapackage.MediaPackageElementFlavor;
 import org.opencastproject.mediapackage.MediaPackageElementParser;
 import org.opencastproject.mediapackage.MediaPackageException;
+import org.opencastproject.mediapackage.MediaPackageReference;
 import org.opencastproject.mediapackage.Track;
 import org.opencastproject.mediapackage.selector.SimpleElementSelector;
 import org.opencastproject.mediapackage.selector.TrackSelector;
@@ -69,6 +70,7 @@ import java.net.URI;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import javax.xml.bind.JAXBException;
 
@@ -189,125 +191,63 @@ public class VideoEditorWorkflowOperationHandler extends AbstractWorkflowOperati
               config.sourceFlavors, mediaPackage.getIdentifier());
     }
 
-    // Get SMIL file
+    // Load source SMIL file and update the tracks
     Smil smil;
     MediaPackageElement smilCatalog = smilCatalogs.iterator().next();
     try {
       final File smilFile = workspace.get(smilCatalog.getURI());
       smil = smilService.fromXml(smilFile).getSmil();
       smil = replaceAllTracksWith(smil, sourceTracks.toArray(new Track[0]));
+    } catch (NotFoundException | IOException ex) {
+      throw new WorkflowOperationException(format("Can't open SMIL catalog %s from media package %s.",
+          smilCatalog.getIdentifier(), mediaPackage.getIdentifier().compact()), ex);
+    } catch (SmilException ex) {
+      throw new WorkflowOperationException(ex);
+    }
 
+    // write target smil
+    if (StringUtils.isNotEmpty(config.targetSmilFlavor)) {
+      MediaPackageElementFlavor targetSmilFlavor = MediaPackageElementFlavor.parseFlavor(config.targetSmilFlavor);
       try (InputStream is = IOUtils.toInputStream(smil.toXML(), "UTF-8")) {
         // put modified SMIL into workspace
         URI newSmilUri = workspace.put(mediaPackage.getIdentifier().compact(), smil.getId(), SMIL_FILE_NAME, is);
         Catalog catalog = (Catalog) MediaPackageElementBuilderFactory.newInstance().newElementBuilder()
-                .elementFromURI(newSmilUri, MediaPackageElement.Type.Catalog, smilCatalogs[0].getFlavor());
-        catalog.setIdentifier(smil.getId());
+            .elementFromURI(newSmilUri, MediaPackageElement.Type.Catalog, targetSmilFlavor);
+        catalog.setIdentifier(UUID.randomUUID().toString());
         mediaPackage.add(catalog);
       } catch (Exception ex) {
         throw new WorkflowOperationException(ex);
       }
-
-    } catch (NotFoundException ex) {
-      throw new WorkflowOperationException(format("Failed to get SMIL catalog %s from mediapackage %s.",
-              smilCatalogs[0].getIdentifier(), mediaPackage.getIdentifier().compact()), ex);
-    } catch (IOException ex) {
-      throw new WorkflowOperationException(format("Can't open SMIL catalog %s from mediapackage %s.",
-              smilCatalogs[0].getIdentifier(), mediaPackage.getIdentifier().compact()), ex);
-    } catch (SmilException ex) {
-      throw new WorkflowOperationException(ex);
     }
+
     // If skipProcessing, The track is processed by a separate operation which takes the SMIL file and encode directly
     // to delivery format
-    if (skipProcessing) {
-      logger.info("VideoEdit workflow {} finished - smil file is {}", workflowInstance.getId(), smil.getId());
+    if (config.skipProcessing) {
+      logger.info("Editor workflow {} finished - smil file is {}", workflowInstance.getId(), smil.getId());
       return createResult(mediaPackage, Action.CONTINUE);
     }
-    // create video edit jobs and run them
-    if (skipIfNoTrim) {
-      // We need to check whether or not there are trimming points defined
-      // TODO The SmilService implementation does not do any filtering or optimizations for us. We need to
-      // process the SMIL file ourselves. The SmilService should be something more than a bunch of classes encapsulating
-      // data types which provide no extra functionality (e.g. we shouldn't have to check the SMIL structure ourselves)
 
-      // We should not modify the SMIL file as we traverse through its elements, so we make a copy and modify it instead
-      try {
-        Smil filteredSmil = smilService.fromXml(smil.toXML()).getSmil();
-        for (SmilMediaObject element : smil.getBody().getMediaElements()) {
-          // body should contain par elements
-          if (element.isContainer()) {
-            SmilMediaContainer container = (SmilMediaContainer) element;
-            if (SmilMediaContainer.ContainerType.PAR == container.getContainerType()) {
-              continue;
-            }
-          }
-          filteredSmil = smilService.removeSmilElement(filteredSmil, element.getId()).getSmil();
-        }
-
-        // Return an empty job list if not PAR components (i.e. trimming points) are defined, or if there is just
-        // one that takes the whole video size
-        switch (filteredSmil.getBody().getMediaElements().size()) {
-          case 0:
-            logger.info("Skipping SMIL job generation for mediapackage '{}', "
-                    + "because the SMIL does not define any trimming points", mediaPackage.getIdentifier());
-            return skip(workflowInstance, context);
-
-          case 1:
-            // If the whole duration was not defined in the mediapackage, we cannot tell whether or not this PAR
-            // component represents the whole duration or not, therefore we don't bother to try
-            if (mediaPackage.getDuration() < 0)
-              break;
-
-            SmilMediaContainer parElement = (SmilMediaContainer) filteredSmil.getBody().getMediaElements().get(0);
-            boolean skip = true;
-            for (SmilMediaObject elementChild : parElement.getElements()) {
-              if (!elementChild.isContainer()) {
-                SmilMediaElement media = (SmilMediaElement) elementChild;
-                // Compare begin and endpoints
-                // If they don't represent the whole length, then we break --we have a trimming point
-                if ((media.getClipBeginMS() != 0) || (media.getClipEndMS() != mediaPackage.getDuration())) {
-                  skip = false;
-                  break;
-                }
-              }
-            }
-
-            if (skip) {
-              logger.info("Skipping SMIL job generation for mediapackage '{}', "
-                      + "because the trimming points in the SMIL correspond "
-                      + "to the beginning and the end of the video", mediaPackage.getIdentifier());
-              return skip(workflowInstance, context);
-            }
-
-            break;
-
-          default:
-            break;
-        }
-      } catch (MalformedURLException | SmilException | JAXBException | SAXException e) {
-        logger.warn("Error parsing input SMIL to determine if it has trimpoints. "
-                + "We will assume it does and go on creating jobs.");
-      }
+    // Check if we need to trim/process the video based on the input SMIL
+    if (config.skipIfNoTrim && !isTrimmingNecessary(mediaPackage, smil)) {
+      return skip(workflowInstance, context);
     }
 
     // Create video edit jobs and run them
-    List<Job> jobs = null;
+    List<Job> jobs;
 
     try {
-      logger.info("Create processing jobs for SMIL file: {}", smilCatalogs[0].getIdentifier());
+      logger.info("Create processing jobs for SMIL file: {}", smilCatalog.getIdentifier());
       jobs = videoEditorService.processSmil(smil);
-      if (!waitForStatus(jobs.toArray(new Job[jobs.size()])).isSuccess()) {
-        throw new WorkflowOperationException(
-                format("Processing SMIL file failed: %s", smilCatalogs[0].getIdentifier()));
+      if (!waitForStatus(jobs.toArray(new Job[0])).isSuccess()) {
+        throw new WorkflowOperationException(format("Processing SMIL file failed: %s", smilCatalog.getIdentifier()));
       }
-      logger.info("Finished processing of SMIL file: {}", smilCatalogs[0].getIdentifier());
+      logger.info("Finished processing of SMIL file: {}", smilCatalog.getIdentifier());
     } catch (ProcessFailedException ex) {
-      throw new WorkflowOperationException(
-              format("Finished processing of SMIL file: %s", smilCatalogs[0].getIdentifier()), ex);
+      throw new WorkflowOperationException(format("Processing SMIL failed: %s", smilCatalog.getIdentifier()), ex);
     }
 
     // Move edited tracks to work location and set target flavor
-    Track editedTrack = null;
+    Track editedTrack;
     boolean mpAdded = false;
     for (Job job : jobs) {
       try {
@@ -342,22 +282,89 @@ public class VideoEditorWorkflowOperationHandler extends AbstractWorkflowOperati
     return createResult(mediaPackage, Action.CONTINUE);
   }
 
+  private boolean isTrimmingNecessary(final MediaPackage mediaPackage, final Smil smil) {
+
+    // We need to check whether or not there are trimming points defined
+    // TODO The SmilService implementation does not do any filtering or optimizations for us. We need to
+    // process the SMIL file ourselves. The SmilService should be something more than a bunch of classes encapsulating
+    // data types which provide no extra functionality (e.g. we shouldn't have to check the SMIL structure ourselves)
+
+    // We should not modify the SMIL file as we traverse through its elements, so we make a copy and modify it instead
+    try {
+      Smil filteredSmil = smilService.fromXml(smil.toXML()).getSmil();
+      for (SmilMediaObject element : smil.getBody().getMediaElements()) {
+        // body should contain par elements
+        if (element.isContainer()) {
+          SmilMediaContainer container = (SmilMediaContainer) element;
+          if (SmilMediaContainer.ContainerType.PAR == container.getContainerType()) {
+            continue;
+          }
+        }
+        filteredSmil = smilService.removeSmilElement(filteredSmil, element.getId()).getSmil();
+      }
+
+      // Return an empty job list if not PAR components (i.e. trimming points) are defined, or if there is just
+      // one that takes the whole video size
+      switch (filteredSmil.getBody().getMediaElements().size()) {
+        case 0:
+          logger.info("Skipping editor for '{}' because the SMIL does not define any trimming points",
+              mediaPackage.getIdentifier());
+          return false;
+
+        case 1:
+          // If the whole duration was not defined in the media package, we cannot tell whether or not this PAR
+          // component represents the whole duration or not, therefore we don't bother to try
+          if (mediaPackage.getDuration() < 0)
+            break;
+
+          SmilMediaContainer parElement = (SmilMediaContainer) filteredSmil.getBody().getMediaElements().get(0);
+          boolean skip = true;
+          for (SmilMediaObject elementChild : parElement.getElements()) {
+            if (!elementChild.isContainer()) {
+              SmilMediaElement media = (SmilMediaElement) elementChild;
+              // Compare begin and endpoints
+              // If they don't represent the whole length, then we break --we have a trimming point
+              if ((media.getClipBeginMS() != 0) || (media.getClipEndMS() != mediaPackage.getDuration())) {
+                skip = false;
+                break;
+              }
+            }
+          }
+
+          if (skip) {
+            logger.info("Skipping editor for '{}' because the trimming points in the SMIL correspond "
+                + "to the beginning and the end of the video", mediaPackage.getIdentifier());
+            return false;
+          }
+
+          break;
+
+        default:
+          break;
+      }
+    } catch (MalformedURLException | SmilException | JAXBException | SAXException e) {
+      logger.warn("Error parsing input SMIL to determine if it has trimpoints. "
+          + "We will assume it does and go on creating jobs.");
+    }
+    return true;
+  }
+
   /**
    * {@inheritDoc}
    *
    * @see org.opencastproject.workflow.api.AbstractWorkflowOperationHandler#skip(org.opencastproject.workflow.api.WorkflowInstance,
    *      JobContext)
    */
-  public WorkflowOperationResult skip(final WorkflowOperationInstance operation, final MediaPackage mediaPackage,
-          final Config config) throws WorkflowOperationException {
+  private WorkflowOperationResult skip(final WorkflowOperationInstance operation, final MediaPackage mediaPackage,
+      final Config config) throws WorkflowOperationException {
     logger.info("Skip video editor operation for media package {}", mediaPackage.getIdentifier());
 
-    // processing will operate directly on source tracks as named in smil file
-    final boolean skipProcessing = BooleanUtils
-            .toBoolean(operation.getConfiguration(SKIP_PROCESSING_PROPERTY));
-    if (skipProcessing)
+    // break if we do not need to do any further processing
+    if (config.skipProcessing) {
       return createResult(mediaPackage, Action.SKIP);
-    // If not skipProcessing (set it up for process-smil), then clone and tag to target
+    }
+
+    // processing will operate directly on source tracks as named in smil file
     String targetFlavorSubTypeProperty = StringUtils
             .trimToNull(operation.getConfiguration(TARGET_FLAVOR_PROPERTY));
     if (targetFlavorSubTypeProperty == null) {
