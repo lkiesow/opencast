@@ -26,6 +26,8 @@ import org.opencastproject.mediapackage.MediaPackageElement;
 import org.opencastproject.mediapackage.MediaPackageElementFlavor;
 import org.opencastproject.mediapackage.MediaPackageElementSelector;
 
+import org.apache.commons.lang3.StringUtils;
+
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
@@ -185,6 +187,20 @@ public abstract class AbstractMediaPackageElementSelector<T extends MediaPackage
     MediaPackageElementFlavor f = MediaPackageElementFlavor.parseFlavor(flavor);
     if (!flavors.contains(f))
       flavors.add(f);
+  }
+
+  /**
+   * Split the given list of comma and/or space separated flavors and add them to the list of flavors.
+   * <p>
+   * Note that the order is relevant to the selection of the track returned by this selector.
+   *
+   * @param flavors
+   *        Comma and/or space separated list of flavors
+   */
+  public void addFlavors(final String flavors) {
+    for (String flavor: StringUtils.split(flavors, ", ")) {
+      addFlavor(flavor);
+    }
   }
 
   /**
