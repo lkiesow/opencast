@@ -81,6 +81,19 @@ public interface SearchService {
   SearchResult getByQuery(SearchQuery q) throws SearchException;
 
   /**
+   * Find search results based on the specified query object
+   *
+   * @param q
+   *          The {@link SearchQuery} containing the details of the desired results
+   * @param signed
+   *          Request a media package with signed URLs
+   * @return The search result
+   * @throws SearchException
+   *           if an error occurs while searching for media packages
+   */
+  SearchResult getByQuery(SearchQuery q, boolean signed) throws SearchException;
+
+  /**
    * Finds search results across any organization, protected by any access control. This should be used for
    * administrative purposes, such as bulk edits based on metadata updates.
    *
