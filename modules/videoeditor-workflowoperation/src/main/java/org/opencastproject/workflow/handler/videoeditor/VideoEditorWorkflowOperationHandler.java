@@ -82,7 +82,7 @@ public class VideoEditorWorkflowOperationHandler extends AbstractWorkflowOperati
   private static final String SKIP_PROCESSING_PROPERTY = "skip-processing";
 
   /** Name of the configuration option that provides the SMIL flavor as input. */
-  private static final String SOURCE_SMIL_FLAVOR_PROPERTY = "source-smil-flavors";
+  private static final String SOURCE_SMIL_FLAVOR_PROPERTY = "source-smil-flavor";
 
   /** Name of the configuration option that provides the SMIL flavor as input. */
   private static final String TARGET_SMIL_FLAVOR_PROPERTY = "target-smil-flavor";
