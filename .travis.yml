@@ -130,8 +130,9 @@ jobs:
     - stage: build
       env: name=build-other-locale
       script:
-        - export LANG=de_DE.utf8
-        - mvn clean install -Pnone
+        - ( export LANG=de_DE.utf8 &&
+            export LC_ALL= &&
+            mvn clean install -Pnone )
 
     # Make a simple build to generate all Opencast artifacts while excluding as many checks as possible since we do a
     # proper test in parallel anyway. Then run `mvn site` to generate Javadocs. We exclude checkstyle and tests since
