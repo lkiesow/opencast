@@ -130,6 +130,7 @@ jobs:
     - stage: build
       env: name=build-other-locale
       script:
+        - sudo locale-gen "en_US.UTF-8" "de_DE.UTF-8"
         - ( export LANG=de_DE.utf8 &&
             export LC_ALL= &&
             mvn clean install -Pnone )
