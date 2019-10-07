@@ -40,6 +40,7 @@ import org.opencastproject.mediapackage.Publication;
 import org.opencastproject.mediapackage.PublicationImpl;
 import org.opencastproject.mediapackage.selector.SimpleElementSelector;
 import org.opencastproject.search.api.SearchQuery;
+import org.opencastproject.security.api.SecurityService;
 import org.opencastproject.serviceregistry.api.ServiceRegistryException;
 import org.opencastproject.util.MimeTypes;
 import org.opencastproject.util.NotFoundException;
@@ -99,6 +100,8 @@ public class PublishIliasWorkflowOperationHandler extends AbstractWorkflowOperat
   /** The ilias distribution service */
   private DistributionService iliasDistributionService = null;
 
+  private SecurityService securityService = null;
+
   /** The server url */
   private URL serverUrl;
 
@@ -113,6 +116,10 @@ public class PublishIliasWorkflowOperationHandler extends AbstractWorkflowOperat
    */
   protected void setIliasDistributionService(DistributionService iliasDistributionService) {
     this.iliasDistributionService = iliasDistributionService;
+  }
+
+  protected void setSecurityService(SecurityService securityService) {
+    this.securityService = securityService;
   }
 
   /** The configuration options for this handler */
@@ -151,16 +158,6 @@ public class PublishIliasWorkflowOperationHandler extends AbstractWorkflowOperat
     } else {
       logger.error("{} is not set", ILIAS_URL_PROPERTY);
     }
-  }
-
-  /**
-   * {@inheritDoc}
-   *
-   * @see org.opencastproject.workflow.api.WorkflowOperationHandler#getConfigurationOptions()
-   */
-  @Override
-  public SortedMap<String, String> getConfigurationOptions() {
-    return CONFIG_OPTIONS;
   }
 
   /**
@@ -280,7 +277,8 @@ public class PublishIliasWorkflowOperationHandler extends AbstractWorkflowOperat
         logger.info("Publishing media package {} to search index", mediaPackageForSearch);
 
         URL engageBaseUrl = null;
-        iliasUrlString = StringUtils.trimToNull(workflowInstance.getOrganization().getProperties()
+
+        iliasUrlString = StringUtils.trimToNull(securityService.getOrganization().getProperties()
                 .get(ILIASFRONTEND_URL_PROPERTY));
         if (iliasUrlString != null) {
           engageBaseUrl = new URL(iliasUrlString);
