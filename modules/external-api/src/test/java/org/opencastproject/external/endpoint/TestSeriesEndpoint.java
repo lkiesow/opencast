@@ -21,6 +21,7 @@
 package org.opencastproject.external.endpoint;
 
 import static com.entwinemedia.fn.data.Opt.some;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.easymock.EasyMock.anyObject;
 import static org.easymock.EasyMock.createMock;
 import static org.easymock.EasyMock.createNiceMock;
@@ -29,7 +30,7 @@ import static org.easymock.EasyMock.expectLastCall;
 import static org.easymock.EasyMock.replay;
 import static org.opencastproject.index.service.util.CatalogAdapterUtil.getCatalogProperties;
 
-import org.opencastproject.external.impl.index.ExternalIndex;
+import org.opencastproject.external.index.ExternalIndex;
 import org.opencastproject.index.service.api.IndexService;
 import org.opencastproject.index.service.catalog.adapter.MetadataList;
 import org.opencastproject.index.service.catalog.adapter.series.CommonSeriesCatalogUIAdapter;
@@ -109,14 +110,13 @@ public class TestSeriesEndpoint extends SeriesEndpoint {
     series1.setSubject("Topic");
     series1.setCreator("Gracie Walsh");
     series1.setCreatedDateTime(new Date(1429175556000L));
-    series1.setOptOut(true);
     series1.addContributor("Nu'man Farooq Morcos");
     series1.addContributor("Alfie Gibbons");
     series1.addPublisher("Sophie Chandler");
     series1.addOrganizer("Peter Feierabend");
     series1.addOrganizer("Florian Naumann");
     series1.addOrganizer("Niklas Vogler");
-    series1.setAccessPolicy(IOUtils.toString(TestSeriesEndpoint.class.getResourceAsStream("/series1-acl.json")));
+    series1.setAccessPolicy(IOUtils.toString(TestSeriesEndpoint.class.getResourceAsStream("/series1-acl.json"), UTF_8));
 
     SearchResultItem<Series> searchResultItem1 = EasyMock.createNiceMock(SearchResultItem.class);
     expect(searchResultItem1.getSource()).andStubReturn(series1);

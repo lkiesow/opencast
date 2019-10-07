@@ -38,7 +38,7 @@ import static org.opencastproject.index.service.util.RestUtils.okJson;
 import static org.opencastproject.index.service.util.RestUtils.okJsonList;
 import static org.opencastproject.util.doc.rest.RestParameter.Type.STRING;
 
-import org.opencastproject.adminui.impl.index.AdminUISearchIndex;
+import org.opencastproject.adminui.index.AdminUISearchIndex;
 import org.opencastproject.adminui.util.QueryPreprocessor;
 import org.opencastproject.index.service.impl.index.series.Series;
 import org.opencastproject.index.service.impl.index.series.SeriesSearchQuery;
@@ -453,7 +453,7 @@ public class ThemesEndpoint {
       Theme updatedTheme = themesServiceDatabase.updateTheme(theme);
       return RestUtils.okJson(themeToJSON(updatedTheme));
     } catch (ThemesServiceDatabaseException e) {
-      logger.error("Unable to update theme {}: {}", themeId, ExceptionUtils.getStackTrace(e));
+      logger.error("Unable to update theme {}", themeId, e);
       return RestUtil.R.serverError();
     }
   }
@@ -512,7 +512,7 @@ public class ThemesEndpoint {
       } catch (NotFoundException e) {
         logger.warn("Theme {} already deleted on series {}", themeId, seriesId);
       } catch (SeriesException e) {
-        logger.error("Unable to remove theme from series {}: {}", seriesId, ExceptionUtils.getStackTrace(e));
+        logger.error("Unable to remove theme from series {}", seriesId, e);
         throw new WebApplicationException(e, Status.INTERNAL_SERVER_ERROR);
       }
     }
@@ -583,7 +583,7 @@ public class ThemesEndpoint {
         fields.add(f(fieldName.concat("Name"), v(staticFileService.getFileName(staticFileId))));
         fields.add(f(fieldName.concat("Url"), v(staticFileRestService.getStaticFileURL(staticFileId).toString(), Jsons.BLANK)));
       } catch (IllegalStateException | NotFoundException e) {
-        logger.error("Error retreiving static file '{}' : {}", staticFileId, ExceptionUtils.getStackTrace(e));
+        logger.error("Error retreiving static file '{}' ", staticFileId, e);
       }
     }
   }

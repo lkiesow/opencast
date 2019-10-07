@@ -37,12 +37,14 @@ import org.opencastproject.util.doc.rest.RestQuery;
 import org.opencastproject.util.doc.rest.RestResponse;
 import org.opencastproject.util.doc.rest.RestService;
 
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.DELETE;
@@ -81,28 +83,32 @@ public class SearchRestService extends AbstractJobProducerEndpoint {
   /** The service registry */
   private ServiceRegistry serviceRegistry;
 
-  public String getSampleMediaPackage() {
-    return "<mediapackage xmlns=\"http://mediapackage.opencastproject.org\" start=\"2007-12-05T13:40:00\" duration=\"1004400000\"><title>t1</title>\n"
-            + "  <metadata>\n"
-            + "    <catalog id=\"catalog-1\" type=\"dublincore/episode\">\n"
-            + "      <mimetype>text/xml</mimetype>\n"
-            + "      <url>https://opencast.jira.com/svn/MH/trunk/modules/kernel/src/test/resources/dublincore.xml</url>\n"
-            + "      <checksum type=\"md5\">2b8a52878c536e64e20e309b5d7c1070</checksum>\n"
-            + "    </catalog>\n"
-            + "    <catalog id=\"catalog-3\" type=\"metadata/mpeg-7\" ref=\"track:track-1\">\n"
-            + "      <mimetype>text/xml</mimetype>\n"
-            + "      <url>https://opencast.jira.com/svn/MH/trunk/modules/kernel/src/test/resources/mpeg7.xml</url>\n"
-            + "      <checksum type=\"md5\">2b8a52878c536e64e20e309b5d7c1070</checksum>\n"
-            + "    </catalog>\n"
-            + "  </metadata>\n" + "</mediapackage>";
-  }
+  private static final String SAMPLE_MEDIA_PACKAGE = "<mediapackage xmlns=\"http://mediapackage.opencastproject.org\""
+          + "start=\"2007-12-05T13:40:00\" duration=\"1004400000\">\n"
+          + "  <title>t1</title>\n"
+          + "  <metadata>\n"
+          + "    <catalog id=\"catalog-1\" type=\"dublincore/episode\">\n"
+          + "      <mimetype>text/xml</mimetype>\n"
+          + "      <url>https://opencast.jira.com/svn/MH/trunk/modules/kernel/src/test/resources/dublincore.xml</url>\n"
+          + "      <checksum type=\"md5\">2b8a52878c536e64e20e309b5d7c1070</checksum>\n"
+          + "    </catalog>\n"
+          + "    <catalog id=\"catalog-3\" type=\"metadata/mpeg-7\" ref=\"track:track-1\">\n"
+          + "      <mimetype>text/xml</mimetype>\n"
+          + "      <url>https://opencast.jira.com/svn/MH/trunk/modules/kernel/src/test/resources/mpeg7.xml</url>\n"
+          + "      <checksum type=\"md5\">2b8a52878c536e64e20e309b5d7c1070</checksum>\n"
+          + "    </catalog>\n"
+          + "  </metadata>\n"
+          + "</mediapackage>";
 
   @POST
   @Path("add")
   @Produces(MediaType.APPLICATION_XML)
-  @RestQuery(name = "add", description = "Adds a mediapackage to the search index.", restParameters = { @RestParameter(description = "The media package to add to the search index.", isRequired = true, name = "mediapackage", type = RestParameter.Type.TEXT, defaultValue = "${this.sampleMediaPackage}") }, reponses = {
-          @RestResponse(description = "XML encoded receipt is returned", responseCode = HttpServletResponse.SC_OK),
-          @RestResponse(description = "There has been an internal error and the mediapackage could not be added", responseCode = HttpServletResponse.SC_INTERNAL_SERVER_ERROR) }, returnDescription = "The job receipt")
+  @RestQuery(name = "add", description = "Adds a mediapackage to the search index.",
+    restParameters = {
+      @RestParameter(description = "The media package to add to the search index.", isRequired = true, name = "mediapackage", type = RestParameter.Type.TEXT, defaultValue = SAMPLE_MEDIA_PACKAGE)
+    }, reponses = {
+      @RestResponse(description = "XML encoded receipt is returned", responseCode = HttpServletResponse.SC_OK),
+      @RestResponse(description = "There has been an internal error and the mediapackage could not be added", responseCode = HttpServletResponse.SC_INTERNAL_SERVER_ERROR) }, returnDescription = "The job receipt")
   public Response add(@FormParam("mediapackage") MediaPackageImpl mediaPackage) throws SearchException {
     try {
       Job job = searchService.add(mediaPackage);
@@ -143,7 +149,10 @@ public class SearchRestService extends AbstractJobProducerEndpoint {
                   + "CONTRIBUTOR, LANGUAGE, LICENSE, SUBJECT, DESCRIPTION, PUBLISHER.  Add '_DESC' to reverse the sort order (e.g. TITLE_DESC).", type = RestParameter.Type.STRING),
           @RestParameter(defaultValue = "20", description = "The maximum number of items to return per page.", isRequired = false, name = "limit", type = RestParameter.Type.STRING),
           @RestParameter(defaultValue = "0", description = "The page number.", isRequired = false, name = "offset", type = RestParameter.Type.STRING),
-          @RestParameter(defaultValue = "false", description = "Whether this is an administrative query", isRequired = false, name = "admin", type = RestParameter.Type.BOOLEAN) }, reponses = { @RestResponse(description = "The request was processed succesfully.", responseCode = HttpServletResponse.SC_OK) }, returnDescription = "The search results, expressed as xml or json.")
+          @RestParameter(defaultValue = "false", description = "Whether this is an administrative query", isRequired = false, name = "admin", type = RestParameter.Type.BOOLEAN),
+          @RestParameter(defaultValue = "true", description = "If results are to be signed", isRequired = false,
+              name = "sign", type = RestParameter.Type.BOOLEAN)
+    }, reponses = { @RestResponse(description = "The request was processed successfully.", responseCode = HttpServletResponse.SC_OK) }, returnDescription = "The search results, formatted as XML or JSON.")
   public Response getEpisodeAndSeriesById(
       @QueryParam("id")       String  id,
       @QueryParam("q")        String  text,
@@ -152,10 +161,12 @@ public class SearchRestService extends AbstractJobProducerEndpoint {
       @QueryParam("limit")    int     limit,
       @QueryParam("offset")   int     offset,
       @QueryParam("admin")    boolean admin,
+      @QueryParam("sign")     String  sign,
       @PathParam("format")    String  format
       ) throws SearchException, UnauthorizedException {
 
-    SearchQuery query = new SearchQuery();
+    final boolean signURLs = BooleanUtils.toBoolean(Objects.toString(sign, "true"));
+    SearchQuery query = new SearchQuery().signURLs(signURLs);
 
     // If id is specified, do a search based on id
     if (StringUtils.isNotBlank(id))
@@ -229,11 +240,14 @@ public class SearchRestService extends AbstractJobProducerEndpoint {
                   + "CONTRIBUTOR, LANGUAGE, LICENSE, SUBJECT, DESCRIPTION, PUBLISHER.  Add '_DESC' to reverse the sort order (e.g. TITLE_DESC).", type = RestParameter.Type.STRING),          
           @RestParameter(defaultValue = "20", description = "The maximum number of items to return per page.", isRequired = false, name = "limit", type = RestParameter.Type.STRING),
           @RestParameter(defaultValue = "0", description = "The page number.", isRequired = false, name = "offset", type = RestParameter.Type.STRING),
-          @RestParameter(defaultValue = "false", description = "Whether this is an administrative query", isRequired = false, name = "admin", type = RestParameter.Type.BOOLEAN) }, reponses = { @RestResponse(description = "The request was processed succesfully.", responseCode = HttpServletResponse.SC_OK) }, returnDescription = "The search results, expressed as xml or json.")
+          @RestParameter(defaultValue = "false", description = "Whether this is an administrative query", isRequired = false, name = "admin", type = RestParameter.Type.BOOLEAN),
+          @RestParameter(defaultValue = "true", description = "If results are to be signed", isRequired = false,
+              name = "sign", type = RestParameter.Type.BOOLEAN)
+  }, reponses = { @RestResponse(description = "The request was processed successfully.", responseCode = HttpServletResponse.SC_OK) }, returnDescription = "The search results, formatted as xml or json.")
   public Response getEpisode(@QueryParam("id") String id, @QueryParam("q") String text,
           @QueryParam("sid") String seriesId, @QueryParam("sort") String sort, @QueryParam("tag") String[] tags, @QueryParam("flavor") String[] flavors,
           @QueryParam("limit") int limit, @QueryParam("offset") int offset, @QueryParam("admin") boolean admin,
-          @PathParam("format") String format) throws SearchException, UnauthorizedException {
+          @QueryParam("sign") String sign, @PathParam("format") String format) throws SearchException, UnauthorizedException {
     // CHECKSTYLE:ON
     // Prepare the flavors
     List<MediaPackageElementFlavor> flavorSet = new ArrayList<MediaPackageElementFlavor>();
@@ -247,10 +261,16 @@ public class SearchRestService extends AbstractJobProducerEndpoint {
       }
     }
 
+    final boolean signURLs = BooleanUtils.toBoolean(Objects.toString(sign, "true"));
+
     SearchQuery search = new SearchQuery();
-    search.withId(id).withSeriesId(seriesId)
-            .withElementFlavors(flavorSet.toArray(new MediaPackageElementFlavor[flavorSet.size()]))
-            .withElementTags(tags).withLimit(limit).withOffset(offset);
+    search.withId(id)
+        .withSeriesId(seriesId)
+        .withElementFlavors(flavorSet.toArray(new MediaPackageElementFlavor[0]))
+        .withElementTags(tags)
+        .withLimit(limit)
+        .withOffset(offset)
+        .signURLs(signURLs);
 
     if (StringUtils.isNotBlank(text)) {
       search.withText(text);
@@ -306,11 +326,16 @@ public class SearchRestService extends AbstractJobProducerEndpoint {
                   + "CONTRIBUTOR, LANGUAGE, LICENSE, SUBJECT, DESCRIPTION, PUBLISHER.  Add '_DESC' to reverse the sort order (e.g. TITLE_DESC).", type = RestParameter.Type.STRING),
           @RestParameter(defaultValue = "20", description = "The maximum number of items to return per page.", isRequired = false, name = "limit", type = RestParameter.Type.STRING),
           @RestParameter(defaultValue = "0", description = "The page number.", isRequired = false, name = "offset", type = RestParameter.Type.STRING),
-          @RestParameter(defaultValue = "false", description = "Whether this is an administrative query", isRequired = false, name = "admin", type = RestParameter.Type.BOOLEAN) }, reponses = { @RestResponse(description = "The request was processed succesfully.", responseCode = HttpServletResponse.SC_OK) }, returnDescription = "The search results, expressed as xml or json")
+          @RestParameter(defaultValue = "false", description = "Whether this is an administrative query", isRequired = false, name = "admin", type = RestParameter.Type.BOOLEAN),
+          @RestParameter(defaultValue = "true", description = "If results are to be signed", isRequired = false,
+              name = "sign", type = RestParameter.Type.BOOLEAN)
+    }, reponses = { @RestResponse(description = "The request was processed successfully.", responseCode = HttpServletResponse.SC_OK) }, returnDescription = "The search results, formatted as xml or json")
   public Response getByLuceneQuery(@QueryParam("q") String q, @QueryParam("sort") String sort, @QueryParam("limit") int limit,
-          @QueryParam("offset") int offset, @QueryParam("admin") boolean admin, @PathParam("format") String format)
+          @QueryParam("offset") int offset, @QueryParam("admin") boolean admin,
+          @QueryParam("sign") String sign, @PathParam("format") String format)
           throws SearchException, UnauthorizedException {
-    SearchQuery query = new SearchQuery();
+    final boolean signURLs = BooleanUtils.toBoolean(Objects.toString(sign, "true"));
+    SearchQuery query = new SearchQuery().signURLs(signURLs);
     if (!StringUtils.isBlank(q))
       query.withQuery(q);
 

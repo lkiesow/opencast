@@ -28,7 +28,7 @@ import static org.easymock.EasyMock.replay;
 import static org.opencastproject.index.service.util.CatalogAdapterUtil.getCatalogProperties;
 
 import org.opencastproject.capture.CaptureParameters;
-import org.opencastproject.external.impl.index.ExternalIndex;
+import org.opencastproject.external.index.ExternalIndex;
 import org.opencastproject.index.service.api.IndexService;
 import org.opencastproject.index.service.catalog.adapter.MetadataList;
 import org.opencastproject.index.service.catalog.adapter.events.CommonEventCatalogUIAdapter;
@@ -54,7 +54,6 @@ import org.opencastproject.util.PropertiesUtil;
 
 import com.entwinemedia.fn.data.Opt;
 
-import org.apache.commons.io.IOUtils;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.osgi.service.cm.ConfigurationException;
@@ -227,7 +226,6 @@ public class TestEventsEndpoint extends EventsEndpoint {
         "testAgent23",
         Date.from(Instant.parse("2017-08-28T00:05:00Z")),
         Date.from(Instant.parse("2017-08-28T00:07:00Z")),
-        false,
         null,
         null,
         Collections.singletonMap(CaptureParameters.CAPTURE_DEVICE_NAMES, "default1"),
@@ -249,8 +247,7 @@ public class TestEventsEndpoint extends EventsEndpoint {
         eq(Opt.none()),
         eq(Opt.none()),
         capture(capturedAgentConfig),
-        eq(Opt.none()),
-        eq(SchedulerService.ORIGIN)
+        eq(false)
     );
     EasyMock.expectLastCall();
 
@@ -263,7 +260,6 @@ public class TestEventsEndpoint extends EventsEndpoint {
         "testAgent24",
         Date.from(Instant.parse("2017-08-29T00:05:00Z")),
         Date.from(Instant.parse("2017-08-29T00:07:00Z")),
-        false,
         null,
         null,
         Collections.singletonMap(CaptureParameters.CAPTURE_DEVICE_NAMES, "default1,default2"),
@@ -282,7 +278,7 @@ public class TestEventsEndpoint extends EventsEndpoint {
     setupSecurityService();
     setupEventCatalogUIAdapters();
     Properties properties = new Properties();
-    properties.load(IOUtils.toInputStream(IOUtils.toString(getClass().getResource("/events-endpoint.properties"))));
+    properties.load(getClass().getResourceAsStream("/events-endpoint.properties"));
     updated((Hashtable) properties);
   }
 

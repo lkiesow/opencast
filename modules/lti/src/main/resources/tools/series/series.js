@@ -19,31 +19,53 @@
  *
  */
 
-/* global $, Mustache */
+/* global $, Mustache, i18ndata */
 
 'use strict';
 
-var player,
-    currentpage;
+const player = '/play/';
 
-function getSeries() {
-  var prefix = '?series=';
-  if (location.search.startsWith(prefix)) {
-    return location.search.substring(prefix.length).split('&')[0];
+var currentpage,
+    defaultLang = i18ndata['en-US'],
+    lang = defaultLang;
+
+function matchLanguage(lang) {
+  // break for too short codes
+  if (lang.length < 2) {
+    return defaultLang;
   }
-  return '';
+  // Check for exact match
+  if (lang in i18ndata) {
+    return i18ndata[lang];
+  }
+  // Check if there is a more specific language (e.g. 'en-US' if 'en' is requested)
+  for (const key of Object.keys(i18ndata)) {
+    if (key.startsWith(lang)) {
+      return i18ndata[key];
+    }
+  }
+  // check if there is a less specific language
+  return matchLanguage(lang.substring(0, lang.length - 1));
 }
 
-function loadDefaultPlayer() {
-  var infoUrl = '/info/me.json';
+function tryLocalDate(date) {
+  try {
+    return new Date(date).toLocaleString();
+  } catch(err) {
+    return date;
+  }
+}
 
-  // load spinner
-  $('main').html($('#template-loading').html());
+function i18n(key) {
+  return lang[key];
+}
 
-  // get organization configuration
-  return $.getJSON(infoUrl, function( data ) {
-    player = data.org.properties.player;
-  });
+function getSeries() {
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.has('series')) {
+    return urlParams.get('series');
+  }
+  return '';
 }
 
 function loadPage(page) {
@@ -75,12 +97,13 @@ function loadPage(page) {
 
     for (var i = 0; i < results.length; i++) {
       var episode = results[i],
+          i18ncreator = Mustache.render(i18n('CREATOR'), {creator: episode.dcCreator}),
           template = $('#template-episode').html(),
           tpldata = {
-            player: player + '?id=' + episode.id,
+            player: player + episode.id,
             title: episode.dcTitle,
-            creator: episode.dcCreator,
-            created: episode.dcCreated};
+            i18ncreator: i18ncreator,
+            created: tryLocalDate(episode.dcCreated)};
 
       // get preview image
       var attachments = episode.mediapackage.attachments.attachment;
@@ -100,7 +123,7 @@ function loadPage(page) {
     $('main').html(rendered);
 
     // render result information
-    var resultTemplate = $('#template-results').html(),
+    var resultTemplate = i18n('RESULTS'),
         resultTplData = {
           total: total,
           range: {
@@ -108,7 +131,7 @@ function loadPage(page) {
             end: offset + parseInt(data.limit)
           }
         };
-    $('header').html(Mustache.render(resultTemplate, resultTplData));
+    $('header').text(Mustache.render(resultTemplate, resultTplData));
 
     // render pagination
     $('footer').pagination({
@@ -127,6 +150,6 @@ function loadPage(page) {
 }
 
 $(document).ready(function() {
-  loadDefaultPlayer()
-    .then(loadPage(1));
+  lang = matchLanguage(navigator.language);
+  loadPage(1);
 });

@@ -86,7 +86,7 @@ public class AssetManagerMessageReceiverImpl extends BaseMessageReceiverImpl<Ass
     // Load or create the corresponding recording event
     final Event event;
     try {
-      event = getOrCreateEvent(mp.getIdentifier().toString(), organization, user, getSearchIndex());
+      event = getOrCreateEvent(msg.getId(), organization, user, getSearchIndex());
       final AccessControlList acl = msg.getAcl();
       List<ManagedAcl> acls = aclServiceFactory.serviceFor(getSecurityService().getOrganization()).getAcls();
       for (final ManagedAcl managedAcl : AccessInformationUtil.matchAcls(acls, acl)) {
@@ -109,7 +109,7 @@ public class AssetManagerMessageReceiverImpl extends BaseMessageReceiverImpl<Ass
     try {
       EventIndexUtils.updateSeriesName(event, organization, user, getSearchIndex());
     } catch (SearchIndexException e) {
-      logger.error("Error updating the series name of the event to index: {}", ExceptionUtils.getStackTrace(e));
+      logger.error("Error updating the series name of the event to index", e);
     }
 
     // Persist the scheduling event
@@ -139,7 +139,7 @@ public class AssetManagerMessageReceiverImpl extends BaseMessageReceiverImpl<Ass
     // Remove the archived entry from the search index
     try {
       getSearchIndex().deleteAssets(organization, user, eventId);
-      logger.debug("Archived media package {} removed from admin ui search index", eventId);
+      logger.debug("Archived media package {} removed from {} search index", eventId, getSearchIndex().getIndexName());
     } catch (NotFoundException e) {
       logger.warn("Archived media package {} not found for deletion", eventId);
     } catch (SearchIndexException e) {

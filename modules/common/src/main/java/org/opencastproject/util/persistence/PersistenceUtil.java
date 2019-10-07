@@ -25,9 +25,7 @@ import static org.opencastproject.util.data.Monadics.mlist;
 import static org.opencastproject.util.data.Option.none;
 import static org.opencastproject.util.data.Option.option;
 import static org.opencastproject.util.data.Option.some;
-import static org.opencastproject.util.data.Tuple.tuple;
 
-import org.opencastproject.fun.juc.Immutables;
 import org.opencastproject.util.data.Either;
 import org.opencastproject.util.data.Function;
 import org.opencastproject.util.data.Option;
@@ -35,6 +33,7 @@ import org.opencastproject.util.data.Tuple;
 
 import com.mchange.v2.c3p0.ComboPooledDataSource;
 
+import org.eclipse.persistence.config.PersistenceUnitProperties;
 import org.osgi.service.component.ComponentContext;
 
 import java.beans.PropertyVetoException;
@@ -400,9 +399,9 @@ public final class PersistenceUtil {
     pooledDataSource.setPassword(pwd);
 
     // Set up the persistence properties
-    final Map<String, Object> props = Immutables.<String, Object> map(persistenceProps,
-            tuple("javax.persistence.nonJtaDataSource", pooledDataSource),
-            tuple("eclipselink.target-database", vendor));
+    final Map<String, Object> props = new HashMap<>(persistenceProps);
+    props.put("javax.persistence.nonJtaDataSource", pooledDataSource);
+    props.put("eclipselink.target-database", vendor);
 
     final EntityManagerFactory emf = pp.createEntityManagerFactory(emName, props);
     if (emf == null) {
@@ -419,10 +418,11 @@ public final class PersistenceUtil {
    *          name of the persistence unit (see META-INF/persistence.xml)
    */
   public static EntityManagerFactory newTestEntityManagerFactory(String emName) {
+    Map<String, String> persistenceProperties = new HashMap<>();
+    persistenceProperties.put(PersistenceUnitProperties.DDL_GENERATION, PersistenceUnitProperties.DROP_AND_CREATE);
+    persistenceProperties.put(PersistenceUnitProperties.DDL_GENERATION_MODE, PersistenceUnitProperties.DDL_DATABASE_GENERATION);
     return newEntityManagerFactory(emName, "Auto", "org.h2.Driver", "jdbc:h2:./target/db" + System.currentTimeMillis(),
-            "sa", "sa", Immutables.map(tuple("eclipselink.ddl-generation", "create-tables"),
-                    tuple("eclipselink.ddl-generation.output-mode", "database")),
-            testPersistenceProvider());
+            "sa", "sa", persistenceProperties, testPersistenceProvider());
   }
 
   /** Create a new persistence provider for unit tests. */

@@ -23,13 +23,11 @@ package org.opencastproject.assetmanager.impl;
 
 import static org.opencastproject.util.data.Option.some;
 
-import org.opencastproject.capture.CaptureParameters;
 import org.opencastproject.kernel.scanner.AbstractScanner;
 import org.opencastproject.security.api.Organization;
 import org.opencastproject.util.Log;
 import org.opencastproject.util.NeedleEye;
 import org.opencastproject.util.NotFoundException;
-import org.opencastproject.util.data.Effect0;
 import org.opencastproject.workflow.api.WorkflowService;
 
 import org.apache.commons.lang3.BooleanUtils;
@@ -45,6 +43,7 @@ import org.slf4j.LoggerFactory;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Dictionary;
+import java.util.concurrent.TimeUnit;
 
 public class TimedMediaArchiver extends AbstractScanner implements ManagedService {
   private static final Log logger = new Log(LoggerFactory.getLogger(TimedMediaArchiver.class));
@@ -141,7 +140,7 @@ public class TimedMediaArchiver extends AbstractScanner implements ManagedServic
   @Override
   public void scan() {
     Date maxAge = Calendar.getInstance().getTime();
-    maxAge.setTime(maxAge.getTime() - (ageModifier * CaptureParameters.HOURS * CaptureParameters.MILLISECONDS));
+    maxAge.setTime(maxAge.getTime() - TimeUnit.HOURS.toMillis(ageModifier));
     if (assetManager.getAssetStore(storeId).isNone()) {
       throw new RuntimeException("Store " + storeId + " is not available to the asset manager");
     }
@@ -178,12 +177,7 @@ public class TimedMediaArchiver extends AbstractScanner implements ManagedServic
       // iterate all organizations
       for (final Organization org : parameters.getOrganizationDirectoryService().getOrganizations()) {
         // set the organization on the current thread
-        parameters.getAdminContextFor(org.getId()).runInContext(new Effect0() {
-          @Override
-          protected void run() {
-            parameters.scan();
-          }
-        });
+        parameters.getAdminContextFor(org.getId()).runInContext(parameters::scan);
       }
 
       logger.debug("Finished " + parameters.getScannerName() + " job.");

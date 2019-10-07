@@ -23,10 +23,9 @@
 // Controller for all single series screens.
 angular.module('adminNg.controllers')
 .controller('SerieCtrl', ['$scope', 'SeriesMetadataResource', 'SeriesEventsResource', 'SeriesAccessResource',
-  'SeriesThemeResource', 'ResourcesListResource', 'UserRolesResource', 'Notifications', 'OptoutSingleResource',
-  'SeriesParticipationResource',
+  'SeriesThemeResource', 'ResourcesListResource', 'UserRolesResource', 'Notifications', 'AuthService',
   function ($scope, SeriesMetadataResource, SeriesEventsResource, SeriesAccessResource, SeriesThemeResource,
-    ResourcesListResource, UserRolesResource, Notifications, OptoutSingleResource, SeriesParticipationResource) {
+    ResourcesListResource, UserRolesResource, Notifications, AuthService) {
 
     var roleSlice = 100;
     var roleOffset = 0;
@@ -68,7 +67,9 @@ angular.module('adminNg.controllers')
             $scope.policies.push(policy);
           });
 
-          if (!loading) {
+          if (loading) {
+            $scope.validAcl = true;
+          } else {
             $scope.accessSave();
           }
         };
@@ -76,6 +77,14 @@ angular.module('adminNg.controllers')
     $scope.aclLocked = false,
     $scope.policies = [];
     $scope.baseAcl = {};
+
+    AuthService.getUser().$promise.then(function (user) {
+      var mode = user.org.properties['admin.series.acl.event.update.mode'];
+      if (['always', 'never', 'optional'].indexOf(mode) < 0) {
+        mode = 'optional'; // defaults to optional
+      }
+      $scope.updateMode = mode;
+    });
 
     $scope.changeBaseAcl = function () {
       $scope.baseAcl = SeriesAccessResource.getManagedAcl({id: this.baseAclId}, function () {
@@ -86,6 +95,7 @@ angular.module('adminNg.controllers')
 
     $scope.addPolicy = function () {
       $scope.policies.push(createPolicy());
+      $scope.validAcl = false;
     };
 
     $scope.deletePolicy = function (policyToDelete) {
@@ -104,19 +114,6 @@ angular.module('adminNg.controllers')
       }
 
       $scope.accessSave();
-    };
-
-    $scope.updateOptout = function (newBoolean) {
-
-      OptoutSingleResource.save({
-        resource: 'series',
-        id: $scope.resourceId,
-        optout: newBoolean
-      }, function () {
-        Notifications.add('success', 'SERIES_PARTICIPATION_STATUS_UPDATE_SUCCESS', 'series-participation');
-      }, function () {
-        Notifications.add('error', 'SERIES_PARTICIPATION_STATUS_UPDATE_ERROR', 'series-participation');
-      });
     };
 
     $scope.getMoreRoles = function (value) {
@@ -195,7 +192,6 @@ angular.module('adminNg.controllers')
         }
       });
 
-      $scope.participation = SeriesParticipationResource.get({ id: id });
       $scope.acls  = ResourcesListResource.get({ resource: 'ACL' });
       $scope.actions = {};
       $scope.hasActions = false;
@@ -207,6 +203,7 @@ angular.module('adminNg.controllers')
           }
         });
       });
+      $scope.aclLocked = false,
 
       $scope.selectedTheme = {};
 
@@ -293,14 +290,18 @@ angular.module('adminNg.controllers')
     };
 
     $scope.accessChanged = function (role) {
-      if (!role) return;
-      $scope.accessSave();
+      if (role) {
+        $scope.accessSave();
+      }
     };
 
-    $scope.accessSave = function () {
+    $scope.accessSave = function (override) {
       var ace = [],
           hasRights = false,
           rulesValid = false;
+
+      $scope.validAcl = false;
+      override = override === true || $scope.updateMode === 'always';
 
       angular.forEach($scope.policies, function (policy) {
         rulesValid = false;
@@ -338,6 +339,7 @@ angular.module('adminNg.controllers')
         }
       });
 
+      $scope.validAcl = rulesValid;
       me.unvalidRule = !rulesValid;
       me.hasRights = hasRights;
 
@@ -366,7 +368,7 @@ angular.module('adminNg.controllers')
           acl: {
             ace: ace
           },
-          override: true
+          override: override
         });
 
         Notifications.add('info', 'SAVED_ACL_RULES', NOTIFICATION_CONTEXT, 1200);

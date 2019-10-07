@@ -33,7 +33,6 @@ import net.fortuna.ical4j.model.Calendar;
 import net.fortuna.ical4j.model.DateTime;
 import net.fortuna.ical4j.model.ParameterList;
 import net.fortuna.ical4j.model.component.VEvent;
-import net.fortuna.ical4j.model.parameter.Cn;
 import net.fortuna.ical4j.model.parameter.Encoding;
 import net.fortuna.ical4j.model.parameter.FmtType;
 import net.fortuna.ical4j.model.parameter.Value;
@@ -43,19 +42,16 @@ import net.fortuna.ical4j.model.property.CalScale;
 import net.fortuna.ical4j.model.property.Description;
 import net.fortuna.ical4j.model.property.LastModified;
 import net.fortuna.ical4j.model.property.Location;
-import net.fortuna.ical4j.model.property.Organizer;
 import net.fortuna.ical4j.model.property.ProdId;
 import net.fortuna.ical4j.model.property.RelatedTo;
 import net.fortuna.ical4j.model.property.Uid;
 import net.fortuna.ical4j.model.property.Version;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.net.URI;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -144,21 +140,12 @@ public class CalendarGenerator {
 
     VEvent event = new VEvent(startDate, endDate, catalog.getFirst(DublinCore.PROPERTY_TITLE));
     try {
-      ParameterList pl = new ParameterList();
-      if (StringUtils.isNotEmpty(catalog.getFirst(DublinCore.PROPERTY_CREATOR))) {
-        pl.add(new Cn(catalog.getFirst(DublinCore.PROPERTY_CREATOR)));
-      }
       event.getProperties().add(new Uid(eventId));
 
       DateTime lastModifiedDate = new DateTime(lastModified);
       lastModifiedDate.setUtc(true);
       event.getProperties().add(new LastModified(lastModifiedDate));
 
-      // TODO Organizer should be URI (email-address?) created fake address
-      if (StringUtils.isNotEmpty(catalog.getFirst(DublinCore.PROPERTY_CREATOR))) {
-        URI organizer = new URI("mailto", catalog.getFirst(DublinCore.PROPERTY_CREATOR) + "@opencast.tld", null);
-        event.getProperties().add(new Organizer(pl, organizer));
-      }
       if (StringUtils.isNotEmpty(catalog.getFirst(DublinCore.PROPERTY_DESCRIPTION))) {
         event.getProperties().add(new Description(catalog.getFirst(DublinCore.PROPERTY_DESCRIPTION)));
       }
@@ -199,7 +186,7 @@ public class CalendarGenerator {
       event.getProperties().add(agentsAttachment);
 
     } catch (Exception e) {
-      logger.error("Unable to add event '{}' to recording calendar: {}", eventId, ExceptionUtils.getStackTrace(e));
+      logger.error("Unable to add event '{}' to recording calendar", eventId, e);
       return false;
     }
 
@@ -235,7 +222,7 @@ public class CalendarGenerator {
         seriesDC = seriesService.getSeries(seriesID);
         series.put(seriesID, seriesDC);
       } catch (SeriesException e) {
-        logger.error("Error loading DublinCoreCatalog for series '{}': {}", seriesID, ExceptionUtils.getStackTrace(e));
+        logger.error("Error loading DublinCoreCatalog for series '{}'", seriesID, e);
         return null;
       }
     }
@@ -243,7 +230,7 @@ public class CalendarGenerator {
     try {
       return seriesDC.toXmlString();
     } catch (IOException e) {
-      logger.error("Error serializing DublinCoreCatalog of series '{}': {}", seriesID, ExceptionUtils.getStackTrace(e));
+      logger.error("Error serializing DublinCoreCatalog of series '{}'", seriesID, e);
       return null;
     }
   }

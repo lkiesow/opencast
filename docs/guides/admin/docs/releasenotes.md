@@ -1,101 +1,145 @@
-Opencast 6: Release Notes
+Opencast 7: Release Notes
 =========================
 
 New Features
 ------------
 
-- **Asset Manager Storage Layers** - The Asset Manager now supports multiple storage layers natively.  This allows
-  users to move data from local storage to remote storage within Opencast.  These moves can be triggered manually, or
-  via a built-in timer.  Currently we support local file storage, and AWS S3 storage.
-
-- **Video Editor - Thumbnails** - When displaying lists of videos, thumbnails are usually used to make such lists more
-  appealing. The video editor allows the user to choose between the default thumbnail (automatically created), a
-  snapshot thumbnail (extract at current position from video stream) or an uploaded thumbnail.  This allows the user to
-  get the best thumbnails for his videos with as little effort as possible.
-
-- **Video Editor - Track selection** - In case multiple tracks have been ingested, the video editor allows the user to
-  choose which tracks should be processed. In case of a dual track lecture recording, the presenter track could be
-  exluded from publication in case the recorded person would want this.
-
-- **Keyboard Shortcuts** - A per page keyboard shortcut list is available so that users can at any time and page see
-  what keyboard shortcuts are currenlty available.
-
-- **External API 1.1.0** - For the first time, Opencast takes advantage of its state-of-the-art versioned API by
-  introducing the External API 1.1.0.  The new version extends the API to support scheduling of events and access to
-  workflows.  The filter and sort facilities have been extended and additional fields are directly delivered by some
-  core requests with allows clients to access them way faster.  The External API 1.0.0 is still supported relieving
-  existing clients from the need to be timely adapted.
-
-- **Processing Settings Persistency** - A new persistence layer for processing settings has been introduced. This allows
-  the Admin UI to not just provide processing settings as input when starting workflows, but also to display processing
-  settings on event basis.
-
-- **Capture Agent Access Management** - The Admin UI now supports access management for capture agents. This features
-  addresses the need to allow unprivileged users to access the Admin UI to manage their own content and cut videos
-  without allowing them to schedule events or change the scheduling as this task is usually in the responsibility of a
-  dedicated team.  It is also possible to permit users access to specific subsets of the available capture agents.
-
-- **New Workflow Operation Handler**
-    - **demux** can be used to demux multiple streams from a container into seperate containers
-    - **image-convert** can convert multiple source images into multiple target images with different encoding
-    - **mattermost-notify** sends notification to services like Mattermost or Slack
-    - **move-to-remote** moves files in the asset manager from one storage system to another
-    - **multi-encode** allows encoding of multiple source tracks into multiple target tracks with differnet encoding
-    - **process-smil** edits media files based on descriptions from a SMIL file
-    - **select-tracks** can filter source tracks based on workflow properties
-    - **start-workflow** allows a workflow to start another workflow
+- Overhaul of the permission management with the newly added possibility to define how access control lists are
+  evaluated and how series permission changes are populated to episodes. For more details take a look at the [access
+  control configuration guide](configuration/acl.md).
+- Update Elasticsearch and make it possible to run Elasticsearch as an external service.
+- Per-Tenant Capture Agent Users
+- Asset manager snaphots clean-up to remove older snapshots for a given media package. In some cases, this can
+  drastically reduce Opencast's storage consumption. This feature is implemented as an option for the
+  [asset-delete workflow operation handler](workflowoperationhandlers/asset-delete-woh.md).
+- Allow the workflow to select the audio track for composite video
+- Add multi-tenant support for all list providers
+- Make waveform size configurable
+- Create a generic user interface configuration service
+- In the events table add a link to the series details
+- Add internationalization support for series LTI tools
+- Display creator of workflow
+- Allow the ingest service to make authenticated requests to other servers
+- Some modules are now plugins. These are not started by default to reduce the amount of code running unnecessarily.
+  They can easily be enabled in `etc/org.apache.karaf.features.cfg`. Modified modules are:
+    - Moodle user directory
+    - Sakai user directory
 
 Improvements
 ------------
 
-A non-comprehensive list of improvements:
-
-- The event counters are now fully configurable
-- Workflows can be stopped and deleted in the Admin UI
-- Multiple scheduled events can be edited at once
-- Deleting Series now warns if series contains events. You can configure if the user is allowed to
-  delete a series containing events in the series endpoint config file.
-- The video editor can be opened while an event is processed
-- Add Moodle groups to Moodle role provider
-- The order of appearance of workflows can be configured
-- Ability to send HTML emails
-- Ability for blacklisting languages from the admin UI
-- Update LTI Series Tool
-- Pre-fill creator metadata field with actual user when creating a new event
-- Video editor improvements
-- Intuitive Merging of Video Segments
-- Add new modal to edit multiple scheduled events at once
-- Add ability to hide read-only series and events for unprivileged users
-- Lossless Concat Operation
-- Update Paella Player to 6.0.x
+- Improved performance when scheduling new events or checking for conflicts (reducing the time for adding
+multiple schedules by up to 90%).
 
 Configuration changes
 ---------------------
 
-- The tracking options defaults have changed to be more aware of the European Union's General Data Protection
-  Regulation. Note that this is [still configurable](configuration/user-statistics.and.privacy.md).
+- `etc/org.opencastproject.scheduler.impl.SchedulerServiceImpl.cfg` has a new option `maintenance` which temporarily
+  disables the scheduler if set to `true`.
+- `KARAF_NOROOT` is now set to `true` by default, preventing Opencast to be started as root user unless the
+  configuration is changed.
+- The default configuration for the Paella player has been moved to `etc/ui-config/mh_default_org/paella/config.json`
+- By default, metadata catalogs and attachments sent by capture agents are discarded since this data is usually
+  controlled by Opencast and the routing through capture agents which existed for historical reasons was just an
+  additional source for errors. If you rely on the old behavior, it can be configured in
+  `etc/org.opencastproject.ingest.impl.IngestServiceImpl.cfg`.
+- By default, the Paella player now respects all tracks published to engage instead of having a hard-coded filter for
+  tracks with the sub-flavor `delivery` only.
+- The structure of the configuration files concerning URL signing has changed. See the
+[stream security configuration](./configuration/stream-security.md) for more details.
 
-- The role `ROLE_UI_EVENTS_DETAILS_GENERAL_VIEW` for viewing the publications (previously general) tab in the event
-  details modal has been renamed to `ROLE_UI_EVENTS_DETAILS_PUBLICATIONS_VIEW` for consistency.
+API changes
+-----------
 
-- The introduction of capture agent access management implies that unprivileged users do not have access to any capture
-  agents by default.  To allow otherwise unprivileged users to interact with event scheduling, you need to configure
-  their access permissions appropriately. For more details, take a look at the [capture agent access management
-  documentation](../../user/advanced/capture-agent-access/).
+Due to [MH-13397](https://opencast.jira.com/browse/MH-13397):
+
+- Modified GET /recordings/{id}/technical.json: Removed field `optOut`
+- Removed GET /recordings/{id}/optOut
+- Removed GET /recordings/{id}/reviewStatus
+- Removed PUT /recordings/{id}/reviewStatus
+- Modified POST /recordings: Removed form parameter `optOut`
+- Modified POST /recordings/multiple: Removed form parameter `optOut`
+- Modified PUT /recordings/{id}: Removed form parameters `optOut` and `updateOptOut`
+- Removed GET /series/{id}/optOut
+
+Due to [MH-13446](https://opencast.jira.com/browse/MH-13446):
+
+- Removed GET /acl-manager/transitions.json
+- Removed GET /acl-manager/transitionsfor.json
+- Removed POST /acl-manager/episode/{id}
+- Removed POST /acl-manager/series/{id}
+- Modified POST /acl-manager/apply/episode/{id}: Removed form parameters workflowDefinitionId and workflowParams
+- Modified POST /acl-manager/apply/series/{id}: Removed form parameters workflowDefinitionId and workflowParams
+- Removed DELETE /acl-manager/episode/{transitionId}
+- Removed DELETE /acl-manager/series/{transitionId}
+- Removed PUT /acl-manager/episode/{transitionId}
+- Removed PUT /acl-manager/series/{transitionId}
+
+Additional Notes About 7.1
+--------------------------
+
+Opencast 7.1 is the first maintenance release for Opencast 7. It fixes a bug with the scheduler migration which may have
+caused minor issues for old, processed events which were missing some metadata. If you have already migrated to
+Opencast 7.0 and experience this problem, simply re-start the scheduler migration and re-build the index once more.
+
+
+Additional Notes About 7.2
+--------------------------
+
+Opencast 7.2 fixes a bug in the video editor configuration present in Opencast 7.0 to 7.1 which will cause Opencast to
+always silently skip the video editor and publish the whole video. The problem was introduced by [a fix in the default
+workflows](https://github.com/opencast/opencast/pull/944) and later fixed again by a [configuration change therein
+](https://github.com/opencast/opencast/pull/1013). If you use the default workflows, please make sure to update to the
+latest state of the workflows.
+
+If you use your own workflow and did not adapt the first patch, you should not be affected by this problem at all. If
+you are, just make sure that source and target smil flavor for the editor workflow operation are identical like it is
+ensured [by the official fix](https://github.com/opencast/opencast/pull/1013). A proper solution not relying on specific
+configurations and less error prone is in work and will be added to the upcoming major Opencast release.
+
+
+Additional Notes About 7.3
+--------------------------
+
+Opencast 7.3 fixes a bug where the audio-source-name parameter of the composite operation defaults to none instead of
+"dual" in distributed systems, causing the resulting video to have no audio. A workaround for this problem entails
+setting audio-source-name to "dual" explicitly. Additionally this release fixes another problem in the composite WOH
+where using the watermark tool causes the operation to fail.
+
+This release also solves a major problem during the index rebuild of the workflow service where the process will
+sometimes fail with an OutOfMemory error because it's attempting to load all workflows at once. This problem is averted
+by loading and processing the workflows in increments instead. If you encountered this problem or plan to update to 7
+and have a lot of workflows in your system, you should update to 7.3.
+
+7.3 also ensures that the start dates shown in the events table and in the event details are once more consistent by
+using the bibliographic for both instead of showing the technical date in the events table since this can't be updated
+via UI for uploaded events and leads to confusion.
+
+Last but not least this release also fixes a known security vulnerability in Apache Santuario, so it is encouraged to
+update.
+
+
+Aditional Notes About 7.4
+-------------------------
+Opencast 7.4 brings a performance fix for some queries in the search API that can cause Opencast to run out of memory.
+
+This release also gives back a patch that was in version 6.x that allows to filter capture agent roles for ACLs and
+fixes the date cell of the events overview table in the admin UI.
+
+Finally, Opencast 7.4 also brings an update to the CAS security example that was out of date.
 
 Release Schedule
 ----------------
 
 |Date                         |Phase
 |-----------------------------|------------------------------------------
-|Sep 25th 2018                |Feature Freeze
-|Oct 29th - Nov 4th 2018      |Translation week
-|Nov 5th - Nov 18th 2018      |Public QA phase
-|Dec 10th 2018                |Release of Opencast 6.0
-
+|April 1st 2019               |Feature Freeze
+|May 6th - May 12th 2019      |Translation week
+|May 13th - May 26th 2019     |Public QA phase
+|June 13th 2019               |Release of Opencast 7.0
 
 Release Managers
 ----------------
 
-- Matthias Neugebauer (University of Münster)
-- Lars Kiesow (ELAN e.V.)
+- Maximiliano Lira Del Canto (University of Cologne)
+- Katrin Ihler (ELAN e.V.)

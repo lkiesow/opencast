@@ -36,7 +36,6 @@ import org.opencastproject.composer.api.VideoClip;
 import org.opencastproject.composer.layout.Dimension;
 import org.opencastproject.composer.layout.Layout;
 import org.opencastproject.composer.layout.Serializer;
-import org.opencastproject.fun.juc.Mutables;
 import org.opencastproject.inspection.api.MediaInspectionException;
 import org.opencastproject.inspection.api.MediaInspectionService;
 import org.opencastproject.job.api.AbstractJobProducer;
@@ -99,6 +98,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -125,8 +125,9 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
   private static final int PROFILE_ID_INDEX = 0;
   private static final int UPPER_TRACK_INDEX = 3;
   private static final int UPPER_TRACK_LAYOUT_INDEX = 4;
-  private static final int WATERMARK_INDEX = 7;
-  private static final int WATERMARK_LAYOUT_INDEX = 8;
+  private static final int WATERMARK_INDEX = 8;
+  private static final int WATERMARK_LAYOUT_INDEX = 9;
+  private static final int AUDIO_SOURCE_INDEX = 7;
   /**
    * Error codes
    */
@@ -285,9 +286,10 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
    * @return File handler for track
    * @throws EncoderException Could not load file into workspace
    */
-  private File loadTrackIntoWorkspace(final Job job, final String name, final Track track) throws EncoderException {
+  private File loadTrackIntoWorkspace(final Job job, final String name, final Track track, boolean unique)
+          throws EncoderException {
     try {
-      return workspace.get(track.getURI());
+      return workspace.get(track.getURI(), unique);
     } catch (NotFoundException e) {
       incident().recordFailure(job, WORKSPACE_GET_NOT_FOUND, e,
               getWorkspaceMediapackageParams(name, track), NO_DETAILS);
@@ -349,7 +351,7 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
     Map<String, File> files = new HashMap<>();
     // Get the tracks and make sure they exist
     for (Entry<String, Track> track: tracks.entrySet()) {
-      files.put(track.getKey(), loadTrackIntoWorkspace(job, track.getKey(), track.getValue()));
+      files.put(track.getKey(), loadTrackIntoWorkspace(job, track.getKey(), track.getValue(), false));
     }
 
     // Get the encoding profile
@@ -421,7 +423,7 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
       throw new EncoderException("The Job parameter must not be null");
     }
     // Get the tracks and make sure they exist
-    final File mediaFile = loadTrackIntoWorkspace(job, "source", mediaTrack);
+    final File mediaFile = loadTrackIntoWorkspace(job, "source", mediaTrack, false);
 
     // Create the engine
     final EncodingProfile profile = getProfile(profileId);
@@ -531,7 +533,7 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
     String targetTrackId = idBuilder.createNew().toString();
 
     // Get the track and make sure it exists
-    final File trackFile = loadTrackIntoWorkspace(job, "source", sourceTrack);
+    final File trackFile = loadTrackIntoWorkspace(job, "source", sourceTrack, false);
 
     // Get the encoding profile
     final EncodingProfile profile = getProfile(job, profileId);
@@ -613,8 +615,8 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
   @Override
   public Job composite(Dimension compositeTrackSize, Option<LaidOutElement<Track>> upperTrack,
           LaidOutElement<Track> lowerTrack, Option<LaidOutElement<Attachment>> watermark, String profileId,
-          String background) throws EncoderException, MediaPackageException {
-    List<String> arguments = new ArrayList<>(9);
+          String background, String sourceAudioName) throws EncoderException, MediaPackageException {
+    List<String> arguments = new ArrayList<>(10);
     arguments.add(PROFILE_ID_INDEX, profileId);
     arguments.add(LOWER_TRACK_INDEX, MediaPackageElementParser.getAsXml(lowerTrack.getElement()));
     arguments.add(LOWER_TRACK_LAYOUT_INDEX, Serializer.json(lowerTrack.getLayout()).toJson());
@@ -627,6 +629,7 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
     }
     arguments.add(COMPOSITE_TRACK_SIZE_INDEX, Serializer.json(compositeTrackSize).toJson());
     arguments.add(BACKGROUND_COLOR_INDEX, background);
+    arguments.add(AUDIO_SOURCE_INDEX, sourceAudioName);
     if (watermark.isSome()) {
       LaidOutElement<Attachment> watermarkLaidOutElement = watermark.get();
       arguments.add(WATERMARK_INDEX, MediaPackageElementParser.getAsXml(watermarkLaidOutElement.getElement()));
@@ -642,7 +645,7 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
 
   private Option<Track> composite(Job job, Dimension compositeTrackSize, LaidOutElement<Track> lowerLaidOutElement,
           Option<LaidOutElement<Track>> upperLaidOutElement, Option<LaidOutElement<Attachment>> watermarkOption,
-          String profileId, String backgroundColor) throws EncoderException, MediaPackageException {
+          String profileId, String backgroundColor, String audioSourceName) throws EncoderException, MediaPackageException {
 
     // Get the encoding profile
     final EncodingProfile profile = getProfile(job, profileId);
@@ -654,11 +657,11 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
     Option<File> upperVideoFile = Option.none();
     try {
       // Get the tracks and make sure they exist
-      final File lowerVideoFile = loadTrackIntoWorkspace(job, "lower video", lowerLaidOutElement.getElement());
+      final File lowerVideoFile = loadTrackIntoWorkspace(job, "lower video", lowerLaidOutElement.getElement(), false);
 
       if (upperLaidOutElement.isSome()) {
         upperVideoFile = Option.option(
-                loadTrackIntoWorkspace(job, "upper video", upperLaidOutElement.get().getElement()));
+                loadTrackIntoWorkspace(job, "upper video", upperLaidOutElement.get().getElement(), false));
       }
       File watermarkFile = null;
       if (watermarkOption.isSome()) {
@@ -702,7 +705,7 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
 
       // Creating video filter command
       final String compositeCommand = buildCompositeCommand(compositeTrackSize, lowerLaidOutElement,
-              upperLaidOutElement, upperVideoFile, watermarkOption, watermarkFile, backgroundColor);
+              upperLaidOutElement, upperVideoFile, watermarkOption, watermarkFile, backgroundColor, audioSourceName);
 
       Map<String, String> properties = new HashMap<>();
       properties.put(EncoderEngine.CMD_SUFFIX + ".compositeCommand", compositeCommand);
@@ -832,7 +835,7 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
         incident().recordFailure(job, NO_STREAMS, params);
         throw new EncoderException("Track has no audio or video stream available: " + track);
       }
-      trackFiles.add(i++, loadTrackIntoWorkspace(job, "concat", track));
+      trackFiles.add(i++, loadTrackIntoWorkspace(job, "concat", track, false));
     }
 
     // Create the engine
@@ -1083,14 +1086,22 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
         throw new EncoderException("Unable to extract an image from a track with unknown duration");
       }
       if (time < 0 || time * 1000 > sourceTrack.getDuration()) {
+        Duration duration = Duration.ofMillis(sourceTrack.getDuration());
+        long durationSeconds = duration.getSeconds();
+        long durationMillis = duration.minusSeconds(durationSeconds).toMillis();
+        String formattedDuration = String.valueOf(durationSeconds) + '.'
+                + StringUtils.leftPad(String.valueOf(durationMillis), 3, '0');
+
         Map<String, String> params = new HashMap<>();
         params.put("track-id", sourceTrack.getIdentifier());
         params.put("track-url", sourceTrack.getURI().toString());
-        params.put("track-duration", sourceTrack.getDuration().toString());
+        params.put("track-duration", formattedDuration);
         params.put("time", Double.toString(time));
         incident().recordFailure(job, IMAGE_EXTRACTION_TIME_OUTSIDE_DURATION, params);
-        throw new EncoderException("Can not extract an image at time " + time + " from a track with duration "
-                + sourceTrack.getDuration());
+
+        throw new EncoderException("An image could not be extracted from the track " + sourceTrack.getURI()
+                + " with id " + sourceTrack.getIdentifier() + " because the extraction time (" + time + " second(s)) is "
+                + "outside of the track's duration (" + formattedDuration + " second(s))");
       }
     }
 
@@ -1133,7 +1144,7 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
     final EncoderEngine encoderEngine = getEncoderEngine();
 
     // Finally get the file that needs to be encoded
-    File videoFile = loadTrackIntoWorkspace(job, "video", sourceTrack);
+    File videoFile = loadTrackIntoWorkspace(job, "video", sourceTrack, true);
 
     // Do the work
     List<File> encodingOutput;
@@ -1183,6 +1194,7 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
 
     // cleanup
     cleanup(encodingOutput.toArray(new File[encodingOutput.size()]));
+    cleanup(videoFile);
 
     MediaPackageElementBuilder builder = MediaPackageElementBuilderFactory.newInstance().newElementBuilder();
     List<Attachment> imageAttachments = new LinkedList<Attachment>();
@@ -1232,24 +1244,35 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
     }
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * @see org.opencastproject.composer.api.ComposerService#convertImageSync(
+          org.opencastproject.mediapackage.Attachment, java.lang.String...)
+   */
   @Override
-  public Attachment convertImageSync(Attachment image, String profileId) throws EncoderException, MediaPackageException {
+  public List<Attachment> convertImageSync(Attachment image, String... profileIds) throws EncoderException,
+      MediaPackageException {
     Job job = null;
     try {
-      final EncodingProfile profile = profileScanner.getProfile(profileId);
+      final float jobLoad = (float) Arrays.stream(profileIds)
+        .map(p -> profileScanner.getProfile(p))
+        .mapToDouble(EncodingProfile::getJobLoad)
+        .max()
+        .orElse(0);
       job = serviceRegistry
           .createJob(
-              JOB_TYPE, Operation.Image.toString(), null, null, false, profile.getJobLoad());
+              JOB_TYPE, Operation.Image.toString(), null, null, false, jobLoad);
       job.setStatus(Job.Status.RUNNING);
       job = serviceRegistry.updateJob(job);
-      List<Attachment> result = convertImage(job, image, profileId);
+      List<Attachment> results = convertImage(job, image, profileIds);
       job.setStatus(Job.Status.FINISHED);
-      if (result.isEmpty()) {
+      if (results.isEmpty()) {
         throw new EncoderException(format(
-                "Unable to convert image %s with encoding profile %s. The result set is empty.",
-                image.getURI().toString(), profileId));
+                "Unable to convert image %s with encoding profiles %s. The result set is empty.",
+                image.getURI().toString(), profileIds));
       }
-      return result.get(0);
+      return results;
     } catch (ServiceRegistryException | NotFoundException e) {
       throw new EncoderException("Unable to create a job", e);
     } finally {
@@ -1422,15 +1445,19 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
           Dimension compositeTrackSize = Serializer
                   .dimension(JsonObj.jsonObj(arguments.get(COMPOSITE_TRACK_SIZE_INDEX)));
           String backgroundColor = arguments.get(BACKGROUND_COLOR_INDEX);
+          String audioSourceName = arguments.get(AUDIO_SOURCE_INDEX);
 
           Option<LaidOutElement<Attachment>> watermarkOption = Option.none();
-          if (arguments.size() == 9) {
+          //If there is a watermark defined, it needs both args 8 and 9
+          if (arguments.size() > WATERMARK_INDEX && arguments.size() <= WATERMARK_LAYOUT_INDEX + 1) {
             watermarkAttachment = (Attachment) MediaPackageElementParser.getFromXml(arguments.get(WATERMARK_INDEX));
             Layout watermarkLayout = Serializer.layout(JsonObj.jsonObj(arguments.get(WATERMARK_LAYOUT_INDEX)));
             watermarkOption = Option.some(new LaidOutElement<>(watermarkAttachment, watermarkLayout));
+          } else if (arguments.size() > WATERMARK_LAYOUT_INDEX + 1) {
+            throw new IndexOutOfBoundsException("Too many composite arguments!");
           }
           serialized = composite(job, compositeTrackSize, lowerLaidOutElement, upperLaidOutElement, watermarkOption,
-                  encodingProfile, backgroundColor).map(MediaPackageElementParser.getAsXml()).getOrElse("");
+                  encodingProfile, backgroundColor, audioSourceName).map(MediaPackageElementParser.getAsXml()).getOrElse("");
           break;
         case Concat:
           String dimensionString = arguments.get(1);
@@ -1621,7 +1648,7 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
    */
   private static String buildCompositeCommand(Dimension compositeTrackSize, LaidOutElement<Track> lowerLaidOutElement,
           Option<LaidOutElement<Track>> upperLaidOutElement, Option<File> upperFile,
-          Option<LaidOutElement<Attachment>> watermarkOption, File watermarkFile, String backgroundColor) {
+          Option<LaidOutElement<Attachment>> watermarkOption, File watermarkFile, String backgroundColor, String audioSourceName) {
     final StringBuilder cmd = new StringBuilder();
     final String videoId = watermarkOption.isNone() ? "[out]" : "[video]";
     if (upperLaidOutElement.isNone()) {
@@ -1667,9 +1694,13 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
 
     if (upperLaidOutElement.isSome()) {
       // handle audio
-      // if both videos contain audio mix it into a single audio stream
-      final boolean lowerAudio = lowerLaidOutElement.getElement().hasAudio();
-      final boolean upperAudio = upperLaidOutElement.get().getElement().hasAudio();
+      boolean lowerAudio = lowerLaidOutElement.getElement().hasAudio();
+      boolean upperAudio = upperLaidOutElement.get().getElement().hasAudio();
+      // if audio source name is "both" or unspecified, use audio of both videos, otherwise pick one
+      if (StringUtils.isNotBlank(audioSourceName) && ! ComposerService.BOTH.equalsIgnoreCase(audioSourceName)) {
+        lowerAudio = lowerAudio & ComposerService.LOWER.equalsIgnoreCase(audioSourceName);
+        upperAudio = upperAudio & ComposerService.UPPER.equalsIgnoreCase(audioSourceName);
+      }
       if (lowerAudio && upperAudio) {
         cmd.append(";[0:a][1:a]amix=inputs=2[aout] -map [out] -map [aout]");
       } else if (lowerAudio) {
@@ -1797,7 +1828,7 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
   }
 
   private static List<Tuple<String, String>> detailsFor(EncoderException ex, EncoderEngine engine) {
-    final List<Tuple<String, String>> d = Mutables.arrayList();
+    final List<Tuple<String, String>> d = new ArrayList<>();
     d.add(tuple("encoder-engine-class", engine.getClass().getName()));
     if (ex instanceof CmdlineEncoderException) {
       d.add(tuple("encoder-commandline", ((CmdlineEncoderException) ex).getCommandLine()));
@@ -1958,7 +1989,7 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
 
     try {
       // Get the track and make sure it exists
-      final File videoFile = (videoTrack != null) ? loadTrackIntoWorkspace(job, "source", videoTrack) : null;
+      final File videoFile = (videoTrack != null) ? loadTrackIntoWorkspace(job, "source", videoTrack, false) : null;
 
       // Get the encoding profile
       EncodingProfile profile = getProfile(job, encodingProfile);
@@ -1999,6 +2030,16 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
         throw new EncoderException(e);
       }
     }
+  }
+
+  /**
+   * OSGI callback when the configuration is updated. This method is only here to prevent the
+   * configuration admin service from calling the service deactivate and activate methods
+   * for a config update. It does not have to do anything as the updates are handled by updated().
+   */
+  public void modified(Map<String, Object> config)
+     throws ConfigurationException {
+    logger.debug("Modified");
   }
 
   @Override
@@ -2299,7 +2340,7 @@ public class ComposerServiceImpl extends AbstractJobProducer implements Composer
       throw new IllegalArgumentException("Cannot encode without encoding profiles");
     List<File> outputs = null;
     try {
-      final File videoFile = loadTrackIntoWorkspace(job, "source", track);
+      final File videoFile = loadTrackIntoWorkspace(job, "source", track, false);
       // Get the encoding profiles
       List<EncodingProfile> profiles = new ArrayList<>();
       for (String profileId : profileIds) {

@@ -22,6 +22,7 @@
 package org.opencastproject.serviceregistry.impl;
 
 import static com.entwinemedia.fn.Stream.$;
+import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.opencastproject.job.api.AbstractJobProducer.ACCEPT_JOB_LOADS_EXCEEDING_PROPERTY;
@@ -266,7 +267,7 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
   protected Boolean acceptJobLoadsExeedingMaxLoad = true;
 
   // Current system load
-  protected float systemLoad = 0.0f;
+  protected float localSystemLoad = 0.0f;
 
   /** OSGi DI */
   void setEntityManagerFactory(EntityManagerFactory emf) {
@@ -354,13 +355,13 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
               .getOrElse(DEFAULT_ACCEPT_JOB_LOADS_EXCEEDING);
     }
 
-    systemLoad = getHostLoads(emf.createEntityManager()).get(hostName).getLoadFactor();
-    logger.info("Current system load: {}", systemLoad);
+    localSystemLoad = 0;
+    logger.info("Activated");
   }
 
   @Override
   public float getOwnLoad() {
-    return systemLoad;
+    return localSystemLoad;
   }
 
   @Override
@@ -369,7 +370,20 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
   }
 
   public void deactivate() {
-    logger.debug("deactivate");
+    logger.info("deactivate service registry");
+
+    // Wait for job dispatcher to stop before unregistering hosts and requeuing jobs
+    if (scheduledExecutor != null) {
+      try {
+        scheduledExecutor.shutdownNow();
+        if (!scheduledExecutor.isShutdown()) {
+          logger.info("Waiting for Dispatcher to terminate");
+          scheduledExecutor.awaitTermination(10, TimeUnit.SECONDS);
+        }
+      } catch (InterruptedException e) {
+        logger.error("Error shutting down the Dispatcher", e);
+      }
+    }
 
     for (ObjectInstance mbean : jmxBeans) {
       JmxUtil.unregisterMXBean(mbean);
@@ -382,11 +396,6 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
       unregisterHost(hostName);
     } catch (ServiceRegistryException e) {
       throw new IllegalStateException("Unable to unregister host " + hostName + " from the service registry", e);
-    }
-
-    // Stop the job dispatcher
-    if (scheduledExecutor != null) {
-      scheduledExecutor.shutdownNow();
     }
   }
 
@@ -583,8 +592,10 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
 
       // if this job is not dispatchable, it must be handled by the host that has created it
       if (dispatchable) {
+        logger.trace("Queuing dispatchable '{}'", jpaJob);
         jpaJob.setStatus(Status.QUEUED);
       } else {
+        logger.trace("Giving new non-dispatchable '{}' its creating service as processor '{}'", jpaJob, creatingService);
         jpaJob.setProcessorServiceRegistration(creatingService);
       }
 
@@ -636,7 +647,7 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
       }
 
       tx.commit();
-      logger.debug("Jobs with IDs '{}' deleted", jobIds);
+      logger.info("Jobs with IDs '{}' deleted", jobIds);
     } finally {
       if (em != null)
         em.close();
@@ -646,7 +657,7 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
   private void deleteChildJobs(EntityManager em, EntityTransaction tx, long jobId) throws ServiceRegistryException {
     List<Job> childJobs = getChildJobs(jobId);
     if (childJobs.isEmpty()) {
-      logger.debug("No child jobs of job '{}' found to delete.", jobId);
+      logger.trace("No child jobs of job '{}' found to delete.", jobId);
       return;
     }
 
@@ -658,7 +669,7 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
         JpaJob jobToDelete = em.find(JpaJob.class, job.getId());
         em.remove(jobToDelete);
         removeFromLoadCache(job.getId());
-        logger.debug("Job '{}' deleted", job.getId());
+        logger.debug("{} deleted", job);
       }
       logger.debug("Deleted all child jobs of job '{}'", jobId);
     } catch (Exception e) {
@@ -698,10 +709,10 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
         if (job.getStatus().isTerminated()) {
           try {
             removeJobs(Collections.singletonList(job.getId()));
-            logger.debug("Parentless job '{}' removed", job.getId());
+            logger.debug("Parentless '{}' removed", job);
             count++;
           } catch (NotFoundException e) {
-            logger.debug("Parentless job '{} ' not found in database: {}", job.getId(), e);
+            logger.debug("Parentless '{} ' not found in database: {}", job, e);
           }
         }
 
@@ -710,7 +721,7 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
       if (count > 0)
         logger.info("Successfully removed {} parentless jobs", count);
       else
-        logger.info("No parentless jobs found to remove", count);
+        logger.trace("No parentless jobs found to remove");
     } finally {
       if (em != null)
         em.close();
@@ -727,7 +738,7 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
   @SuppressWarnings("rawtypes")
   public void updated(Dictionary properties) throws ConfigurationException {
 
-    logger.info("Updating service registry");
+    logger.info("Updating service registry properties");
 
     String maxAttempts = StringUtils.trimToNull((String) properties.get(MAX_ATTEMPTS_CONFIG_KEY));
     if (maxAttempts != null) {
@@ -931,27 +942,34 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
    */
   private synchronized void processCachedLoadChange(JpaJob job) {
     if (JOB_STATUSES_INFLUENCING_LOAD_BALANCING.contains(job.getStatus()) && jobCache.get(job.getId()) == null) {
-      logger.debug("{} Adding to load cache: Job {}, type {}, status {}", Thread.currentThread().getId(), job.getId(),
-              job.getJobType(), job.getStatus());
-      systemLoad += job.getJobLoad();
+      logger.debug("Adding to load cache: {}, type {}, load {}, status {}",
+              job, job.getJobType(), job.getJobLoad(), job.getStatus());
+      localSystemLoad += job.getJobLoad();
       jobCache.put(job.getId(), job.getJobLoad());
     } else if (jobCache.get(job.getId()) != null && Status.FINISHED.equals(job.getStatus())
             || Status.FAILED.equals(job.getStatus()) || Status.WAITING.equals(job.getStatus())) {
-      logger.debug("{} Removing from load cache: Job {}, type {}, status {}", Thread.currentThread().getId(),
-              job.getId(), job.getJobType(), job.getStatus());
-      systemLoad -= job.getJobLoad();
+      logger.debug("Removing from load cache: {}, type {}, load {}, status {}",
+              job, job.getJobType(), job.getJobLoad(), job.getStatus());
+      localSystemLoad -= job.getJobLoad();
       jobCache.remove(job.getId());
     } else {
-      logger.debug("{} Ignoring for load cache: Job {}, type {}, status {}", Thread.currentThread().getId(),
-              job.getId(), job.getJobType(), job.getStatus());
+      logger.debug("Ignoring for load cache: {}, type {}, status {}",
+              job, job.getJobType(), job.getStatus());
     }
-    logger.debug("{} Current host load: {}", Thread.currentThread().getId(), systemLoad);
+    logger.debug("Current host load: {}, job load cache size: {}", format("%.1f", localSystemLoad), jobCache.size());
+
+    if (jobCache.isEmpty() && Math.abs(localSystemLoad) > 0.01f) {
+      logger.warn("No jobs in the job load cache, but load is {}: setting job load to 0",
+              format("%.2f", localSystemLoad));
+      localSystemLoad = 0;
+    }
   }
 
   private synchronized void removeFromLoadCache(Long jobId) {
     if (jobCache.get(jobId) != null) {
-      logger.debug("{} Removing deleted job from load cache: Job {}", Thread.currentThread().getId(), jobId);
-      systemLoad -= jobCache.get(jobId);
+      float jobLoad = jobCache.get(jobId);
+      logger.debug("Removing deleted job from load cache: Job {}, load {}", jobId, jobLoad);
+      localSystemLoad -= jobLoad;
       jobCache.remove(jobId);
     }
   }
@@ -1037,10 +1055,6 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
         logger.error("JPA processor service mismatch: " + originalJob.getProcessorServiceRegistration().getId() + " vs " + fromDb.getProcessorServiceRegistration().getId());
       if (!originalJob.getDateStarted().equals(fromDb.getDateStarted()))
         logger.error("JPA date started mismatch: " + originalJob.getDateStarted() + " vs " + fromDb.getDateStarted());
-      if (!originalJob.getBlockedJobIds().equals(fromDb.getBlockedJobIds()))
-        logger.error("JPA blocked job ids mismatch: " + originalJob.getBlockedJobIds() + " vs " + fromDb.getBlockedJobIds());
-      if (!originalJob.getBlockingJobId().equals(fromDb.getBlockingJobId()))
-        logger.error("JPA blocking job id mismatch: " + originalJob.getBlockingJobId() + " vs " + fromDb.getBlockingJobId());
       if (!originalJob.getChildJobsString().equals(fromDb.getChildJobsString()))
         logger.error("JPA child job id mismatch: " + originalJob.getChildJobsString() + " vs " + fromDb.getChildJobsString());
     } catch (Exception e) {
@@ -1106,8 +1120,6 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
     fromDb.setVersion(job.getVersion());
     fromDb.setOperation(job.getOperation());
     fromDb.setArguments(job.getArguments());
-    fromDb.setBlockedJobIds(job.getBlockedJobIds());
-    fromDb.setBlockingJobId(job.getBlockingJobId());
 
     if (job.getDateCreated() == null) {
       jpaJob.setDateCreated(now);
@@ -1117,7 +1129,11 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
     if (job.getProcessingHost() != null) {
       ServiceRegistrationJpaImpl processingService = (ServiceRegistrationJpaImpl) getServiceRegistration(
               job.getJobType(), job.getProcessingHost());
+      logger.debug("{} has host '{}': setting processor service to '{}'", job, job.getProcessingHost(), processingService);
       fromDb.setProcessorServiceRegistration(processingService);
+    } else {
+      logger.debug("Unsetting previous processor service registration for {}", job);
+      fromDb.setProcessorServiceRegistration(null);
     }
     if (Status.RUNNING.equals(status) && !Status.WAITING.equals(fromDbStatus)) {
       if (job.getDateStarted() == null) {
@@ -1373,8 +1389,10 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
       Query q = em.createNamedQuery("ServiceRegistration.getRegistration");
       q.setParameter("serviceType", serviceType);
       q.setParameter("host", host);
+      logger.trace("Looking for: host {} service {}", host, serviceType);
       return (ServiceRegistrationJpaImpl) q.getSingleResult();
     } catch (NoResultException e) {
+      logger.debug("Not Found: host {} service {}", host, serviceType);
       return null;
     }
   }
@@ -1395,6 +1413,7 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
   protected ServiceRegistration setOnlineStatus(String serviceType, String baseUrl, String path, boolean online,
           Boolean jobProducer) throws ServiceRegistryException {
     if (isBlank(serviceType) || isBlank(baseUrl)) {
+      logger.info("Uninformed baseUrl '{}' or service '{}' (path '{}')", baseUrl, serviceType, path);
       throw new IllegalArgumentException("serviceType and baseUrl must not be blank");
     }
     EntityManager em = null;
@@ -1405,6 +1424,7 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
       tx.begin();
       HostRegistrationJpaImpl hostRegistration = fetchHostRegistration(em, baseUrl);
       if (hostRegistration == null) {
+        logger.info("No associated host registration for '{}' or service '{}' (path '{}')", baseUrl, serviceType,path);
         throw new IllegalStateException(
                 "A service registration can not be updated when it has no associated host registration");
       }
@@ -1452,7 +1472,7 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
    */
   @Override
   public void unRegisterService(String serviceType, String baseUrl) throws ServiceRegistryException {
-    logger.info("Unregistering Service " + serviceType + "@" + baseUrl);
+    logger.info("Unregistering Service {}@{} and cleaning its running jobs", serviceType, baseUrl);
     // TODO: create methods that accept an entity manager, so we can execute multiple queries using the same em and tx
     setOnlineStatus(serviceType, baseUrl, null, false, null);
 
@@ -1463,6 +1483,7 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
   private void cleanUndispatchableJobs(String hostName) {
     EntityManager em = null;
     EntityTransaction tx = null;
+    logger.debug("Starting check for undispatchable jobs for host {}", hostName);
     try {
       em = emf.createEntityManager();
       tx = em.getTransaction();
@@ -1474,6 +1495,9 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
       query.setParameter("statuses", statuses);
       @SuppressWarnings("unchecked")
       List<JpaJob> undispatchableJobs = query.getResultList();
+      if (undispatchableJobs.size() > 0) {
+        logger.info("Found {} undispatchable jobs on host {}", undispatchableJobs.size(), hostName);
+      }
       for (JpaJob job : undispatchableJobs) {
         // Make sure the job was processed on this host
         String jobHost = "";
@@ -1481,17 +1505,17 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
           jobHost = job.getProcessorServiceRegistration().getHost();
         }
         if (!jobHost.equals(hostName)) {
-          logger.debug("Will not cancel undispatchable job {}, it is running on a different host", job);
+          logger.debug("Will not cancel undispatchable job {} for host {}, it is running on a different host ({})", job, hostName, jobHost);
 
         } else {
-          logger.info("Cancelling the running undispatchable job {}, it was orphaned on this host", job);
+          logger.info("Cancelling the running undispatchable job {}, it was orphaned on this host ({})", job, hostName);
           job.setStatus(Status.CANCELED);
           em.merge(job);
         }
       }
       tx.commit();
     } catch (Exception e) {
-      logger.error("Unable to clean undispatchable jobs! {}", e.getMessage());
+      logger.error("Unable to clean undispatchable jobs for host {}! {}", hostName, e.getMessage());
       if (tx != null && tx.isActive()) {
         tx.rollback();
       }
@@ -1529,6 +1553,9 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
       query.setParameter("serviceType", serviceType);
 
       List<JpaJob> unregisteredJobs = query.getResultList();
+      if (unregisteredJobs.size() > 0) {
+        logger.info("Found {} jobs to clean for {}@{}", unregisteredJobs.size(), serviceType, baseUrl);
+      }
       for (JpaJob job : unregisteredJobs) {
         if (job.isDispatchable()) {
           em.refresh(job);
@@ -1544,13 +1571,13 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
             continue;
           }
 
-          logger.info("Marking child jobs from job {} as canceled", job);
+          logger.info("Marking child jobs from {} as canceled", job);
           cancelAllChildren(job, em);
-          logger.info("Rescheduling lost job {}", job);
+          logger.info("Rescheduling lost {}", job);
           job.setStatus(Status.RESTART);
           job.setProcessorServiceRegistration(null);
         } else {
-          logger.info("Marking lost job {} as failed", job);
+          logger.info("Marking lost {} as failed", job);
           job.setStatus(Status.FAILED);
         }
         em.merge(job);
@@ -1595,18 +1622,21 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
   public void setMaintenanceStatus(String baseUrl, boolean maintenance) throws NotFoundException {
     EntityManager em = null;
     EntityTransaction tx = null;
+    logger.info("Setting maintenance mode on host '{}'", baseUrl);
     try {
       em = emf.createEntityManager();
       tx = em.getTransaction();
       tx.begin();
       HostRegistrationJpaImpl reg = fetchHostRegistration(em, baseUrl);
       if (reg == null) {
+        logger.warn("Can not set maintenance mode because host '{}' was not registered", baseUrl);
         throw new NotFoundException("Can not set maintenance mode on a host that has not been registered");
       }
       reg.setMaintenanceMode(maintenance);
       em.merge(reg);
       tx.commit();
       hostsStatistics.updateHost(reg);
+      logger.info("Finished setting maintenance mode on host '{}'", baseUrl);
     } catch (RollbackException e) {
       if (tx != null && tx.isActive()) {
         tx.rollback();
@@ -1748,6 +1778,7 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
   public List<Job> getJobs(String type, Status status) throws ServiceRegistryException {
     TypedQuery<JpaJob> query = null;
     EntityManager em = null;
+    logger.trace("Getting jobs '{}' and '{}'", type, status);
     try {
       em = emf.createEntityManager();
       if (type == null && status == null) {
@@ -1788,6 +1819,38 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
       return query.getResultList();
     } catch (Exception e) {
       throw new ServiceRegistryException(e);
+    }
+  }
+
+  @Override
+  public List<String> getJobPayloads(String operation, int limit, int offset) throws ServiceRegistryException {
+    EntityManager em = emf.createEntityManager();
+    try {
+      TypedQuery<String> query = em.createNamedQuery("Job.payload", String.class);
+      query.setParameter("operation", operation);
+      query.setMaxResults(limit);
+      query.setFirstResult(offset);
+      logger.debug("Requesting job payloads using query: {}", query);
+      return query.getResultList();
+    } catch (Exception e) {
+      throw new ServiceRegistryException(e);
+    }
+  }
+
+  @Override
+  public int getJobCount(final String operation) throws ServiceRegistryException {
+    EntityManager em = null;
+    try {
+      em = emf.createEntityManager();
+      Query query = em.createNamedQuery("Job.countByOperationOnly");
+      query.setParameter("operation", operation);
+      final Number countResult = (Number) query.getSingleResult();
+      return countResult.intValue();
+    } catch (Exception e) {
+      throw new ServiceRegistryException(e);
+    } finally {
+      if (em != null)
+        em.close();
     }
   }
 
@@ -2233,29 +2296,23 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
       String host = String.valueOf(resultArray[0]);
 
       Status status = Status.values()[(int) resultArray[1]];
-      float load = ((Number) resultArray[2]).floatValue();
+      float currentLoad = ((Number) resultArray[2]).floatValue();
+      float maxLoad = ((Number) resultArray[3]).floatValue();
 
       // Only queued, and running jobs are adding to the load, so every other status is discarded
       if (status == null || !JOB_STATUSES_INFLUENCING_LOAD_BALANCING.contains(status)) {
-        load = 0.0f;
+        currentLoad = 0.0f;
       }
 
       // Add the service registration
-      NodeLoad serviceLoad;
-      if (systemLoad.containsHost(host)) {
-        serviceLoad = systemLoad.get(host);
-        serviceLoad.setLoadFactor(serviceLoad.getLoadFactor() + load);
-      } else {
-        serviceLoad = new NodeLoad(host, load);
-      }
-
+      NodeLoad serviceLoad = new NodeLoad(host, currentLoad, maxLoad);
       systemLoad.addNodeLoad(serviceLoad);
     }
 
     // This is important, otherwise services which have no current load are not listed in the output!
     for (HostRegistration h : getHostRegistrations(em)) {
       if (!systemLoad.containsHost(h.getBaseUrl())) {
-        systemLoad.addNodeLoad(new NodeLoad(h.getBaseUrl(), 0.0f));
+        systemLoad.addNodeLoad(new NodeLoad(h.getBaseUrl(), 0.0f, h.getMaxLoad()));
       }
     }
 
@@ -2477,6 +2534,7 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
           if (currentService.equals(relatedService))
             continue;
 
+          // De-escalate the state of related services as the issue is most likely with the job not the service
           // Reset the WARNING job to NORMAL
           if (relatedService.getServiceState() == WARNING) {
             logger.info("State reset to NORMAL for related service {} on host {}", relatedService.getServiceType(),
@@ -2527,17 +2585,6 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
                 currentService.getHost());
         currentService.setServiceState(NORMAL);
         updateServiceState(em, currentService);
-      }
-
-      // Services in WARNING state triggered by current job
-      List<ServiceRegistrationJpaImpl> relatedWarningServices = getRelatedWarningServices(job);
-
-      // Sets all related services to error state
-      for (ServiceRegistrationJpaImpl relatedService : relatedWarningServices) {
-        logger.info("State set to ERROR for related service {} on host {}", currentService.getServiceType(),
-                currentService.getHost());
-        relatedService.setServiceState(ERROR, job.toJob().getSignature());
-        updateServiceState(em, relatedService);
       }
 
     }
@@ -2616,7 +2663,7 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
 
     Query query = null;
     EntityManager em = null;
-    logger.debug("Finding services put in WARNING state by job {}", job.toJob().getSignature());
+    logger.trace("Finding services put in WARNING state by job {}", job.toJob().getSignature());
     try {
       em = emf.createEntityManager();
       // TODO: modify the query to avoid to go through the list here
@@ -2661,8 +2708,8 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
 
     Query query = null;
     EntityManager em = null;
-    logger.debug("Try to get the services in WARNING or ERROR state triggered by this job {} failed",
-            job.toJob().getSignature());
+    logger.debug("Try to get the services in WARNING or ERROR state triggered by {} failed",
+            job);
     try {
       em = emf.createEntityManager();
 
@@ -2766,7 +2813,8 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
 
       // Is this host suited for processing?
       if (hostLoad == null || hostLoadMax == null || hostLoad < hostLoadMax) {
-        logger.debug("Adding candidate service {} for processing of jobs of type '{}'", service, jobType);
+        logger.debug("Adding candidate service {} for processing of jobs of type '{}' (host load is {} of max {})",
+           service, jobType, hostLoad, hostLoadMax);
         filteredList.add(service);
       }
 
@@ -2853,7 +2901,7 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
   public SystemLoad getMaxLoads() throws ServiceRegistryException {
     final SystemLoad loads = new SystemLoad();
     for (HostRegistration host : getHostRegistrations()) {
-      NodeLoad load = new NodeLoad(host.getBaseUrl(), host.getMaxLoad());
+      NodeLoad load = new NodeLoad(host.getBaseUrl(), 0.0f, host.getMaxLoad());
       loads.addNodeLoad(load);
     }
     return loads;
@@ -2872,7 +2920,7 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
       em = emf.createEntityManager();
       query = em.createNamedQuery("HostRegistration.getMaxLoadByHostName");
       query.setParameter("host", host);
-      return new NodeLoad(host, ((Number) query.getSingleResult()).floatValue());
+      return new NodeLoad(host, 0.0f, ((Number) query.getSingleResult()).floatValue());
     } catch (NoResultException e) {
       throw new NotFoundException(e);
     } catch (Exception e) {
@@ -2922,10 +2970,12 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
         }
 
         if (!dispatchPriorityList.isEmpty()) {
+          logger.trace("Checking for outdated jobs in dispatchPriorityList's '{}' jobs", dispatchPriorityList.size());
           // Remove outdated jobs from priority list
           List<Long> jobIds = getDispatchableJobsWithIdFilter(em, dispatchPriorityList.keySet());
           for (Long jobId : new HashSet<>(dispatchPriorityList.keySet())) {
             if (!jobIds.contains(jobId)) {
+              logger.debug("Removing outdated dispatchPriorityList job '{}'", jobId);
               dispatchPriorityList.remove(jobId);
             }
           }
@@ -3005,7 +3055,7 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
         // Skip jobs that we already know can't be dispatched except of jobs in the priority list
         String jobSignature = new StringBuilder(jobType).append('@').append(job.getOperation()).toString();
         if (undispatchableJobTypes.contains(jobSignature) && !dispatchPriorityList.keySet().contains(job.getId())) {
-          logger.trace("Skipping dispatching of jobs {} with type '{}' for this round of dispatching", job.getId(),
+          logger.trace("Skipping dispatching of {} with type '{}' for this round of dispatching", job,
                   jobType);
           continue;
         }
@@ -3027,7 +3077,7 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
         // Try to load the user
         User user = userDirectoryService.loadUser(creator);
         if (user == null) {
-          logger.warn("Unable to dispatch job {}: creator '{}' is not available", job.getId(), creator);
+          logger.warn("Unable to dispatch {}: creator '{}' is not available", job, creator);
           continue;
         }
         securityService.setUser(user);
@@ -3080,7 +3130,7 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
             try {
               systemLoad.updateNodeLoad(hostAcceptingJob, job.getJobLoad());
             } catch (NotFoundException e) {
-              logger.debug("Host {} not found in load list, this is a bug.", hostAcceptingJob);
+              logger.info("Host {} not found in load list, cannot dispatch {} to it", hostAcceptingJob, job);
             }
 
             dispatchPriorityList.remove(job.getId());
@@ -3091,14 +3141,14 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
               undispatchableJobTypes.add(jobSignature);
             continue;
           } catch (UndispatchableJobException e) {
-            logger.debug("Job {} currently cannot be dispatched", job.getId());
+            logger.debug("{} currently cannot be dispatched", job);
             continue;
           }
 
-          logger.debug("Job {} dispatched to {}", job.getId(), hostAcceptingJob);
+          logger.debug("{} dispatched to {}", job, hostAcceptingJob);
         } catch (ServiceRegistryException e) {
           Throwable cause = (e.getCause() != null) ? e.getCause() : e;
-          logger.error("Error dispatching job " + job, cause);
+          logger.error("Error dispatching {}: {}", job, cause);
         } finally {
           securityService.setUser(null);
           securityService.setOrganization(null);
@@ -3162,7 +3212,7 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
           // specific APIs, we just catch Exception.
           logger.debug("Unable to dispatch {}.  This is likely caused by another service registry dispatching the job",
                   job);
-          throw new UndispatchableJobException("Job " + job.getId() + " is already being dispatched");
+          throw new UndispatchableJobException(job + " is already being dispatched");
         }
 
         triedDispatching = true;
@@ -3183,8 +3233,8 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
         HttpResponse response = null;
         int responseStatusCode;
         try {
-          logger.debug("Trying to dispatch job {} of type '{}' to {}",
-                  new String[] { Long.toString(job.getId()), job.getJobType(), registration.getHost() });
+          logger.debug("Trying to dispatch {} type '{}' load {} to {}",
+                  job, job.getJobType(), job.getJobLoad(), registration.getHost());
           if (!START_WORKFLOW.equals(job.getOperation()))
             setCurrentJob(job.toJob());
           response = client.execute(post);
@@ -3211,10 +3261,10 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
           throw e;
         } catch (TrustedHttpClientException e) {
           // Will try another node. If no other node, it will be re-queued
-          logger.warn("Unable to dispatch job {}", job.getId(), e);
+          logger.warn("Unable to dispatch {}", job, e);
           continue;
         } catch (Exception e) {
-          logger.warn("Unable to dispatch job {}", job.getId(), e);
+          logger.warn("Unable to dispatch {}", job, e);
         } finally {
           client.close(response);
           setCurrentJob(null);
@@ -3229,6 +3279,7 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
         if (acceptJobLoadsExeedingMaxLoad && !dispatchPriorityList.containsKey(job.getId())
                 && !TYPE_WORKFLOW.equals(job.getJobType()) && job.getProcessorServiceRegistration() != null) {
           String host = job.getProcessorServiceRegistration().getHost();
+          logger.debug("About to add {} to dispatchPriorityList with processor host {}", job, host);
           dispatchPriorityList.put(job.getId(), host);
         }
 
@@ -3237,12 +3288,12 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
           job.setProcessorServiceRegistration(null);
           job = updateJob(job);
         } catch (Exception e) {
-          logger.error("Unable to put job back into queue", e);
+          logger.error("Unable to put {} back into queue", job, e);
         }
       }
 
       logger.debug("Unable to dispatch {}, no service is currently ready to accept the job", job);
-      throw new UndispatchableJobException("Job " + job.getId() + " is currently undispatchable");
+      throw new UndispatchableJobException(job + " is currently undispatchable");
     }
 
     private final Fn2<HostRegistration, Long, Boolean> filterOutPriorityHosts = new Fn2<HostRegistration, Long, Boolean>() {
@@ -3391,7 +3442,17 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
     public int compare(ServiceRegistration serviceA, ServiceRegistration serviceB) {
       String hostA = serviceA.getHost();
       String hostB = serviceB.getHost();
-      return Float.compare(loadByHost.get(hostA).getLoadFactor(), loadByHost.get(hostB).getLoadFactor());
+      NodeLoad nodeA = loadByHost.get(hostA);
+      NodeLoad nodeB = loadByHost.get(hostB);
+      //If the load factors are about the same, sort based on maximum load
+      if (Math.abs(nodeA.getLoadFactor() - nodeB.getLoadFactor()) <= 0.01) {
+        //NOTE: The sort order below is *reversed* from what you'd expect
+        //When we're comparing the load factors we want the node with the lowest factor to be first
+        //When we're comparing the maximum load value, we want the node with the highest max to be first
+        return Float.compare(nodeB.getMaxLoad(), nodeA.getMaxLoad());
+      }
+      return Float.compare(nodeA.getLoadFactor(), nodeB.getLoadFactor());
+
     }
 
   }

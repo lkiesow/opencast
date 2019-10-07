@@ -2,18 +2,19 @@
   "name": "opencast-lit-tools",
   "private": true,
   "scripts": {
+    "i18n": "./i18n.js",
     "eslint": "eslint --config ../../docs/checkstyle/eslintrc.js src/main/resources/",
     "html-linter": "html-linter --config ../../docs/checkstyle/html-linter.json 'src/main/resources/**/*.html'"
   },
   "dependencies": {
     "font-awesome": "^4.7.0",
-    "jquery": "^3.3.1",
-    "mustache": "^3.0.0",
+    "jquery": "^3.4.1",
+    "mustache": "^3.0.1",
     "paginationjs": "^2.1.4"
   },
   "devDependencies": {
-    "eslint": "^5.6.0",
-    "eslint-plugin-header": "^2.0.0",
-    "html-linter": "^1.0.8"
+    "eslint": "^5.16.0",
+    "eslint-plugin-header": "^3.0.0",
+    "html-linter": "^1.1.1"
   }
 }

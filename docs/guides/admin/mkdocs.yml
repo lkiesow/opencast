@@ -1,8 +1,9 @@
-site_name: Opencast - Administration Guide
-repo_url: https://github.com/opencast/opencast/tree/develop/docs/guides/admin/docs
+site_name: Administration Guide
+repo_url: https://github.com/opencast/opencast
+edit_uri: edit/develop/docs/guides/admin/docs/
 
-# Default theme used is readthedocs
-theme: readthedocs
+# Default theme used is windmill
+theme: windmill
 
 # The directory that contain the source .md files
 docs_dir: 'docs'
@@ -10,9 +11,20 @@ docs_dir: 'docs'
 # The directory to which the site is built using mkdocs
 site_dir: 'site'
 
+# The css files in this list will override existing css from the default theme
+extra_css:
+   - css/extra.css
+
+# The javascript files in this list will extend the existing javascript from the default theme
+extra_javascript:
+   - javascript/extra.js
+
+# The logo in the header
+extra:
+   logo: 'opencast-white.svg'
+
 # This needs to be listed in order to populate the left navigation and the TOC
 # Items will appear in this order
-
 nav:
 - Home: 'index.md'
 - Release Notes: 'releasenotes.md'
@@ -28,6 +40,8 @@ nav:
       - Debian/Ubuntu: 'installation/debs.md'
       - Fedora: 'installation/rpm-fedora.md'
       - RHEL/CentOS: 'installation/rpm-rhel-sl-centos.md'
+   - Installation via script:
+      - Ansible: 'installation/ansible.md'
    - Installation with Docker:
       - Testing Locally: 'installation/docker-local.md'
 - Configuration:
@@ -43,6 +57,8 @@ nav:
    - Message Broker: 'configuration/message-broker.md'
    - Metadata: 'configuration/metadata.md'
    - Encoding: 'configuration/encoding.md'
+   - Inbox: 'configuration/inbox.md'
+   - List Providers: 'configuration/listproviders.md'
    - Load: 'configuration/load.md'
    - Log: 'configuration/log.md'
    - User Statistics and Privacy Configuration: 'configuration/user-statistics.and.privacy.md'
@@ -80,7 +96,10 @@ nav:
       - URL Parameters: 'modules/player.url.parameter.md'
       - Matomo Tracking: 'modules/player.matomo.tracking.md'
    - Paella player: 'modules/paella.player.md'
-   - Search Index: 'modules/searchindex.md'
+   - Search Index:
+      - Overview: 'modules/searchindex/index.md'
+      - Solr: 'modules/searchindex/solr.md'
+      - Elasticsearch: 'modules/searchindex/elasticsearch.md'
    - Stream Security: 'modules/stream-security.md'
    - Text Extraction: 'modules/textextraction.md'
    - Timeline Previews: 'modules/timelinepreviews.md'
@@ -95,6 +114,7 @@ nav:
 - Workflow Operation Handler:
    - Overview: 'workflowoperationhandlers/index.md'
    - Retry Strategies: 'workflowoperationhandlers/retry-strategies.md'
+   - Add Catalog: 'workflowoperationhandlers/add-catalog-woh.md'
    - Analyze Tracks: 'workflowoperationhandlers/analyze-tracks-woh.md'
    - Analyze Audio: 'workflowoperationhandlers/analyzeaudio-woh.md'
    - Animate: 'workflowoperationhandlers/animate-woh.md'

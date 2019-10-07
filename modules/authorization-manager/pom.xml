@@ -7,7 +7,7 @@
   <parent>
     <groupId>org.opencastproject</groupId>
     <artifactId>base</artifactId>
-    <version>6-SNAPSHOT</version>
+    <version>7-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <properties>
@@ -172,6 +172,12 @@
       <artifactId>h2</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.opencastproject</groupId>
+      <artifactId>opencast-rest-test-environment</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
   <build>
     <plugins>
@@ -200,11 +206,9 @@
             </Export-Package>
             <Service-Component>
               OSGI-INF/acl-jpa-db.xml,
-              OSGI-INF/acl-jpa-transition-db.xml,
               OSGI-INF/acl-service-factory.xml,
               OSGI-INF/acl-scanner.xml,
-              OSGI-INF/acl-service-rest.xml,
-              OSGI-INF/acl-scheduler.xml
+              OSGI-INF/acl-service-rest.xml
             </Service-Component>
             <Meta-Persistence>
               META-INF/persistence.xml

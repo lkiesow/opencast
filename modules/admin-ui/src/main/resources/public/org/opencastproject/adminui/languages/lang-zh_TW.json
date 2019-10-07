@@ -10,7 +10,8 @@
    "SAVE": "儲存",
    "LOGOUT": "登出",
    "RESET": "重設",
-   "SELECT_NO_OPTIONS": "沒有選項",
+   "SELECT_NO_OPTION_SELECTED": "No option selected",
+   "SELECT_NO_OPTIONS_AVAILABLE": "No options available",
    "YES": "是",
    "LANGUAGES": {
       "ARABIC": "阿拉伯文",
@@ -55,11 +56,8 @@
             "ACL": "以下ACL將被刪除",
             "GROUP": "以下群組將被刪除",
             "USER": "以下的使用者將被刪除",
-            "USER_BLACKLIST": "以下使用者黑名單將被刪除",
             "THEME": "下列主題將被刪除",
-            "EMAIL": "將刪除以下電子郵件範本",
-            "LOCATION": "以下位置將被刪除",
-            "LOCATION_BLACKLIST": "以下位置黑名單將被刪除"
+            "LOCATION": "以下位置將被刪除"
          },
          "NAME": "名稱"
       },
@@ -130,30 +128,9 @@
       "EVENTS_NOT_DELETED_NOT_AUTHORIZED": "The event could not be deleted, because you don't have the permission to do so.",
       "SERIES_DELETED": "該系列已被刪除",
       "SERIES_NOT_DELETED": "該系列無法刪除",
-      "USER_BLACKLIST_CREATED": "黑名單已創建",
-      "USER_BLACKLIST_NOT_CREATED": "黑名單無法創建",
-      "USER_BLACKLIST_SAVED": "黑名單已儲存",
-      "USER_BLACKLIST_NOT_SAVED": "黑名單無法儲存",
-      "USER_BLACKLIST_DELETED": "黑名單已刪除",
-      "USER_BLACKLIST_NOT_DELETED": "黑名單無法刪除",
       "LOCATION_DELETED": "位置已被刪除",
       "LOCATION_NOT_DELETED": "無法刪除位置",
       "LOCATION_NOT_DELETED_NOT_AUTHORIZED": "The location could not be deleted, because you don't have the permission to do so.",
-      "LOCATION_BLACKLIST_CREATED": "黑名單已創建",
-      "LOCATION_BLACKLIST_NOT_CREATED": "黑名單無法創建",
-      "LOCATION_BLACKLIST_SAVED": "黑名單已儲存",
-      "LOCATION_BLACKLIST_NOT_SAVED": "黑名單無法儲存",
-      "LOCATION_BLACKLIST_DELETED": "黑名單已刪除",
-      "LOCATION_BLACKLIST_NOT_DELETED": "黑名單無法刪除",
-      "EMAIL_TEMPLATE_CREATED": "樣板已創建",
-      "EMAIL_TEMPLATE_NOT_CREATED": "樣板無法創建",
-      "EMAIL_TEMPLATE_SAVED": "樣板已儲存",
-      "EMAIL_TEMPLATE_NOT_SAVED": "樣板無法儲存",
-      "EMAIL_TEMPLATE_DELETED": "樣板已刪除",
-      "EMAIL_TEMPLATE_NOT_DELETED": "樣板無法刪除",
-      "EMAIL_TEMPLATE_NAME_TAKEN": "樣版名稱已被使用",
-      "EMAIL_SENT": "訊息已發送",
-      "EMAIL_NOT_SENT": "訊息無法發送",
       "CONFLICT_DETECTED": "預約程序有衝突 ︰ 新的事件與現有的事件重疊。請更改位置、 日期或時間。",
       "CONFLICT_BULK_DETECTED": "Scheduling conflict: changing the events results in conflicts. Please change the location, dates or times.",
       "CONFLICT_ALREADY_ENDED": "排程有誤，此一事件已經結束。",
@@ -166,11 +143,6 @@
       "SERIES_ACL_LOCKED": "如果正在執行屬於系列中的一個事件，將無法編輯存取權限",
       "SERIES_ACL_MISSING_READWRITE_ROLE": "需要具備至少一項讀取和寫入的權限",
       "EVENT_ACL_MISSING_READWRITE_ROLE": "需要具備至少一項讀取和寫入的權限",
-      "EVENT_PARTICIPATION_STATUS_UPDATE_SUCCESS": "已成功更新事件退出狀態。",
-      "EVENT_PARTICIPATION_STATUS_UPDATE_ERROR": "更新事件退出狀態時出現錯誤。",
-      "EVENT_PARTICIPATION_STATUS_READONLY": "參與狀態無法更新，因為該排程已經過期。",
-      "SERIES_PARTICIPATION_STATUS_UPDATE_SUCCESS": "已成功更新系列退出狀態。",
-      "SERIES_PARTICIPATION_STATUS_UPDATE_ERROR": "更新系列退出狀態時出現錯誤。",
       "THEME_NAME_ALREADY_TAKEN": "這個名稱已被使用",
       "THEME_NAME_EMPTY": "這個名稱不能為空白",
       "BUMPER_UPLOAD_ERROR": "上傳時發生錯誤",
@@ -199,13 +171,7 @@
    },
    "BULK_ACTIONS": {
       "CAPTION": "操作",
-      "SEND_MESSAGE": "發送消息",
       "WARNING": "警告",
-      "EDIT_STATUS": {
-         "CAPTION": "編輯狀態",
-         "READY_FOR_RECORDING": "準備錄製",
-         "OPTED_OUT": "選擇退出"
-      },
       "DELETE": {
          "SERIES": {
             "CAPTION": "刪除",
@@ -279,8 +245,11 @@
          },
          "EDIT": {
             "CAPTION": "編輯",
+            "EVENT": "event",
+            "EVENTS": "events",
+            "HEADER": "This page allows you to edit scheduled events grouped by weekdays. The inputs fields are pre-filled in case all scheduled events have the same value for a specific field. Otherwise, the input fields are left blank. Leaving input fields blank means that the respective values should not be changed.",
             "METADATA": "後設資料",
-            "SCHEDULING": "排程"
+            "SCHEDULING": "{{ weekday }} ({{ noEvents }} {{ eventOrEvents }})"
          }
       }
    },
@@ -302,6 +271,8 @@
       "BACK": "上一個",
       "CREATE": "新增",
       "RETRACT": "撤銷",
+      "RETRACT_DELETE": "Retract/Delete",
+      "DELETE": "刪除",
       "UPDATE": "更新",
       "DURATION": {
          "HOURS": "小時",
@@ -358,28 +329,6 @@
          "BSD": "BSD",
          "CCND": "CCND",
          "GPL": "GPL"
-      },
-      "SEND_MESSAGE": {
-         "CAPTION": "發送消息",
-         "TABS": {
-            "RECIPIENTS": "收件人",
-            "MESSAGE": "信息",
-            "SUMMARY": "摘要"
-         },
-         "RECIPIENTS": {
-            "AUDIT_TRAIL_CAPTION": "加入稽核追蹤",
-            "AUDIT_TRAIL_DESCRIPTION": "檢查的消息加入到稽核追蹤",
-            "AUDIT_TRAIL_LABEL": ""
-         },
-         "MESSAGE": {
-            "EMAIL_TEMPLATE": "選擇電子郵件樣板",
-            "SUBJECT": "主題",
-            "MESSAGE": "訊息：",
-            "INCLUDE_SIGNATURE": "在電子郵件中包含我的簽名"
-         },
-         "SUMMARY": {
-            "MESSAGE_SUMMARY": "摘要"
-         }
       },
       "EVENTS": {
          "NEW": {
@@ -445,7 +394,8 @@
                   "CAPTION": "多個事件的排程",
                   "REPEATS": "重複",
                   "REPEAT_ON": "重複的",
-                  "WEEKDAYS": "平日"
+                  "WEEKDAYS": "平日",
+                  "WEEKDAY": "Weekday"
                },
                "NO_SOURCE_AVAILABLE": "沒有可定時錄製的製播器可用"
             },
@@ -509,7 +459,6 @@
          "ADD_EVENT": "增加事件",
          "TABLE": {
             "CAPTION": "事件",
-            "CREATORS": "建立者",
             "TITLE": "標題",
             "PRESENTERS": "演講者",
             "SERIES": "系列",
@@ -524,9 +473,7 @@
             "LAST": "最後一次",
             "NEXT": "下一次",
             "MANAGED_ACL": "存取權限",
-            "SCHEDULING_STATUS": "狀態",
             "WORKFLOW_STATE": "進程",
-            "REVIEW_STATUS": "檢視狀態",
             "PREVIOUS": "前一項",
             "NOCONTENT": "無可用數據",
             "PUBLISHED": "已發佈",
@@ -541,18 +488,12 @@
                "EDITOR": "打開視頻編輯器",
                "EDITOR_NEEDS_CUTTING": "Open video Editor (a comment indicates that cutting the video has been requested)",
                "COMMENTS": "檢視註解",
-               "PAUSED_WORKFLOW": "查看暫停的工作流"
+               "PAUSED_WORKFLOW": "查看暫停的工作流",
+               "PRESENTER": "Filter for this presenter"
             }
-         },
-         "SCHEDULING_STATUS": {
-            "READY_FOR_RECORDING": "準備錄製",
-            "BLACKLISTED": "列入黑名單",
-            "OPTED_OUT": "選擇退出"
          },
          "STATUS": {
             "SCHEDULED": "已排程",
-            "OPTEDOUT": "選擇退出",
-            "BLACKLISTED": "列入黑名單",
             "RECORDING": "錄製中",
             "UPLOADING": "正在上傳",
             "INGESTING": "攝取中",
@@ -581,9 +522,6 @@
                "NO_PUBLICATIONS_AVAILABLE": "此事件沒有發佈",
                "PUBLICATION_DESCRIPTION": "此事件已發佈到以下發布管道:",
                "LIVE_EVENT_NOT_IN_PROGRESS": "此事件當前未進行",
-               "SCHEDULING_STATUS": "狀態",
-               "READY_FOR_RECORDING": "準備錄製",
-               "OPTED_OUT": "選擇退出",
                "CUSTOM": "自定義",
                "ENGAGE": "播放",
                "ENGAGE_LIVE": "即時轉播",
@@ -850,20 +788,6 @@
             },
             "SCHEDULING": {
                "CAPTION": "參與狀態",
-               "REVIEW_STATUS": {
-                  "CAPTION": "檢視狀態"
-               },
-               "OPTEDOUT": {
-                  "CAPTION": "退出狀態",
-                  "READY": "準備錄製",
-                  "OPTEDOUT": "選擇退出"
-               },
-               "MESSAGES": {
-                  "CAPTION": "訊息",
-                  "CREATION_DATE": "建立日期",
-                  "SENDER": "發送者",
-                  "SUBJECT": "主題"
-               },
                "PLACEHOLDER": {
                   "PRESENTERS": "演講者"
                }
@@ -871,25 +795,29 @@
             "WORKFLOWS": {
                "ACTIONS": "操作",
                "DETAILS": "詳細信息",
-               "DESCRIPTION": "",
-               "MORE_INFO": "More Information & Actions",
+               "DESCRIPTION": "說明",
+               "MORE_INFO": "More Information",
                "ID": "ID",
                "TYPE": "類型",
                "TITLE": "標題",
-               "STATE": "狀態",
+               "STATUS": "狀態",
                "STARTED": "已啟動",
                "SERIES": "系列",
                "SUBMITTED": "已提出",
+               "SUBMITTER": "Submitter",
+               "EXECUTION_TIME": "Execution time",
+               "WDID": "工作流程定義",
                "MIMETYPE": "Mime 型態",
                "URL": "網址",
                "CONFIGURATION": "配置",
                "NO_CONFIGURATION": "選定的工作流程，不存在設定參數。",
                "WORKFLOW": "工作流程",
                "TOOLTIP": {
-                  "STOP": "停止執行工作流實例",
-                  "ABORT": "中止執行工作流實例 (不再重試失敗的操作)",
-                  "RETRY": "重試工作流實例的執行",
-                  "DELETE": "刪除工作流實例"
+                  "STOP": "Stop workflow",
+                  "ABORT": "Abort execution of workflow  (don't retry failed operation again)",
+                  "RETRY": "Retry execution of workflow",
+                  "DELETE": "Delete workflow",
+                  "DETAILS": "Open workflow details"
                },
                "OPERATION_STATUS": {
                   "INSTANTIATED": "Instantiated",
@@ -897,12 +825,14 @@
                   "PAUSED": "暫停",
                   "SUCCEEDED": "Succeeded",
                   "FAILED": "失敗",
+                  "FAILING": "Failing",
                   "SKIPPED": "Skipped",
+                  "STOPPED": "Stopped",
                   "RETRY": "Retry"
                }
             },
             "WORKFLOW_INSTANCES": {
-               "TITLE": "Workflow instances"
+               "TITLE": "工作流程"
             },
             "WORKFLOW_DETAILS": {
                "TITLE": "工作流程細節",
@@ -1031,7 +961,7 @@
             "CAPTION": "系列",
             "TITLE": "系列",
             "HAS_EVENTS": "Contains events",
-            "CREATORS": "主辦單位",
+            "ORGANIZERS": "主辦單位",
             "CONTRIBUTORS": "貢獻者",
             "CREATED": "建立於",
             "MANAGED_ACL": "存取權限",
@@ -1048,7 +978,6 @@
             "TABS": {
                "METADATA": "後設資料",
                "EXTENDED_METADATA": "後設資料II",
-               "PARTICIPATION": "參與",
                "EVENTS": "事件",
                "PERMISSIONS": "存取權限",
                "THEME": "主題"
@@ -1070,7 +999,9 @@
                   "ADDITIONAL_ACTIONS": "更多選項",
                   "ACTION": "操作",
                   "NEW": "新政策",
-                  "DETAILS": "詳細信息"
+                  "DETAILS": "詳細信息",
+                  "REPLACE_EVENT_ACLS": "Update event permissions",
+                  "REPLACE_EVENT_ACLS_HINT": "Ensure all events of this series have these permissions in effect"
                },
                "ROLES": {
                   "LABEL": "選擇一個角色",
@@ -1092,24 +1023,6 @@
                "LICENSE": "許可證",
                "DESCRIPTION": "說明"
             },
-            "PARTICIPATION": {
-               "CAPTION": "參與狀態範本",
-               "WARNING_TEMPLATE": "系列參與狀態將作為預設值用於系列中的一部分的新事件。",
-               "REVIEW_STATUS": {
-                  "CAPTION": "檢視狀態"
-               },
-               "OPTEDOUT": {
-                  "CAPTION": "退出狀態",
-                  "READY": "準備錄製",
-                  "OPTEDOUT": "選擇退出"
-               },
-               "MESSAGES": {
-                  "CAPTION": "訊息",
-                  "CREATION_DATE": "建立日期",
-                  "SENDER": "發送者",
-                  "SUBJECT": "主題"
-               }
-            },
             "EVENTS": {
                "TITLE": "標題",
                "PRESENTER": "演講者",
@@ -1124,12 +1037,10 @@
    },
    "RECORDINGS": {
       "NAVIGATION": {
-         "LOCATIONS": "位置",
-         "BLACKLISTS": "黑名單"
+         "LOCATIONS": "位置"
       },
       "ACTIONS": {
          "EXPORT": "匯出",
-         "ADD_BLACKLIST": "加入黑名單",
          "REMOVE": "刪除"
       },
       "RECORDINGS": {
@@ -1143,8 +1054,6 @@
             "NEXT_NAME": "下一個事件的標題",
             "STATUS": "狀態",
             "VERSION": "版本",
-            "BLACKLIST_FROM": "從黑名單",
-            "BLACKLIST_TO": "直到黑名單",
             "ACTION": "操作",
             "TOOLTIP": {
                "NAME": "篩選此位置的事件",
@@ -1175,60 +1084,18 @@
                "NO_CAPABILITIES": "未提供任何功能"
             }
          }
-      },
-      "BLACKLISTS": {
-         "TABLE": {
-            "CAPTION": "位置黑名單",
-            "NAME": "姓名",
-            "ACTIONS": "操作"
-         },
-         "DETAILS": {
-            "NEWCAPTION": "建立黑名單",
-            "EDITCAPTION": "編輯黑名單",
-            "TABS": {
-               "LOCATIONS": "位置",
-               "DATES": "日期",
-               "REASON": "理由",
-               "SUMMARY": "摘要"
-            },
-            "LOCATIONS": {
-               "REMOVE": "刪除",
-               "ADD_LOCATION": "選擇位置",
-               "ALL_LOCATIONS": "所有地點",
-               "SELECT_LOCATION": "選擇"
-            },
-            "DATES": {
-               "START_DATE": "開始日期",
-               "END_DATE": "結束日期"
-            },
-            "REASON": {
-               "SELECT_REASON": "選擇",
-               "REASON": "理由",
-               "COMMENTS": "註解"
-            },
-            "SUMMARY": {
-               "SUMMARY": "摘要",
-               "LOCATION": "位置",
-               "DATE_FROM": "從",
-               "DATE_TO": "直到",
-               "REASON": "理由",
-               "COMMENTS": "註解"
-            }
-         }
       }
    },
    "USERS": {
       "ACTIONS": {
          "ADD_USER": "新增使用者",
          "ADD_GROUP": "新增群組",
-         "ADD_ACL": "新增權限策略",
-         "ADD_BLACKLIST": "加入黑名單"
+         "ADD_ACL": "新增權限策略"
       },
       "NAVIGATION": {
          "USERS": "使用者",
          "GROUPS": "群組",
-         "PERMISSIONS": "存取權限",
-         "BLACKLISTS": "黑名單"
+         "PERMISSIONS": "存取權限"
       },
       "USERS": {
          "TABLE": {
@@ -1239,8 +1106,6 @@
             "ROLES": "角色",
             "TYPE": "類型",
             "PROVIDER": "提供者",
-            "BLACKLIST_FROM": "從黑名單",
-            "BLACKLIST_TO": "直到黑名單",
             "ACTION": "操作",
             "TOOLTIP": {
                "DELETE": "刪除使用者",
@@ -1411,49 +1276,6 @@
                }
             }
          }
-      },
-      "BLACKLISTS": {
-         "TABLE": {
-            "CAPTION": "使用者黑名單",
-            "NAME": "姓名",
-            "DATE_FROM": "從",
-            "DATE_TO": "直到",
-            "REASON": "理由",
-            "ACTION": "操作"
-         },
-         "DETAILS": {
-            "NEWCAPTION": "創建黑名單",
-            "EDITCAPTION": "編輯黑名單",
-            "TABS": {
-               "USERS": "使用者",
-               "DATES": "日期",
-               "REASON": "理由",
-               "SUMMARY": "摘要"
-            },
-            "USERS": {
-               "REMOVE": "刪除",
-               "ADD_USER": "選擇使用者",
-               "ALL_USERS": "所有使用者",
-               "SELECT_USER": "選擇"
-            },
-            "DATES": {
-               "START_DATE": "開始日期",
-               "END_DATE": "結束日期"
-            },
-            "REASON": {
-               "SELECT_REASON": "選擇",
-               "REASON": "理由",
-               "COMMENTS": "註解"
-            },
-            "SUMMARY": {
-               "SUMMARY": "摘要",
-               "USER": "使用者",
-               "DATE_FROM": "從",
-               "DATE_TO": "直到",
-               "REASON": "理由",
-               "COMMENTS": "註解"
-            }
-         }
       }
    },
    "THEMES": {
@@ -1511,34 +1333,7 @@
          "ADD_THEME": "新增主題"
       },
       "NAVIGATION": {
-         "MAIL_TEMPLATES": "電子郵件模板",
-         "MAIL_SERVERS": "電子郵件設定",
          "THEMES": "主題"
-      },
-      "EMAIL_TEMPLATES": {
-         "TABLE": {
-            "CAPTION": "電子郵件模板",
-            "NAME": "姓名",
-            "CREATOR": "建立者",
-            "CREATED": "建立於",
-            "ACTION": "操作"
-         },
-         "DETAILS": {
-            "NEWCAPTION": "建立模板",
-            "EDITCAPTION": "編輯模板",
-            "TABS": {
-               "MESSAGE": "消息",
-               "SUMMARY": "摘要"
-            },
-            "MESSAGE": {
-               "NAME": "姓名",
-               "SUBJECT": "主題",
-               "MESSAGE": "信息"
-            },
-            "SUMMARY": {
-               "MESSAGE_SUMMARY": "信息摘要"
-            }
-         }
       },
       "THEMES": {
          "TABLE": {
@@ -1634,7 +1429,6 @@
       "JOBS": {
          "TABLE": {
             "ID": "作業的識別碼",
-            "ACTION": "操作",
             "CAPTION": "工作",
             "CREATED": "創建",
             "CREATOR": "建立者",
@@ -1644,14 +1438,6 @@
             "STATUS": "狀態",
             "SUBMITTED": "已提出",
             "TYPE": "類型"
-         },
-         "DETAILS": {
-            "HEADER": "工作信息 {{resourceId}}",
-            "TABS": {
-               "GENERAL": "常規",
-               "OPERATIONS": "操作",
-               "INCIDENTS": "事故"
-            }
          },
          "STATUS": {
             "QUEUED": "已排入佇列",
@@ -1679,7 +1465,6 @@
             "MEAN_RUN_TIME": "平均運行時間",
             "MEAN_QUEUE_TIME": "平均排序時間",
             "MAINTENANCE": "維護",
-            "ACTION": "操作",
             "MAINTENANCE_OFF": "進入維護模式",
             "MAINTENANCE_ON": "離開維護模式"
          }
@@ -1909,9 +1694,6 @@
          "LOCATION": {
             "LABEL": "位置"
          },
-         "OPTEDOUT": {
-            "LABEL": "選擇退出"
-         },
          "PERIOD": {
             "LABEL": "週期"
          },
@@ -1923,12 +1705,6 @@
          },
          "PROGRESS": {
             "LABEL": "進程"
-         },
-         "REVIEW_STATUS": {
-            "LABEL": "檢視狀態",
-            "CONFIRMED": "已確認",
-            "UNCONFIRMED": "未確認",
-            "UNSENT": "未發送"
          },
          "SERIES": {
             "LABEL": "系列"
@@ -2079,16 +1855,6 @@
    "TABLE_NO_RESULT": "沒有找到結果",
    "TABLE_LOADING": "載入中…",
    "TABLE_EDIT": "編輯",
-   "PM": {
-      "BLACKLIST": {
-         "REASONS": {
-            "SICK_LEAVE": "病假",
-            "LEAVE": "離開",
-            "FAMILY_EMERGENCY": "家庭緊急情況",
-            "CONSTRUCTION": "建構"
-         }
-      }
-   },
    "DASHBOARD": {
       "RUNNING": "運行中",
       "FINISHED": "已完成",
@@ -2177,6 +1943,11 @@
          "SHUTTING_DOWN": "Shutting down",
          "UNKNOWN": "Unknown",
          "UPLOADING": "正在上傳"
+      }
+   },
+   "EDITABLE": {
+      "MULTI": {
+         "PLACEHOLDER": "To insert multiple values press Enter in between"
       }
    }
 }

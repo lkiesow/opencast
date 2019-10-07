@@ -111,7 +111,6 @@ import org.opencastproject.util.DateTimeSupport;
 import org.opencastproject.util.NotFoundException;
 import org.opencastproject.util.XmlNamespaceBinding;
 import org.opencastproject.util.XmlNamespaceContext;
-import org.opencastproject.util.data.Effect0;
 import org.opencastproject.util.data.Tuple;
 import org.opencastproject.workflow.api.ConfiguredWorkflow;
 import org.opencastproject.workflow.api.WorkflowDatabaseException;
@@ -155,7 +154,6 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -851,15 +849,20 @@ public class IndexServiceImpl implements IndexService {
       currentStartDate = sdf.parse((String) startDate.getValue().get());
     } else if (currentStartDate != null) {
       eventMetadata.removeField(startDate);
-      MetadataField<String> newStartDate = MetadataUtils.copyMetadataField(startDate);
+      MetadataField<String> newStartDate = new MetadataField(startDate);
       newStartDate.setValue(EncodingSchemeUtils.encodeDate(currentStartDate, Precision.Fraction).getValue());
       eventMetadata.addField(newStartDate);
     }
 
+    // This field is null when it is not used in the Admin UI event details metadata tab.
+    // If used, set it to the the start Date or a new date.
+    // Note, even though this field borrows the DublinCore.PROPERTY_CREATED key,
+    // the startDate is used to update the DublinCore catalog PROPERTY_CREATED field,
+    // event, and mediapackage start fields.
     MetadataField<?> created = eventMetadata.getOutputFields().get(DublinCore.PROPERTY_CREATED.getLocalName());
-    if (created == null || !created.isUpdated() || created.getValue().isNone()) {
+    if (created != null && (!created.isUpdated() || created.getValue().isNone())) {
       eventMetadata.removeField(created);
-      MetadataField<String> newCreated = MetadataUtils.copyMetadataField(created);
+      MetadataField<String> newCreated = new MetadataField(created);
       if (currentStartDate != null) {
         newCreated.setValue(EncodingSchemeUtils.encodeDate(currentStartDate, Precision.Second).getValue());
       } else {
@@ -958,8 +961,7 @@ public class IndexServiceImpl implements IndexService {
         eventHttpServletRequest.setMediaPackage(mediaPackage);
         try {
           schedulerService.addEvent(start.toDate(), start.plus(duration).toDate(), captureAgentId, presenterUsernames,
-                  mediaPackage, configuration, (Map) caProperties, Opt.<Boolean> none(), Opt.<String> none(),
-                  SchedulerService.ORIGIN);
+                  mediaPackage, configuration, (Map) caProperties, Opt.<String> none());
         } finally {
           for (MediaPackageElement mediaPackageElement : mediaPackage.getElements()) {
             try {
@@ -971,10 +973,8 @@ public class IndexServiceImpl implements IndexService {
         }
         return mediaPackage.getIdentifier().compact();
       case SCHEDULE_MULTIPLE:
-        List<Period> periods = schedulerService.calculatePeriods(rRule, start.toDate(), end.toDate(), duration, tz);
-        Map<String, Period> scheduled = new LinkedHashMap<>();
-         scheduled = schedulerService.addMultipleEvents(rRule, start.toDate(), end.toDate(), duration, tz, captureAgentId,
-                presenterUsernames, eventHttpServletRequest.getMediaPackage().get(), configuration, (Map) caProperties, Opt.none(), Opt.none(), SchedulerService.ORIGIN);
+        final Map<String, Period> scheduled = schedulerService.addMultipleEvents(rRule, start.toDate(), end.toDate(), duration, tz, captureAgentId,
+                presenterUsernames, eventHttpServletRequest.getMediaPackage().get(), configuration, (Map) caProperties, Opt.none());
         return StringUtils.join(scheduled.keySet(), ",");
       default:
         logger.warn("Unknown source type {}", type);
@@ -1021,8 +1021,7 @@ public class IndexServiceImpl implements IndexService {
       Tuple<List<String>, Set<String>> updatedPresenters = getTechnicalPresenters(eventMetadata);
       presenterUsernames = updatedPresenters.getB();
       eventMetadata.removeField(presentersMetadataField);
-      MetadataField<Iterable<String>> newPresentersMetadataField = MetadataUtils
-              .copyMetadataField(presentersMetadataField);
+      MetadataField<Iterable<String>> newPresentersMetadataField = new MetadataField(presentersMetadataField);
       newPresentersMetadataField.setValue(updatedPresenters.getA());
       eventMetadata.addField(newPresentersMetadataField);
       return Opt.some(presenterUsernames);
@@ -1222,7 +1221,7 @@ public class IndexServiceImpl implements IndexService {
         try {
           schedulerService.updateEvent(event.getIdentifier(), Opt.<Date> none(), Opt.<Date> none(), Opt.<String> none(),
                   Opt.<Set<String>> none(), Opt.some(mediaPackage), Opt.<Map<String, String>> none(),
-                  Opt.<Map<String, String>> none(), Opt.<Opt<Boolean>> none(), SchedulerService.ORIGIN);
+                  Opt.<Map<String, String>> none());
         } catch (SchedulerException e) {
           logger.error("Unable to remove catalog with flavor {} by updating scheduled event {} because {}",
                   flavor, event.getIdentifier(), getStackTrace(e));
@@ -1296,8 +1295,7 @@ public class IndexServiceImpl implements IndexService {
       case SCHEDULE:
         try {
           schedulerService.updateEvent(id, Opt.<Date> none(), Opt.<Date> none(), Opt.<String> none(), presenters,
-                  Opt.some(mediaPackage), Opt.<Map<String, String>> none(), Opt.<Map<String, String>> none(),
-                  Opt.<Opt<Boolean>> none(), SchedulerService.ORIGIN);
+                  Opt.some(mediaPackage), Opt.<Map<String, String>> none(), Opt.<Map<String, String>> none());
         } catch (SchedulerException e) {
           logger.error("Unable to update scheduled event {} with metadata {} because {}",
                   id, RestUtils.getJsonStringSilent(metadataList.toJSON()), getStackTrace(e));
@@ -1352,23 +1350,26 @@ public class IndexServiceImpl implements IndexService {
         // Not updating the acl as the workflow might have already passed the point of distribution.
         throw new IllegalArgumentException("Unable to update the ACL of this event as it is currently processing.");
       case ARCHIVE:
-        mediaPackage = authorizationService.setAcl(mediaPackage, AclScope.Episode, acl).getA();
+        try {
+          mediaPackage = authorizationService.setAcl(mediaPackage, AclScope.Episode, acl).getA();
+        } catch (MediaPackageException e) {
+          throw new IndexServiceException("Unable to update  acl", e);
+        }
         assetManager.takeSnapshot(mediaPackage);
         return acl;
       case SCHEDULE:
-        mediaPackage = authorizationService.setAcl(mediaPackage, AclScope.Episode, acl).getA();
         try {
-          schedulerService.updateEvent(id, Opt.<Date> none(), Opt.<Date> none(), Opt.<String> none(),
-                  Opt.<Set<String>> none(), Opt.some(mediaPackage), Opt.<Map<String, String>> none(),
-                  Opt.<Map<String, String>> none(), Opt.<Opt<Boolean>> none(), SchedulerService.ORIGIN);
-        } catch (SchedulerException e) {
+          mediaPackage = authorizationService.setAcl(mediaPackage, AclScope.Episode, acl).getA();
+          schedulerService.updateEvent(id, Opt.none(), Opt.none(), Opt.none(), Opt.none(), Opt.some(mediaPackage),
+                  Opt.none(), Opt.none());
+        } catch (SchedulerException | MediaPackageException e) {
           throw new IndexServiceException("Unable to update the acl for the scheduled event", e);
         }
         return acl;
       default:
         logger.error("Unknown event source '{}' unable to update ACL!", getEventSource(event));
         throw new IndexServiceException(
-                String.format("Unable to update the ACL as '{}' is an unknown event source.", getEventSource(event)));
+                String.format("Unable to update the ACL as '%s' is an unknown event source.", getEventSource(event)));
     }
   }
 
@@ -1582,19 +1583,15 @@ public class IndexServiceImpl implements IndexService {
       case WORKFLOW:
         Opt<WorkflowInstance> currentWorkflowInstance = getCurrentWorkflowInstance(event.getIdentifier());
         if (currentWorkflowInstance.isNone()) {
-          logger.error("No workflow instance for event {} found!", event.getIdentifier());
           throw new IndexServiceException("No workflow instance found for event " + event.getIdentifier());
         }
         return currentWorkflowInstance.get().getMediaPackage();
       case ARCHIVE:
-        final AQueryBuilder q = assetManager.createQuery();
-        final AResult r = q.select(q.snapshot())
-                .where(q.mediaPackageId(event.getIdentifier()).and(q.version().isLatest())).run();
-        if (r.getSize() > 0) {
+        Opt<MediaPackage> mpOpt = assetManager.getMediaPackage(event.getIdentifier());
+        if (mpOpt.isSome()) {
           logger.debug("Found event in archive with id {}", event.getIdentifier());
-          return enrich(r).getSnapshots().head2().getMediaPackage();
+          return mpOpt.get();
         }
-        logger.error("No event with id {} found from archive!", event.getIdentifier());
         throw new IndexServiceException("No archived event found with id " + event.getIdentifier());
       case SCHEDULE:
         try {
@@ -1602,16 +1599,11 @@ public class IndexServiceImpl implements IndexService {
           logger.debug("Found event in scheduler with id {}", event.getIdentifier());
           return mediaPackage;
         } catch (NotFoundException e) {
-          logger.error("No scheduled event with id {} found!", event.getIdentifier());
-          throw new IndexServiceException(e.getMessage(), e);
+          throw new IndexServiceException("No scheduled event with id " + event.getIdentifier(), e);
         } catch (UnauthorizedException e) {
-          logger.error("Unauthorized to get event with id {} from scheduler because {}", event.getIdentifier(),
-                  getStackTrace(e));
-          throw new IndexServiceException(e.getMessage(), e);
+          throw new IndexServiceException("Unauthorized to get event " + event.getIdentifier() + " from scheduler", e);
         } catch (SchedulerException e) {
-          logger.error("Unable to get event with id {} from scheduler because {}", event.getIdentifier(),
-                  getStackTrace(e));
-          throw new IndexServiceException(e.getMessage(), e);
+          throw new IndexServiceException("Unable to get event " + event.getIdentifier() + " from scheduler", e);
         }
       default:
         throw new IllegalStateException("Unknown event type!");
@@ -1627,19 +1619,17 @@ public class IndexServiceImpl implements IndexService {
    */
   @Override
   public Source getEventSource(Event event) {
-    if (event.getWorkflowId() != null && isWorkflowActive(event.getWorkflowState()))
+    if (event.getWorkflowId() != null && isWorkflowActive(event.getWorkflowState())) {
       return Source.WORKFLOW;
-
-    if (event.getSchedulingStatus() != null && !event.hasRecordingStarted())
+    } else if (event.isScheduledEvent() && !event.hasRecordingStarted()) {
       return Source.SCHEDULE;
-
-    if (event.getArchiveVersion() != null)
+    } else if (event.getArchiveVersion() != null) {
       return Source.ARCHIVE;
-
-    if (event.getWorkflowId() != null)
+    } else if (event.getWorkflowId() != null) {
       return Source.WORKFLOW;
-
-    return Source.SCHEDULE;
+    } else {
+      return Source.SCHEDULE;
+    }
   }
 
   @Override
@@ -1767,7 +1757,7 @@ public class IndexServiceImpl implements IndexService {
               }
             }
           }
-        } catch (SeriesException e) {
+        } catch (SeriesException | MediaPackageException e) {
           throw new IllegalStateException("Unable to retrieve series ACL for series " + oldSeriesId, e);
         } catch (NotFoundException e) {
           logger.debug("There is no ACL set for the series {}", mp.getSeries());
@@ -1969,48 +1959,38 @@ public class IndexServiceImpl implements IndexService {
   public void updateCommentCatalog(final Event event, final List<EventComment> comments) throws Exception {
     final SecurityContext securityContext = new SecurityContext(securityService, securityService.getOrganization(),
             securityService.getUser());
-    executorService.execute(new Runnable() {
-      @Override
-      public void run() {
-        securityContext.runInContext(new Effect0() {
-          @Override
-          protected void run() {
-            try {
-              MediaPackage mediaPackage = getEventMediapackage(event);
-              updateMediaPackageCommentCatalog(mediaPackage, comments);
-              switch (getEventSource(event)) {
-                case WORKFLOW:
-                  logger.info("Update workflow mediapacakge {} with updated comments catalog.", event.getIdentifier());
-                  Opt<WorkflowInstance> workflowInstance = getCurrentWorkflowInstance(event.getIdentifier());
-                  if (workflowInstance.isNone()) {
-                    logger.error("No workflow instance for event {} found!", event.getIdentifier());
-                    throw new IndexServiceException("No workflow instance found for event " + event.getIdentifier());
-                  }
-                  WorkflowInstance instance = workflowInstance.get();
-                  instance.setMediaPackage(mediaPackage);
-                  updateWorkflowInstance(instance);
-                  break;
-                case ARCHIVE:
-                  logger.info("Update archive mediapacakge {} with updated comments catalog.", event.getIdentifier());
-                  assetManager.takeSnapshot(mediaPackage);
-                  break;
-                case SCHEDULE:
-                  logger.info("Update scheduled mediapacakge {} with updated comments catalog.", event.getIdentifier());
-                  schedulerService.updateEvent(event.getIdentifier(), Opt.<Date> none(), Opt.<Date> none(),
-                          Opt.<String> none(), Opt.<Set<String>> none(), Opt.some(mediaPackage),
-                          Opt.<Map<String, String>> none(), Opt.<Map<String, String>> none(), Opt.<Opt<Boolean>> none(),
-                          SchedulerService.ORIGIN);
-                  break;
-                default:
-                  logger.error("Unkown event source {}!", event.getSource().toString());
-              }
-            } catch (Exception e) {
-              logger.error("Unable to update event {} comment catalog: {}", event.getIdentifier(), getStackTrace(e));
+    executorService.execute(() -> securityContext.runInContext(() -> {
+      try {
+        MediaPackage mediaPackage = getEventMediapackage(event);
+        updateMediaPackageCommentCatalog(mediaPackage, comments);
+        switch (getEventSource(event)) {
+          case WORKFLOW:
+            logger.info("Update workflow mediapacakge {} with updated comments catalog.", event.getIdentifier());
+            Opt<WorkflowInstance> workflowInstance = getCurrentWorkflowInstance(event.getIdentifier());
+            if (workflowInstance.isNone()) {
+              logger.error("No workflow instance for event {} found!", event.getIdentifier());
+              throw new IndexServiceException("No workflow instance found for event " + event.getIdentifier());
             }
-          }
-        });
+            WorkflowInstance instance = workflowInstance.get();
+            instance.setMediaPackage(mediaPackage);
+            updateWorkflowInstance(instance);
+            break;
+          case ARCHIVE:
+            logger.info("Update archive mediapacakge {} with updated comments catalog.", event.getIdentifier());
+            assetManager.takeSnapshot(mediaPackage);
+            break;
+          case SCHEDULE:
+            logger.info("Update scheduled mediapacakge {} with updated comments catalog.", event.getIdentifier());
+            schedulerService.updateEvent(event.getIdentifier(), Opt.none(), Opt.none(), Opt.none(), Opt.none(),
+                    Opt.some(mediaPackage), Opt.none(), Opt.none());
+            break;
+          default:
+            logger.error("Unkown event source {}!", event.getSource());
+        }
+      } catch (Exception e) {
+        logger.error("Unable to update event {} comment catalog", event.getIdentifier(), e);
       }
-    });
+    }));
   }
 
   private void updateMediaPackageCommentCatalog(MediaPackage mediaPackage, List<EventComment> comments)
@@ -2053,19 +2033,6 @@ public class IndexServiceImpl implements IndexService {
         }
       }
     }
-  }
-
-  @Override
-  public void changeOptOutStatus(String eventId, boolean optout, AbstractSearchIndex index)
-          throws NotFoundException, SchedulerException, SearchIndexException, UnauthorizedException {
-    Opt<Event> optEvent = getEvent(eventId, index);
-    if (optEvent.isNone())
-      throw new NotFoundException("Cannot find an event with id " + eventId);
-
-    schedulerService.updateEvent(eventId, Opt.<Date> none(), Opt.<Date> none(), Opt.<String> none(),
-            Opt.<Set<String>> none(), Opt.<MediaPackage> none(), Opt.<Map<String, String>> none(),
-            Opt.<Map<String, String>> none(), Opt.some(Opt.some(optout)), SchedulerService.ORIGIN);
-    logger.debug("Setting event {} to opt out status of {}", eventId, optout);
   }
 
   /**
@@ -2167,20 +2134,6 @@ public class IndexServiceImpl implements IndexService {
     return WorkflowState.INSTANTIATED.toString().equals(workflowState)
             || WorkflowState.RUNNING.toString().equals(workflowState)
             || WorkflowState.PAUSED.toString().equals(workflowState);
-  }
-
-  @Override
-  public boolean hasActiveTransaction(String eventId)
-          throws NotFoundException, UnauthorizedException, IndexServiceException {
-    try {
-      return schedulerService.hasActiveTransaction(eventId);
-    } catch (SchedulerException e) {
-      logger.error("Unable to get active transaction for scheduled event {} because {}", eventId, getStackTrace(e));
-      throw new IndexServiceException("Unable to get active transaction for scheduled event " + eventId);
-    } catch (NotFoundException e) {
-      logger.trace("The event was not found by the scheduler so it can't be in an active transaction.");
-      return false;
-    }
   }
 
 }

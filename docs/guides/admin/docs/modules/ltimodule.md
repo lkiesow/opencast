@@ -18,8 +18,8 @@ Configure Opencast
 
 ### Configure OAuth authentication
 
-LTI uses OAuth to authenticate users. To enable OAuth in Opencast, edit `OPENCAST/etc/security/mh_default_org.xml` and
-uncomment the oAuthProtectedResourceFilter in the Authentication Filters section:
+LTI uses OAuth to authenticate users. To enable OAuth in Opencast, edit `etc/security/mh_default_org.xml` and uncomment
+the oauthProtectedResourceFilter in the Authentication Filters section:
 
 ```xml
     <!-- 2-legged OAuth is used by trusted 3rd party applications, including LTI. -->
@@ -28,8 +28,8 @@ uncomment the oAuthProtectedResourceFilter in the Authentication Filters section
 ```
 
 To configure OAuth consumers (e.g. a LMS), edit
-`OPENCAST/etc/org.opencastproject.kernel.security.OAuthConsumerDetailsService.cfg` and replace CONSUMERNAME,
-CONSUMERKEY, and CONSUMERSECRET with the values you will use in your LMS:
+`etc/org.opencastproject.kernel.security.OAuthConsumerDetailsService.cfg` and replace CONSUMERNAME, CONSUMERKEY, and
+CONSUMERSECRET with the values you will use in your LMS:
 
 ```properties
 oauth.consumer.name.1=CONSUMERNAME
@@ -100,8 +100,8 @@ custom parameters to be defined separately in each place where an LTI tool is us
 custom parameters to be defined globally.
 
 * To show the Opencast Media Module, use `tool=engage/ui/`
-* To show all videos for a single series, use `tool=ltitools/series/index.html;series=SERIESID`
-* To show a single video, use `tool=engage/theodul/ui/core.html;id=MEDIAPACKAGEID`
+* To show all videos for a single series, use `tool=ltitools/series/index.html?series=SERIESID`
+* To show a single video, use `tool=/play/MEDIAPACKAGEID`
 * To show a short debugging page before proceeding to the tool page, add the parameter `test=true`
 
 For more information about how to set custom LTI parameters, please check the documentation of your LMS.

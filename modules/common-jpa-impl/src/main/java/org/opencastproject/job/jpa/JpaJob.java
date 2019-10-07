@@ -37,7 +37,6 @@ import org.slf4j.LoggerFactory;
 
 import java.net.URI;
 import java.util.Date;
-import java.util.LinkedList;
 import java.util.List;
 
 import javax.persistence.Access;
@@ -114,6 +113,8 @@ import javax.persistence.Version;
         @NamedQuery(name = "Job.countByOperation", query = "SELECT COUNT(j) FROM Job j "
                 + "where j.status = :status and j.operation = :operation and "
                 + "j.creatorServiceRegistration.serviceType = :serviceType"),
+        @NamedQuery(name = "Job.countByOperationOnly", query = "SELECT COUNT(j) FROM Job j "
+                + "where j.operation = :operation"),
         @NamedQuery(name = "Job.fullMonty", query = "SELECT COUNT(j) FROM Job j "
                 + "where j.status = :status and j.operation = :operation "
                 + "and j.processorServiceRegistration is not null and "
@@ -197,30 +198,6 @@ public class JpaJob {
   @Column(name = "job_load")
   private Float jobLoad;
 
-  public String getBlockedJobIds() {
-    StringBuffer sb = new StringBuffer();
-    for (Long id : blockedJobIds) {
-      sb.append(id);
-      sb.append(" ");
-    }
-    return sb.toString();
-  }
-
-  public Long getBlockingJobId() {
-    return blockingJobId;
-  }
-
-  /** The list of job IDs that are blocking this job from continuing. */
-  @Column(name = "blocking_job_list")
-  @OrderColumn(name = "job_index")
-  @ElementCollection(fetch = FetchType.EAGER)
-  @CollectionTable(name = "oc_blocking_job", joinColumns = @JoinColumn(name = "id", referencedColumnName = "id"))
-  private List<Long> blockedJobIds = new LinkedList<Long>();
-
-  /** The job that this job is blocking from continuing. */
-  @Column(name = "blocking_job")
-  private Long blockingJobId = null;
-
   @ManyToOne
   @JoinColumn(name = "creator_service")
   private ServiceRegistrationJpaImpl creatorServiceRegistration;
@@ -299,15 +276,13 @@ public class JpaJob {
     newJob.creator = job.getCreator();
     newJob.organization = job.getOrganization();
     newJob.jobLoad = job.getJobLoad();
-    newJob.blockedJobIds = job.getBlockedJobIds();
-    newJob.blockingJobId = job.getBlockingJobId();
     return newJob;
   }
 
   public Job toJob() {
     return new JobImpl(id, creator, organization, version, jobType, operation, arguments, Status.values()[status],
             createdHost, processingHost, dateCreated, dateStarted, dateCompleted, queueTime, runTime, payload,
-            parentJobId, rootJobId, dispatchable, uri, jobLoad, blockedJobIds, blockingJobId);
+            parentJobId, rootJobId, dispatchable, uri, jobLoad);
   }
 
   public static Fn<JpaJob, Job> fnToJob() {
@@ -372,14 +347,6 @@ public class JpaJob {
 
   public void setArguments(List<String> arguments) {
     this.arguments = arguments;
-  }
-
-  public void setBlockedJobIds(List<Long> blockedJobIds) {
-    this.blockedJobIds = blockedJobIds;
-  }
-
-  public void setBlockingJobId(Long blockingJobId) {
-    this.blockingJobId = blockingJobId;
   }
 
   public void setDateCreated(Date dateCreated) {

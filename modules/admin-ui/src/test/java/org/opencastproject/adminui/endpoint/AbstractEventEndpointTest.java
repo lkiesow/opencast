@@ -26,25 +26,25 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.assertThat;
-import static org.opencastproject.rest.RestServiceTestEnv.localhostRandomPort;
-import static org.opencastproject.rest.RestServiceTestEnv.testEnvForClasses;
+import static org.opencastproject.test.rest.RestServiceTestEnv.localhostRandomPort;
+import static org.opencastproject.test.rest.RestServiceTestEnv.testEnvForClasses;
 
 import org.opencastproject.adminui.impl.AdminUIConfiguration;
-import org.opencastproject.adminui.impl.index.AdminUISearchIndex;
+import org.opencastproject.adminui.index.AdminUISearchIndex;
 import org.opencastproject.assetmanager.api.AssetManager;
 import org.opencastproject.authorization.xacml.manager.api.AclService;
 import org.opencastproject.capture.admin.api.CaptureAgentStateService;
 import org.opencastproject.event.comment.EventCommentService;
 import org.opencastproject.index.service.api.IndexService;
 import org.opencastproject.index.service.util.RestUtils;
-import org.opencastproject.rest.NotFoundExceptionMapper;
-import org.opencastproject.rest.RestServiceTestEnv;
 import org.opencastproject.scheduler.api.Recording;
 import org.opencastproject.scheduler.api.RecordingState;
 import org.opencastproject.scheduler.api.SchedulerService;
 import org.opencastproject.security.api.AuthorizationService;
 import org.opencastproject.security.api.SecurityService;
 import org.opencastproject.security.urlsigning.service.UrlSigningService;
+import org.opencastproject.test.rest.NotFoundExceptionMapper;
+import org.opencastproject.test.rest.RestServiceTestEnv;
 import org.opencastproject.workflow.api.WorkflowService;
 
 import com.entwinemedia.fn.data.Opt;
@@ -84,7 +84,7 @@ public class AbstractEventEndpointTest {
             // TODO: add all serialised props to mock and check here
             .body("id", equalTo("asdasd")).body("title", equalTo("title"))
             .body("event_status", equalTo("EVENTS.EVENTS.STATUS.ARCHIVE")).body("has_preview", equalTo(false))
-            .body("review_status", equalTo("UNSENT")).body("has_open_comments", equalTo(false))
+            .body("has_open_comments", equalTo(false))
             .body("series.id", equalTo("seriesId")).body("technical_start", equalTo("2013-03-20T04:00:00Z"))
             .body("start_date", equalTo("2013-03-20T04:00:00Z")).when().get(rt.host("/{eventId}"));
 
@@ -127,16 +127,6 @@ public class AbstractEventEndpointTest {
 
     String result = given().pathParam("eventId", "asdasd").pathParam("commentId", 33).expect()
             .statusCode(HttpStatus.SC_OK).when().get(rt.host("{eventId}/comment/{commentId}")).asString();
-
-    assertThat(eventString, SameJSONAs.sameJSONAs(result));
-  }
-
-  @Test
-  public void testGetEventParticipation() throws Exception {
-    String eventString = IOUtils.toString(getClass().getResource("/eventParticipation.json"));
-
-    String result = given().pathParam("eventId", "asdasd").expect().statusCode(HttpStatus.SC_OK).when()
-            .get(rt.host("{eventId}/participation.json")).asString();
 
     assertThat(eventString, SameJSONAs.sameJSONAs(result));
   }
@@ -533,42 +523,6 @@ public class AbstractEventEndpointTest {
   }
 
   @Test
-  public void testAddEventTransition() throws Exception {
-    given().pathParam("eventId", "asdasd").expect().statusCode(HttpStatus.SC_BAD_REQUEST).when()
-            .post(rt.host("{eventId}/transitions"));
-
-    given().pathParam("eventId", "asdasd").formParam("transition", "adsf").expect()
-            .statusCode(HttpStatus.SC_BAD_REQUEST).when().post(rt.host("{eventId}/transitions"));
-
-    String transition = "{\"id\": 1,\"application_date\": \"2014-06-05T15:00:00Z\", \"done\": false, \"acl_id\": 43, \"is_deleted\": false }";
-
-    given().pathParam("eventId", "asdasd").formParam("transition", transition).expect()
-            .statusCode(HttpStatus.SC_NO_CONTENT).when().post(rt.host("{eventId}/transitions"));
-  }
-
-  @Test
-  public void testUpdateEventTransition() throws Exception {
-    given().pathParam("eventId", "asdasd").pathParam("transitionId", "adf").expect().statusCode(HttpStatus.SC_NOT_FOUND)
-            .when().put(rt.host("{eventId}/transitions/{transitionId}"));
-    given().pathParam("eventId", "asdasd").pathParam("transitionId", 5).expect().statusCode(HttpStatus.SC_BAD_REQUEST)
-            .when().put(rt.host("{eventId}/transitions/{transitionId}"));
-    given().pathParam("eventId", "asdasd").pathParam("transitionId", 5).formParam("transition", "adsf").expect()
-            .statusCode(HttpStatus.SC_BAD_REQUEST).when().put(rt.host("{eventId}/transitions/{transitionId}"));
-
-    String transition = "{\"id\": 1,\"application_date\": \"2014-06-05T15:00:00Z\", \"done\": false, \"acl_id\": 43, \"is_deleted\": false }";
-    given().pathParam("eventId", "asdasd").pathParam("transitionId", 5).formParam("transition", transition).expect()
-            .statusCode(HttpStatus.SC_NO_CONTENT).when().put(rt.host("{eventId}/transitions/{transitionId}"));
-  }
-
-  @Test
-  public void testDeleteEventTransition() throws Exception {
-    given().pathParam("eventId", "asdasd").pathParam("transitionId", "adf").expect().statusCode(HttpStatus.SC_NOT_FOUND)
-            .when().delete(rt.host("{eventId}/transitions/{transitionId}"));
-    given().pathParam("eventId", "asdasd").pathParam("transitionId", 5).expect().statusCode(HttpStatus.SC_NO_CONTENT)
-            .when().delete(rt.host("{eventId}/transitions/{transitionId}"));
-  }
-
-  @Test
   @Ignore
   public void testGetNewMetadata() throws Exception {
     String eventMetadataString = IOUtils.toString(getClass().getResource("/newEventMetadata.json"));
@@ -652,7 +606,7 @@ public class AbstractEventEndpointTest {
     given().expect().statusCode(HttpStatus.SC_UNSUPPORTED_MEDIA_TYPE).when().post(rt.host("new"));
 
     // TODO: finish this test
-    given().multiPart("metadata", "some content").expect().statusCode(HttpStatus.SC_CREATED).when()
+    given().multiPart("metadata", "some content").expect().statusCode(HttpStatus.SC_BAD_REQUEST).when()
             .post(rt.host("new"));
   }
 
