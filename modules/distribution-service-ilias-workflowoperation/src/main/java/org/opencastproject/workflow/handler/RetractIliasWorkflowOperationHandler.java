@@ -69,16 +69,6 @@ public class RetractIliasWorkflowOperationHandler extends AbstractWorkflowOperat
   /**
    * {@inheritDoc}
    *
-   * @see org.opencastproject.workflow.api.WorkflowOperationHandler#getConfigurationOptions()
-   */
-  @Override
-  public SortedMap<String, String> getConfigurationOptions() {
-    return CONFIG_OPTIONS;
-  }
-
-  /**
-   * {@inheritDoc}
-   *
    * @see org.opencastproject.workflow.api.AbstractWorkflowOperationHandler#activate(org.osgi.service.component.ComponentContext)
    */
   @Override
