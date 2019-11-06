@@ -169,6 +169,8 @@ angular.module('adminNg.controllers')
     $scope.player = {};
     $scope.video  = ToolsResource.get({ id: $scope.id, tool: 'editor' });
 
+    console.log($scope.video);
+
     $scope.activeSubmission = false;
 
     $scope.submit = function () {
