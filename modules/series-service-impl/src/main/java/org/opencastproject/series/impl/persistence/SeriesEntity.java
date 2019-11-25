@@ -79,20 +79,21 @@ public class SeriesEntity {
   @Column(name = "access_control", length = 65535)
   protected String accessControl;
 
+  @Lob
   @ElementCollection(targetClass = String.class)
-  @MapKeyColumn(name = "name")
-  @Column(name = "value")
+  @MapKeyColumn(name = "name", nullable = false)
+  @Column(name = "value", length = 65535)
   @CollectionTable(name = "oc_series_property", joinColumns = {
-          @JoinColumn(name = "series", referencedColumnName = "id"),
-          @JoinColumn(name = "organization", referencedColumnName = "organization") })
+          @JoinColumn(name = "series", referencedColumnName = "id", nullable = false),
+          @JoinColumn(name = "organization", referencedColumnName = "organization", nullable = false) })
   protected Map<String, String> properties;
 
   @ElementCollection
-  @MapKeyColumn(name = "type")
+  @MapKeyColumn(name = "type", length = 128, nullable = false)
   @Column(name = "data")
   @CollectionTable(name = "oc_series_elements", joinColumns = {
-          @JoinColumn(name = "series", referencedColumnName = "id"),
-          @JoinColumn(name = "organization", referencedColumnName = "organization") })
+      @JoinColumn(name = "series", referencedColumnName = "id", nullable = false),
+      @JoinColumn(name = "organization", referencedColumnName = "organization", nullable = false) })
   protected Map<String, byte[]> elements;
 
   /**

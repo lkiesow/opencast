@@ -70,7 +70,7 @@ public final class ManagedAclEntity implements ManagedAcl {
   @Column(name = "pk")
   private Long id;
 
-  @Column(name = "name", nullable = false)
+  @Column(name = "name", nullable = false, length = 128)
   private String name;
 
   @Lob
@@ -85,7 +85,7 @@ public final class ManagedAclEntity implements ManagedAcl {
     }
   });
 
-  @Column(name = "organization_id", nullable = false)
+  @Column(name = "organization_id", nullable = false, length = 128)
   private String organizationId;
 
   /** JPA constructor */
