@@ -10,6 +10,9 @@
     <non-jta-data-source>osgi:service/javax.sql.DataSource/(osgi.jndi.service.name=jdbc/opencast)</non-jta-data-source>
     <class>org.opencastproject.serviceregistry.impl.IncidentDto</class>
     <class>org.opencastproject.serviceregistry.impl.IncidentTextDto</class>
+    <class>org.opencastproject.job.jpa.JpaJob</class>
+    <class>org.opencastproject.serviceregistry.impl.jpa.ServiceRegistrationJpaImpl</class>
+    <class>org.opencastproject.serviceregistry.impl.jpa.HostRegistrationJpaImpl</class>
     <shared-cache-mode>NONE</shared-cache-mode>
     <properties>
       <property name="eclipselink.ddl-generation" value="create-tables" />

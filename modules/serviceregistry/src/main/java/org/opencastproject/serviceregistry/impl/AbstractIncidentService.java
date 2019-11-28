@@ -84,7 +84,7 @@ public abstract class AbstractIncidentService implements IncidentService {
       job = getServiceRegistry().getJob(job.getId());
 
       final IncidentDto dto = getPenv().tx(
-              Queries.persist(IncidentDto.mk(job.getId(), timestamp, code, severity, descriptionParameters, details)));
+              Queries.persist(IncidentDto.mk(job, timestamp, code, severity, descriptionParameters, details)));
       return toIncident(job, dto);
     } catch (NotFoundException e) {
       throw new IllegalStateException("Can't create incident for not-existing job");
@@ -97,7 +97,7 @@ public abstract class AbstractIncidentService implements IncidentService {
   @Override
   public Incident getIncident(long id) throws IncidentServiceException, NotFoundException {
     for (IncidentDto dto : getPenv().tx(Queries.find(IncidentDto.class, id))) {
-      final Job job = findJob(dto.getJobId());
+      final Job job = dto.getJobId().toJob();
       if (job != null) {
         return toIncident(job, dto);
       }

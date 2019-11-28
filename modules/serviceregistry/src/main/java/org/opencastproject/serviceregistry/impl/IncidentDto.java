@@ -27,6 +27,8 @@ import static org.opencastproject.util.Jsons.p;
 import static org.opencastproject.util.data.Tuple.tuple;
 
 import org.opencastproject.job.api.Incident.Severity;
+import org.opencastproject.job.api.Job;
+import org.opencastproject.job.jpa.JpaJob;
 import org.opencastproject.util.JsonObj;
 import org.opencastproject.util.JsonVal;
 import org.opencastproject.util.Jsons;
@@ -50,9 +52,11 @@ import javax.persistence.EntityManager;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.Index;
+import javax.persistence.JoinColumn;
 import javax.persistence.Lob;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
+import javax.persistence.OneToOne;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
@@ -70,8 +74,9 @@ public class IncidentDto {
   @Column(name = "id")
   private Long id;
 
-  @Column(name = "jobid")
-  private Long jobId;
+  @OneToOne(targetEntity = JpaJob.class)
+  @JoinColumn(name = "jobid", referencedColumnName = "id")
+  protected JpaJob jobId;
 
   @Column(name = "timestamp")
   @Temporal(TemporalType.TIMESTAMP)
@@ -93,14 +98,18 @@ public class IncidentDto {
 
   /** Constructor method. */
   public static IncidentDto mk(
-          Long jobId,
+          Job job,
           Date date,
           String code,
           Severity severity,
           Map<String, String> parameters,
           List<Tuple<String, String>> details) {
     IncidentDto dto = new IncidentDto();
-    dto.jobId = jobId;
+    if (job instanceof JpaJob) {
+      dto.jobId = (JpaJob) job;
+    } else {
+      dto.jobId = JpaJob.from(job);
+    }
     dto.timestamp = date;
     dto.code = code;
     dto.severity = severity.ordinal();
@@ -123,7 +132,7 @@ public class IncidentDto {
     return id;
   }
 
-  public long getJobId() {
+  public JpaJob getJobId() {
     return jobId;
   }
 
