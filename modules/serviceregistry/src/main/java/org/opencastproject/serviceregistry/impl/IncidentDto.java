@@ -67,7 +67,7 @@ import javax.persistence.TemporalType;
     @Index(name = "IX_oc_incident_jobid", columnList = ("jobid")),
     @Index(name = "IX_oc_incident_severity", columnList = ("severity")) })
 @NamedQueries({@NamedQuery(name = "Incident.findByJobId",
-                           query = "select a from Incident a where a.jobId = :jobId")})
+                           query = "select a from Incident a where a.job.id = :jobId")})
 public class IncidentDto {
   @Id
   @GeneratedValue
@@ -76,7 +76,7 @@ public class IncidentDto {
 
   @OneToOne(targetEntity = JpaJob.class)
   @JoinColumn(name = "jobid", referencedColumnName = "id")
-  protected JpaJob jobId;
+  protected JpaJob job;
 
   @Column(name = "timestamp")
   @Temporal(TemporalType.TIMESTAMP)
@@ -106,9 +106,9 @@ public class IncidentDto {
           List<Tuple<String, String>> details) {
     IncidentDto dto = new IncidentDto();
     if (job instanceof JpaJob) {
-      dto.jobId = (JpaJob) job;
+      dto.job = (JpaJob) job;
     } else {
-      dto.jobId = JpaJob.from(job);
+      dto.job = JpaJob.from(job);
     }
     dto.timestamp = date;
     dto.code = code;
@@ -132,8 +132,8 @@ public class IncidentDto {
     return id;
   }
 
-  public JpaJob getJobId() {
-    return jobId;
+  public JpaJob getJob() {
+    return job;
   }
 
   /** @see org.opencastproject.job.api.Incident#getTimestamp() */

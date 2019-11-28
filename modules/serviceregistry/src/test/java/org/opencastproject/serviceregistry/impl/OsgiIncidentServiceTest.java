@@ -28,6 +28,8 @@ import static org.junit.Assert.assertEquals;
 
 import org.opencastproject.job.api.Incident;
 import org.opencastproject.job.api.Job;
+import org.opencastproject.job.api.JobImpl;
+import org.opencastproject.job.jpa.JpaJob;
 import org.opencastproject.serviceregistry.api.Incidents;
 import org.opencastproject.serviceregistry.api.ServiceRegistry;
 import org.opencastproject.util.persistence.PersistenceEnv;
@@ -36,7 +38,6 @@ import org.opencastproject.util.persistence.PersistenceUtil;
 import org.opencastproject.workflow.api.WorkflowService;
 
 import org.easymock.EasyMock;
-import org.easymock.IAnswer;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -48,6 +49,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 
 /** Tests persistence: storing, merging, retrieving and removing. */
@@ -66,24 +68,23 @@ public class OsgiIncidentServiceTest {
   public void setUp() throws Exception {
     final EntityManagerFactory emf = PersistenceUtil
             .newTestEntityManagerFactory(AbstractIncidentService.PERSISTENCE_UNIT_NAME);
+    final EntityManager em = emf.createEntityManager();
     penv = PersistenceEnvs.persistenceEnvironment(emf);
 
     // Mock up a job
-    Job job = createNiceMock(Job.class);
-    expect(job.getProcessingHost()).andStubReturn(PROCESSING_HOST);
-    expect(job.getJobType()).andStubReturn(JOB_TYPE);
-    expect(job.getCreator()).andStubReturn("creator");
-    expect(job.getOrganization()).andStubReturn("organization");
-    replay(job);
+    Job job = new JobImpl(1, "creator", "organization", 0, "org.opencastproject.service", null,
+        Collections.emptyList(), Job.Status.QUEUED, null, "localhost", null, null, null, null, null, null,null, null,
+        false, null, 1.0f);
+    jobs.put(1L, job);
+    em.getTransaction().begin();
+    em.merge(JpaJob.from(job));
+    em.getTransaction().commit();
 
     // Mock up a service registry
     final ServiceRegistry serviceRegistry = createNiceMock(ServiceRegistry.class);
-    expect(serviceRegistry.getJob(EasyMock.anyLong())).andAnswer(new IAnswer<Job>() {
-      @Override
-      public Job answer() throws Throwable {
-        final Long jobId = (Long) EasyMock.getCurrentArguments()[0];
-        return jobs.get(jobId);
-      }
+    expect(serviceRegistry.getJob(EasyMock.anyLong())).andAnswer(() -> {
+      final Long jobId = (Long) EasyMock.getCurrentArguments()[0];
+      return jobs.get(jobId);
     }).anyTimes();
     replay(serviceRegistry);
 
@@ -118,20 +119,8 @@ public class OsgiIncidentServiceTest {
 
   @Test
   public void testRetrieving() throws Exception {
-    // manually create and store a job bypassing the service registry because the JPA implementation of the registry
-    // is not very test friendly
+    Job job = jobs.get(1L);
 
-
-    // Mock up a job
-    Job job = createNiceMock(Job.class);
-    expect(job.getId()).andStubReturn(1L);
-    expect(job.getProcessingHost()).andStubReturn("localhost");
-    expect(job.getJobType()).andStubReturn("org.opencastproject.service");
-    expect(job.getCreator()).andStubReturn("creator");
-    expect(job.getOrganization()).andStubReturn("organization");
-    replay(job);
-
-    jobs.put(job.getId(), job);
     incidents.record(job, Incident.Severity.FAILURE, 1511);
     // retrieve the job incident
     final List<Incident> incidents = incidentService.getIncidentsOfJob(Collections.singletonList(job.getId()));

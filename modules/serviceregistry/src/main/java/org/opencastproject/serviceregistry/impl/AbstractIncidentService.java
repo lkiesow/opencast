@@ -97,7 +97,7 @@ public abstract class AbstractIncidentService implements IncidentService {
   @Override
   public Incident getIncident(long id) throws IncidentServiceException, NotFoundException {
     for (IncidentDto dto : getPenv().tx(Queries.find(IncidentDto.class, id))) {
-      final Job job = dto.getJobId().toJob();
+      final Job job = dto.getJob().toJob();
       if (job != null) {
         return toIncident(job, dto);
       }
