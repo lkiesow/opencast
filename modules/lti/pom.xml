@@ -12,7 +12,7 @@
   </parent>
   <properties>
     <opencast.basedir>${project.basedir}/../..</opencast.basedir>
-    <checkstyle.skip>false</checkstyle.skip>
+    <checkstyle.skip>true</checkstyle.skip>
   </properties>
   <dependencies>
     <dependency>
@@ -47,7 +47,7 @@
           <plugin>
             <groupId>org.codehaus.mojo</groupId>
             <artifactId>exec-maven-plugin</artifactId>
-            <executions>
+            <!--executions>
               <execution>
                 <id>npm install</id>
                 <goals>
@@ -106,7 +106,7 @@
                   </arguments>
                 </configuration>
               </execution>
-            </executions>
+            </executions-->
           </plugin>
         </plugins>
       </build>
@@ -158,27 +158,27 @@
                 </configuration>
               </execution>
 
-              <execution>
-                <phase>test</phase>
-                <id>eslint</id>
-                <goals>
-                  <goal>npm</goal>
-                </goals>
-                <configuration>
-                  <arguments>run eslint</arguments>
-                </configuration>
-              </execution>
+<!--              <execution>-->
+<!--                <phase>test</phase>-->
+<!--                <id>eslint</id>-->
+<!--                <goals>-->
+<!--                  <goal>npm</goal>-->
+<!--                </goals>-->
+<!--                <configuration>-->
+<!--                  <arguments>run eslint</arguments>-->
+<!--                </configuration>-->
+<!--              </execution>-->
 
-              <execution>
-                <phase>test</phase>
-                <id>html-linter</id>
-                <goals>
-                  <goal>npm</goal>
-                </goals>
-                <configuration>
-                  <arguments>run html-linter</arguments>
-                </configuration>
-              </execution>
+<!--              <execution>-->
+<!--                <phase>test</phase>-->
+<!--                <id>html-linter</id>-->
+<!--                <goals>-->
+<!--                  <goal>npm</goal>-->
+<!--                </goals>-->
+<!--                <configuration>-->
+<!--                  <arguments>run html-linter</arguments>-->
+<!--                </configuration>-->
+<!--              </execution>-->
             </executions>
           </plugin>
         </plugins>

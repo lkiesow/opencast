@@ -68,6 +68,18 @@ function getSeries() {
   return '';
 }
 
+function loadDefaultPlayer() {
+  var infoUrl = '/info/me.json';
+
+  // load spinner
+  $('main').html($('#template-loading').html());
+
+  // get organization configuration
+  return $.getJSON(infoUrl, function( data ) {
+    player = data.org.properties.player;
+  });
+}
+
 function loadPage(page) {
 
   var limit = 15,
