@@ -21,7 +21,7 @@
 
 /* global $ */
 
-const player = '/play/';
+const player = '/engage/theodul/ui/core.html';
 
 function error() {
   $('#error').show();
