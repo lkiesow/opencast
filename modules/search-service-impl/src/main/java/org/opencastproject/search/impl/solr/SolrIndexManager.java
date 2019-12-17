@@ -657,7 +657,7 @@ public class SolrIndexManager {
 
     for (AccessControlEntry entry : acl.getEntries()) {
       if (!entry.isAllow()) {
-        logger.warn("Search service does not support denial via ACL, ignoring {}", entry);
+        logger.debug("Search service does not support denial via ACL, ignoring {}", entry);
         continue;
       }
       List<String> actionPermissions = permissions.get(entry.getAction());
@@ -665,7 +665,7 @@ public class SolrIndexManager {
        * MH-8353 a series could have a permission defined we don't know how to handle -DH
        */
       if (actionPermissions == null) {
-        logger.warn("Search service doesn't know how to handle action: " + entry.getAction());
+        logger.debug("Search service doesn't know how to handle action, ignoring {}", entry.getAction());
         continue;
       }
       if (acl == null) {
