@@ -111,6 +111,26 @@ define(["jquery"], function($) {
         return res;
     };
 
+
+    Utils.prototype.preferredQualityFormat = function(preferredFormat, withQuality = false) {
+        if (preferredFormat == null) {
+            return null;
+        }
+        var r = preferredFormat.replace(/-quality/g,'');
+        switch (r) {
+            case "low":
+                r = "480p";
+                break;
+            case "medium":
+                r = "720p";
+                break;
+            case "high":
+                r = "1080p";
+                break;
+        }
+        return r + (withQuality ? '-quality' : '');
+    };
+
     // parameter from Basil.get("preferredFormat")
     Utils.prototype.preferredFormat = function(preferredFormat) {
         if (preferredFormat == null) {

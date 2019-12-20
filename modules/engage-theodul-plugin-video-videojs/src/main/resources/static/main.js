@@ -316,15 +316,17 @@ define(['require', 'jquery', 'underscore', 'backbone', 'basil', 'bowser', 'engag
     }
     var newTracksArray = [],
         filterTagsArray = (Array.isArray(filterTags) ? filterTags : filterTags.split(','))
+                                .map(x => Utils.preferredQualityFormat(x.trim(), false))
                                 .filter(x => x);
     
     if (filterTagsArray.length == 0) {
         return tracks;
     }
+
     for (var i = 0; i < tracks.length; i++) {   
         if (tracks[i].tags) {
-            if (tracks[i].tags.tag) {                
-                if (_.intersection(tracks[i].tags.tag, filterTagsArray).length > 0) {
+            if (tracks[i].tags.tag) {
+                if (_.intersection(tracks[i].tags.tag.map(x => Utils.preferredQualityFormat(x.trim(), false)), filterTagsArray).length > 0) {
                     newTracksArray.push(tracks[i]);
                 }
             }
@@ -342,7 +344,7 @@ define(['require', 'jquery', 'underscore', 'backbone', 'basil', 'bowser', 'engag
   /**
    * Lookup all tags that are in use
    * @param {type} videoSources, List of still used tracks
-   * @param {type} keyword, substing that should be included in the tag
+   * @param {type} keyword, substring that should be included in the tag
    * @returns {Array}
    */
   function getTags(videoSources, keyword) {
@@ -378,12 +380,12 @@ define(['require', 'jquery', 'underscore', 'backbone', 'basil', 'bowser', 'engag
   function getQualities(videoSources) {
     // using a cache for qualities, as they probably do not change
     if (foundQualities) {
-      return foundQualities;
+        return foundQualities;
     }
     var tagsList = getTags(videoSources, '-quality');
     var qualitiesList = [];
     tagsList.forEach(function(quality) {
-      qualitiesList.push(quality.substring(0, quality.indexOf('-quality')));
+      qualitiesList.push(quality);
     });
     var tracks;
     for (var source in videoSources) {
@@ -392,17 +394,19 @@ define(['require', 'jquery', 'underscore', 'backbone', 'basil', 'bowser', 'engag
         break;
       }
     }
+    qualitiesList = qualitiesList.map(x => Utils.preferredQualityFormat(x.trim(), false));
     var sortedResolutionsList = [];
+  
     sortedResolutionsList = _.map(qualitiesList, function(quality) {
-      var currentTrack = filterTracksByTag(tracks, quality + '-quality')[0];
-      if (currentTrack !== undefined && currentTrack.resolution !== undefined)
-        return [quality, currentTrack.resolution.substring(0, currentTrack.resolution.indexOf('x'))];
+        var currentTrack = filterTracksByTag(tracks, quality + '-quality')[0];
+        if (currentTrack !== undefined && currentTrack.resolution !== undefined)
+            return [quality, currentTrack.resolution.substring(0, currentTrack.resolution.indexOf('x'))];
     });
     sortedResolutionsList.sort(compareQuality);
     foundQualities = [];
     for (var i = 0; i < sortedResolutionsList.length; ++i) {
       foundQualities.push(sortedResolutionsList[i][0]);
-    }
+    }    
     return foundQualities;
   }
 
