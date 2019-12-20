@@ -700,7 +700,7 @@ define(['require', 'jquery', 'underscore', 'backbone', 'basil', 'bootbox', 'enga
         var quality = resolutions[i];
         addQualityListener(quality);
       }
-      var q = Engage.model.get('quality');
+      var q = Utils.preferredQualityFormat(Engage.model.get('quality'), false);
       $('#' + id_qualityIndicator).html(q.charAt(0).toUpperCase() + q.substring(1));
     }
   }
@@ -1266,7 +1266,7 @@ define(['require', 'jquery', 'underscore', 'backbone', 'basil', 'bootbox', 'enga
         }
       } catch (ex) {
           timelinePreviewsError = true;
-          console.log("The timeline previews image cannot be set or the resolution cannot be found", ex);
+          console.warn("The timeline previews image cannot be set or the resolution cannot be found", ex);
       }
     }
   }
@@ -1294,7 +1294,7 @@ define(['require', 'jquery', 'underscore', 'backbone', 'basil', 'bootbox', 'enga
       inited = true;
       Engage.on(plugin.events.videoFormatsFound.getName(), function (formatarr) {
         if (Array.isArray(formatarr)) {
-          resolutions = formatarr;
+          resolutions = formatarr.map(x => Utils.preferredQualityFormat(x.trim(), false))
           if (controlsViewTopIfBottom) {
             controlsViewTopIfBottom.render();
           }

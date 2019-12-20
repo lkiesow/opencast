@@ -64,6 +64,25 @@ define(["jquery"], function($) {
     return (rate * 100) + "%";
     }
 
+    Utils.prototype.preferredQualityFormat = function(preferredFormat, withQuality = false) {
+        if (preferredFormat == null) {
+            return null;
+        }
+        var r = preferredFormat.replace(/-quality/g,'');
+        switch (r) {
+            case "low":
+                r = "480p";
+                break;
+            case "medium":
+                r = "720p";
+                break;
+            case "high":
+                r = "1080p";
+                break;
+        }
+        return r + (withQuality ? '-quality' : '');
+    };
+
     /**
      * Returns the input time in milliseconds
      *
@@ -169,7 +188,7 @@ define(["jquery"], function($) {
             opacity: 0.5
         });
     }
-    
+
     Utils.prototype.repairSegmentLength = function(segments, duration, min_segment_duration) {
         if (segments && duration) {
             var total = 0;
@@ -182,7 +201,7 @@ define(["jquery"], function($) {
                         if (result.length === 0) {
                           result.push(segments[i]);
                         } else {
-                          result[result.length - 1].duration = parseInt(result[result.length - 1].duration) + 
+                          result[result.length - 1].duration = parseInt(result[result.length - 1].duration) +
                                   parseInt(segments[i].duration);
                         }
                     } else {
@@ -191,7 +210,7 @@ define(["jquery"], function($) {
                 }
               }
             }
-            
+
             if (total > parseInt(duration)) {
                 var diff = total - parseInt(duration);
                 for (var i = result.length - 1; i >= 0; i-- ) {
@@ -224,7 +243,7 @@ define(["jquery"], function($) {
         }
         return 0; // if currentTime is beyond last segment start
     }
-    
+
         /**
      * get starttime next segment and 0 if the last segment has been reached
      *
@@ -233,7 +252,7 @@ define(["jquery"], function($) {
     Utils.prototype.previousSegmentStart = function(segments, currentTime) {
         for (var i = (segments.length - 1); i >= 0; i--) {
             // added limit that last segment can jump to previous segment and not only segment start
-            if (segments[i].time < (currentTime * 1000) - 900) { 
+            if (segments[i].time < (currentTime * 1000) - 900) {
                 return segments[i].time;
             }
         }
