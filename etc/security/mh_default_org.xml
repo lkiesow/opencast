@@ -5,7 +5,7 @@
        http://www.springframework.org/schema/osgi
        http://www.springframework.org/schema/osgi/spring-osgi.xsd
        http://www.springframework.org/schema/security
-       http://www.springframework.org/schema/security/spring-security-3.1.xsd">
+       http://www.springframework.org/schema/security/spring-security-4.2.xsd">
 
   <!-- ######################################## -->
   <!-- # Open and unsecured url patterns      # -->
@@ -382,7 +382,7 @@
   <!-- # Custom Anonymous Filter Definition   # -->
   <!-- ######################################## -->
 
-  <bean id="anonymousFilter" class="org.opencastproject.kernel.security.TrustedAnonymousAuthenticationFilter">
+  <bean id="anonymousFilter" class="org.springframework.security.web.authentication.AnonymousAuthenticationFilter">
     <property name="userAttribute" ref="anonymousUserAttributes" />
     <property name="key" value="anonymousKey" />
   </bean>
