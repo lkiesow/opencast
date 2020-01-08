@@ -34,6 +34,7 @@ import org.codehaus.jettison.mapped.Configuration;
 import org.codehaus.jettison.mapped.MappedNamespaceConvention;
 import org.codehaus.jettison.mapped.MappedXMLStreamReader;
 import org.codehaus.jettison.mapped.MappedXMLStreamWriter;
+import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,6 +44,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.StringWriter;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -915,7 +917,21 @@ public class Event implements IndexObject {
    * @return <code>true</code> if recording of this event has started, and <code>false</code> otherwise
    */
   public boolean hasRecordingStarted() {
-    return isScheduledEvent() && StringUtils.isNotBlank(getRecordingStatus());
+
+    // Uploaded event
+    if (!isScheduledEvent()) {
+       return false;
+    }
+
+    // Recording status has been updated
+    if (StringUtils.isNotBlank(getRecordingStatus())) {
+      return true;
+    }
+
+    // No recording status set, but may still be past the recording start time
+    Date startDate = new DateTime(getTechnicalStartTime()).toDate();
+    Date now = new DateTime().toDate();
+    return startDate.before(now);
   }
 
   /**
