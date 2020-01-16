@@ -835,7 +835,7 @@ public class EncoderEngine implements AutoCloseable {
       }
       // use unsafe because different files may have different SAR/framerate
       if (hasVideo)
-        clauses.add(StringUtils.join(vpads, "") + "concat=n=" + n + ":unsafe=1[ov]"); // concat video clips
+        clauses.add(StringUtils.join(vpads, "") + "concat=n=" + n + "[ov]"); // concat video clips
       if (hasAudio)
         clauses.add(StringUtils.join(apads, "") + "concat=n=" + n + ":v=0:a=1[oa]"); // concat audio clips in stream 0,
     } else if (n == 1) { // single segment
