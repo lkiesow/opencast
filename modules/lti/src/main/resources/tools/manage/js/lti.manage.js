@@ -2425,15 +2425,15 @@ function closeSeries() {
     )
 }
 
-//function blockLongTtEvents(starttime, endtime) {
-//    var startTime = moment(starttime, "hh:mm"),
-//        endTime = moment(endtime, "hh:mm"),
-//        duration = moment.duration(endTime.diff(startTime)).asMilliseconds();
-//
-//    if(duration > maxTime) {
-//        return "disabled";
-//    }
-//}
+function blockLongTtEvents(starttime, endtime) {
+    var startTime = moment(starttime, "hh:mm"),
+        endTime = moment(endtime, "hh:mm"),
+        duration = moment.duration(endTime.diff(startTime)).asMilliseconds();
+
+    if(duration > maxEventDuration) {
+        return "disabled";
+    }
+}
 
 var pollSession = setInterval(function() {
   $.ajax({
