@@ -2430,7 +2430,7 @@ function blockLongTtEvents(starttime, endtime) {
         endTime = moment(endtime, "hh:mm"),
         duration = moment.duration(endTime.diff(startTime)).asMilliseconds();
 
-    if(duration > maxTime) {
+    if(duration > maxEventDuration) {
         return "disabled";
     }
 }
