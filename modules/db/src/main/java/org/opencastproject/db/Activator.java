@@ -46,20 +46,17 @@ public class Activator implements BundleActivator {
   /** The default max idle time for the connection pool */
   private static final int DEFAULT_MAX_IDLE_TIME = 3600;
 
-  private String rootDir;
   private ServiceRegistration<?> datasourceRegistration;
   private ComboPooledDataSource pooledDataSource;
 
   @Override
   public void start(BundleContext bundleContext) throws Exception {
     // Use the configured storage directory
-    rootDir = bundleContext.getProperty("org.opencastproject.storage.dir") + File.separator + "db";
+    final String h2root = bundleContext.getProperty("org.opencastproject.storage.dir") + File.separator + "db";
 
     // Register the data source, defaulting to an embedded H2 database if DB configurations are not specified
-    String jdbcDriver = getConfigProperty(bundleContext.getProperty("org.opencastproject.db.jdbc.driver"),
-            "org.h2.Driver");
-    String jdbcUrl = getConfigProperty(bundleContext.getProperty("org.opencastproject.db.jdbc.url"),
-            "jdbc:h2:" + rootDir);
+    final String jdbcDriver = getConfigProperty(bundleContext, "org.opencastproject.db.jdbc.driver", "org.h2.Driver");
+    final String jdbcUrl = getConfigProperty(bundleContext, "org.opencastproject.db.jdbc.url", "jdbc:h2:" + h2root);
     if ("org.h2.Driver".equals(jdbcDriver)) {
       logger.warn("\n"
           + "######################################################\n"
@@ -74,21 +71,16 @@ public class Activator implements BundleActivator {
           + "#                                                    #\n"
           + "######################################################");
     }
-    String jdbcUser = getConfigProperty(bundleContext.getProperty("org.opencastproject.db.jdbc.user"), "sa");
-    String jdbcPass = getConfigProperty(bundleContext.getProperty("org.opencastproject.db.jdbc.pass"), "sa");
+    final String jdbcUser = getConfigProperty(bundleContext, "org.opencastproject.db.jdbc.user", "sa");
+    final String jdbcPass = getConfigProperty(bundleContext, "org.opencastproject.db.jdbc.pass", "sa");
 
-    Integer maxPoolSize = getConfigProperty(bundleContext.getProperty("org.opencastproject.db.jdbc.pool.max.size"));
-    Integer minPoolSize = getConfigProperty(bundleContext.getProperty("org.opencastproject.db.jdbc.pool.min.size"));
-    Integer acquireIncrement = getConfigProperty(
-            bundleContext.getProperty("org.opencastproject.db.jdbc.pool.acquire.increment"));
-    Integer maxStatements = getConfigProperty(
-            bundleContext.getProperty("org.opencastproject.db.jdbc.pool.max.statements"));
-    Integer loginTimeout = getConfigProperty(
-            bundleContext.getProperty("org.opencastproject.db.jdbc.pool.login.timeout"));
-    Integer maxIdleTime = getConfigProperty(
-            bundleContext.getProperty("org.opencastproject.db.jdbc.pool.max.idle.time"));
-    Integer maxConnectionAge = getConfigProperty(
-            bundleContext.getProperty("org.opencastproject.db.jdbc.pool.max.connection.age"));
+    Integer maxPoolSize = getConfigProperty(bundleContext, "org.opencastproject.db.jdbc.pool.max.size");
+    Integer minPoolSize = getConfigProperty(bundleContext, "org.opencastproject.db.jdbc.pool.min.size");
+    Integer acquireIncrement = getConfigProperty(bundleContext, "org.opencastproject.db.jdbc.pool.acquire.increment");
+    Integer maxStatements = getConfigProperty(bundleContext, "org.opencastproject.db.jdbc.pool.max.statements");
+    Integer loginTimeout = getConfigProperty(bundleContext, "org.opencastproject.db.jdbc.pool.login.timeout");
+    Integer maxIdleTime = getConfigProperty(bundleContext, "org.opencastproject.db.jdbc.pool.max.idle.time");
+    Integer maxConnectionAge = getConfigProperty(bundleContext, "org.opencastproject.db.jdbc.pool.max.connection.age");
 
     pooledDataSource = new ComboPooledDataSource();
     pooledDataSource.setDriverClass(jdbcDriver);
@@ -126,8 +118,7 @@ public class Activator implements BundleActivator {
       dsProps.put("osgi.jndi.service.name", "jdbc/opencast");
       datasourceRegistration = bundleContext.registerService(DataSource.class.getName(), pooledDataSource, dsProps);
     } catch (SQLException e) {
-      logger.error("Connection attempt to {} failed", jdbcUrl);
-      logger.error("Exception: ", e);
+      logger.error("Connection attempt to {} failed", jdbcUrl, e);
       throw e;
     } finally {
       if (connection != null)
@@ -148,11 +139,13 @@ public class Activator implements BundleActivator {
     DataSources.destroy(pooledDataSource);
   }
 
-  private String getConfigProperty(String config, String defaultValue) {
+  private String getConfigProperty(final BundleContext bundleContext, final String key, final String defaultValue) {
+    final String config = bundleContext.getProperty(key);
     return config == null ? defaultValue : config;
   }
 
-  private Integer getConfigProperty(String config) {
+  private Integer getConfigProperty(BundleContext bundleContext, String key) {
+    final String config = bundleContext.getProperty(key);
     return config == null ? null : Integer.parseInt(config);
   }
 
