@@ -229,7 +229,7 @@ $(document).on("click", ".downloader", function () {
                 trackType = item.type.split('/'),
                 fileType = item.mimetype.split('/');
 
-            downloadURL = item.url.replace("http", "https") + '/download/' + episodeTitle + '_' + dateStamp + '_' + trackType[0].charAt(0).toUpperCase() + trackType[0].substring(1) + (fileType[0] === 'audio' ? '.mp3' : '.' + fileType[1]);
+            downloadURL = item.url.replace('http:', 'https:') + '/download/' + episodeTitle + '_' + dateStamp + '_' + trackType[0].charAt(0).toUpperCase() + trackType[0].substring(1) + (fileType[0] === 'audio' ? '.mp3' : '.' + fileType[1]);
 
             if (item.type.indexOf('pic-in-pic') > -1) {
                 type = '_PicInPic';
@@ -294,7 +294,7 @@ $(document).on("click", ".downloader", function () {
                     tCaptionCol2 = document.createElement('td'),
                     tCaptionCol3 = document.createElement('td'),
                     tCaptionCol4 = document.createElement('td'),
-                    captionDownloadURL = item.url.replace("http", "https") + '/download/';
+                    captionDownloadURL = item.url.replace('http:', 'https:') + '/download/';
 
                 tBody.appendChild(tCaptionRow);
                 tCaptionCol1.innerHTML = "Caption";
