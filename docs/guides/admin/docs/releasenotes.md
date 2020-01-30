@@ -77,6 +77,31 @@ API changes
     - DELETE /workflow/definition/{id}
     - PUT /workflow/definition
 
+Aditional Notes About 8.1
+-------------------------
+
+Opencast 8.1 fixes a number of security issues. Upgrading is strongly recommended.
+Take a look at the [security advisories](https://github.com/opencast/opencast/security/advisories) for more details.
+
+One change is that the OAI-PMH endpoint is no longer publicly accessible by default.
+If you need it to be, you can easily change that in the security configuration at `etc/security/mh_default_org.xml`.
+
+### Fixed Security Issues
+
+- CVE-2020-5231 – [Users with ROLE\_COURSE\_ADMIN can create new users
+  ](https://github.com/opencast/opencast/security/advisories/GHSA-94qw-r73x-j7hg)
+- CVE-2020-5206 – [Authentication Bypass For Endpoints With Anonymous Access
+  ](https://github.com/opencast/opencast/security/advisories/GHSA-vmm6-w4cf-7f3x)
+- CVE-2020-5222 – [Hard-Coded Key Used For Remember-me Token
+  ](https://github.com/opencast/opencast/security/advisories/GHSA-mh8g-hprg-8363)
+- CVE-2020-5230 – [Unsafe Identifiers
+  ](https://github.com/opencast/opencast/security/advisories/GHSA-w29m-fjp4-qhmq)
+- CVE-2020-5229 – [Replace MD5 with bcrypt for password hashing
+  ](https://github.com/opencast/opencast/security/advisories/GHSA-h362-m8f2-5x7c)
+- CVE-2020-5228 – [Public Access Via OAI-PMH
+  ](https://github.com/opencast/opencast/security/advisories/GHSA-6f54-3qr9-pjgj)
+
+
 Release Schedule
 ----------------
 
