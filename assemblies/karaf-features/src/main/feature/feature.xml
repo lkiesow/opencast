@@ -673,8 +673,7 @@
   </feature>
 
   <feature name="opencast-moodle" version="${project.version}">
-    <feature start-level="80">opencast-core</feature>
-    <bundle start-level="82">mvn:org.opencastproject/opencast-userdirectory-moodle/${project.version}</bundle>
+    <bundle>mvn:org.opencastproject/opencast-userdirectory-moodle/${project.version}</bundle>
   </feature>
 
   <feature name="opencast-sakai" version="${project.version}">
@@ -685,6 +684,11 @@
   <feature name="opencast-brightspace" version="${project.version}">
     <feature start-level="80">opencast-core</feature>
     <bundle start-level="82">mvn:org.opencastproject/opencast-userdirectory-brightspace/${project.version}</bundle>
+  </feature>
+
+  <feature name="opencast-plugin-management" version="${project.version}">
+    <feature>opencast-core</feature>
+    <bundle start-level="86">mvn:org.opencastproject/opencast-plugin-manager/${project.version}</bundle>
   </feature>
 
 </features>
