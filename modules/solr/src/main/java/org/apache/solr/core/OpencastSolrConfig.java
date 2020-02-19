@@ -21,10 +21,10 @@
 
 package org.apache.solr.core;
 
+import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
 import java.io.IOException;
-import java.io.InputStream;
 
 import javax.xml.parsers.ParserConfigurationException;
 
@@ -44,7 +44,7 @@ public class OpencastSolrConfig extends SolrConfig {
    * @throws IOException
    * @throws SAXException
    */
-  public OpencastSolrConfig(String instanceDir, String name, InputStream is) throws ParserConfigurationException,
+  public OpencastSolrConfig(String instanceDir, String name, InputSource is) throws ParserConfigurationException,
           IOException, SAXException {
     super(new SolrResourceLoader(instanceDir, OpencastSolrConfig.class.getClassLoader()), name, is);
   }
