@@ -89,7 +89,6 @@ public class FexServiceWorkflowOperationHandler extends AbstractWorkflowOperatio
   /**
    * @return
    */
-  @Override
   public SortedMap<String, String> getConfigurationOptions() {
     return CONFIG_OPTIONS;
   }
