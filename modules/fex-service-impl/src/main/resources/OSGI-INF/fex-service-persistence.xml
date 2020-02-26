@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<scr:component xmlns:scr="http://www.osgi.org/xmlns/scr/v1.1.0"
+               name="org.opencastproject.fex.impl.persistence.FexServiceDatabaseImpl"
+               immediate="true" activate="activate">
+  <implementation
+      class="org.opencastproject.fex.impl.persistence.FexServiceDatabaseImpl"/>
+  <property name="service.description" value="Fex Service"/>
+  <service>
+    <provide interface="org.opencastproject.fex.impl.FexServiceDatabase"/>
+  </service>
+  <reference name="entityManagerFactory" interface="javax.persistence.EntityManagerFactory"
+             target="(osgi.unit.name=org.opencastproject.fex.impl.persistence)" cardinality="1..1" policy="static"
+             bind="setEntityManagerFactory"/>
+  <reference name="security-service" interface="org.opencastproject.security.api.SecurityService"
+             cardinality="1..1" policy="static" bind="setSecurityService"/>
+</scr:component>

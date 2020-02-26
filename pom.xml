@@ -127,6 +127,11 @@
     <module>modules/execute-workflowoperation</module>
     <module>modules/external-api</module>
     <module>modules/external-api-index</module>
+    <module>modules/fex-service-impl</module>
+    <module>modules/fex-service-api</module>
+    <module>modules/fex-service-objects</module>
+    <module>modules/fex-fexsend</module>
+    <module>modules/fex-service-workflowoperation</module>
     <module>modules/fileupload</module>
     <module>modules/hello-world-api</module>
     <module>modules/hello-world-impl</module>
