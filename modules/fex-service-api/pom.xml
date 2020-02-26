@@ -13,7 +13,7 @@
   </parent>
   <properties>
     <opencast.basedir>${project.basedir}/../..</opencast.basedir>
-    <checkstyle.skip>true</checkstyle.skip>
+    <checkstyle.skip>false</checkstyle.skip>
   </properties>
   <dependencies>
     <dependency>
@@ -25,7 +25,6 @@
       <groupId>org.opencastproject</groupId>
       <artifactId>opencast-fex-service-objects</artifactId>
       <version>${project.version}</version>
-<!--       <scope>provided</scope> -->
     </dependency>
   </dependencies>
   <build>

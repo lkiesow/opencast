@@ -20,14 +20,24 @@
  */
 package org.opencastproject.fex.impl.persistence;
 
+import java.io.Serializable;
+
 /**
  * IdClass for the FexEntity.
  */
-public class FexEntityId {
+public class FexEntityId implements Serializable {
+  /**
+   *
+   */
+  private static final long serialVersionUID = 1L;
   private String fexId;
   private String organization;
 
-  FexEntityId(String seriesId, String organization) {
+  FexEntityId() {
+
+  }
+
+  FexEntityId(String fexId, String organization) {
     this.fexId = fexId;
     this.organization = organization;
   }
@@ -48,4 +58,30 @@ public class FexEntityId {
     this.organization = organization;
   }
 
+  @Override
+  public int hashCode() {
+    return (fexId + organization).hashCode();
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj)
+      return true;
+    if (obj == null)
+      return false;
+    if (getClass() != obj.getClass())
+      return false;
+    FexEntityId other = (FexEntityId) obj;
+    if (fexId == null) {
+      if (other.fexId != null)
+        return false;
+    } else if (!fexId.equals(other.fexId))
+      return false;
+    if (organization == null) {
+      if (other.organization != null)
+        return false;
+    } else if (!organization.equals(other.organization))
+      return false;
+    return true;
+  }
 }

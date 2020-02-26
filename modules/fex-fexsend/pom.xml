@@ -36,11 +36,6 @@
       <artifactId>opencast-fex-service-objects</artifactId>
       <version>${project.version}</version>
     </dependency>
-    <dependency>
-      <groupId>org.opencastproject</groupId>
-      <artifactId>opencast-fex-service-impl</artifactId>
-      <version>${project.version}</version>
-    </dependency>
     <!--  Thirdparty dependencies -->
     <dependency>
       <groupId>javax.servlet</groupId>
