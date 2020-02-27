@@ -199,7 +199,7 @@ $(document).on("click", ".downloader", function () {
     }
 
     var episodeTitle = $(this).data('title'),
-        episodePresenter = $(this).data('presenter'),
+        episodePresenter = $(this).data('presenter') === "undefined" ? ' ' : $(this).data('presenter'),
         episodeDate = $(this).data('date'),
         mediaTrack  = $(this).data('package'),
         captions  = $(this).data('captions'),
@@ -651,7 +651,7 @@ function getStatus(details) {
         break;
       case 'EVENTS.EVENTS.STATUS.PROCESSING_FAILURE':
       case 'EVENTS.EVENTS.STATUS.RECORDING_FAILURE':
-        evStatus ='Failed'; 
+        evStatus ='Failed';
         break;
       case 'EVENTS.EVENTS.STATUS.INGESTING':
       case 'EVENTS.EVENTS.STATUS.PROCESSING':
@@ -708,7 +708,7 @@ seventhDate = seventhDate.toISOString().split('.')[0]+"Z";
 var recordingsURL = "/api/events?filter=start:" + startDate + "/" + seventhDate + ",series:"+ courseID + "&sort=start_date:ASC&limit=100&offset=0";
 
 xhr({url: recordingsURL, responseType: 'json'}, function(response) {
-    var upcoming_btn = document.getElementById("upcomingBtn"); 
+    var upcoming_btn = document.getElementById("upcomingBtn");
     upcoming_btn.append("Upcoming Recordings (" + response.length + ")");
 
     if(response.length <= 0) {
@@ -722,7 +722,7 @@ xhr({url: recordingsURL, responseType: 'json'}, function(response) {
     try{
         _.forEach(response, function(item) {
             var details = item,
-                status = getStatus(details), 
+                status = getStatus(details),
                 tooltip = getTooltip(details),
                 presenters = item.presenter,
                 location = item.location,
@@ -744,7 +744,7 @@ xhr({url: recordingsURL, responseType: 'json'}, function(response) {
 
             // Get agent name
             var agentsURL = "/mrtg/dashboard/cainfo.json";
-            xhr({url: agentsURL, responseType: 'json'}, 
+            xhr({url: agentsURL, responseType: 'json'},
                 function(response) {
                     var venue = response[location];
                     venue_col.innerHTML = venue;
@@ -755,7 +755,7 @@ xhr({url: recordingsURL, responseType: 'json'}, function(response) {
             tbl_row.appendChild(date_col);
             tbl_row.appendChild(venue_col);
             upcomingList.appendChild(tbl_row);
-        })   
+        })
     } catch(e) {
         console.log(e);
     }
