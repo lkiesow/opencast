@@ -379,6 +379,9 @@ public class IliasDistributionServiceImpl extends AbstractDistributionService im
         case Distribute:
           String elementId = gson.fromJson(arguments.get(2), new TypeToken<String>() {
           }.getType());
+          if ('\"' == elementId.charAt(0)) {
+            elementId = elementId.substring(1,elementId.length() - 1);
+          }
           Boolean checkAvailability = Boolean.parseBoolean(arguments.get(3));
           MediaPackageElement distributedElement = distributeElement(channelId, mediapackage, elementId,
                   checkAvailability);
