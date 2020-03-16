@@ -151,6 +151,7 @@
 		var escapeBmpSymbol = function(symbol) {
 			return escapeCodePoint(symbol.charCodeAt(0));
 		};
+        string = string + '';
 
 		if (encodeEverything) {
 			// Encode ASCII symbols.
