@@ -362,6 +362,9 @@ public class PublishIliasWorkflowOperationHandler extends AbstractWorkflowOperat
       Job job = serviceRegistry.getJob(entry.getId());
       Gson gson = new Gson();
       String sourceElementId = gson.fromJson(job.getArguments().get(2), new TypeToken<String>() { }.getType());
+      if ('\"' == sourceElementId.charAt(0)) {
+          sourceElementId = sourceElementId.substring(1,sourceElementId.length() - 1);
+      }
       MediaPackageElement sourceElement = mp.getElementById(sourceElementId);
 
       // If there is no payload, then the item has not been distributed.
