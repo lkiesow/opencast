@@ -31,7 +31,7 @@ Features
 - Admin UI: new event media upload progress bar
 - Opencast Plug-in features for Karaf
 - Single step delete of events
-
+- **Opencast 8.2: Opencast Studio (browser-based recording tool)**
 
 Improvements
 ------------
@@ -69,13 +69,27 @@ Configuration changes
 - `etc/org.opencastproject.adminui.cfg` has a new option `retract.workflow.id` which contains the id of the workflow used
   to retract events when deleting.
 
-
 API changes
 -----------
 
 - Removed REST endpoints for modifying workflow definitions
     - DELETE /workflow/definition/{id}
     - PUT /workflow/definition
+
+Additional Notes About 8.2
+--------------------------
+
+Unlike in other maintainance releases, the release managers decided to break the rule to include features only
+in major releases. So Opencast 8.2 includes **Opencast Studio** a browser-based recording tool. We felt that
+because of the Corona Crisis this tool would be to many Opencast users as soon as possible.
+
+Additionally this release also includes 17 other patches.
+
+### Configuration Changes in 8.2
+
+- `/etc/encoding/engage-images.properties` has a few optimizations that are needed especially for Studio
+- `etc/security/mh_default_org.xml` has some changes for Studio and a new ROLE_STUDIO is introduced
+- `etc/workflows/publish-uploaded-assets.xml` has some changes.
 
 Aditional Notes About 8.1
 -------------------------
@@ -85,6 +99,17 @@ Take a look at the [security advisories](https://github.com/opencast/opencast/se
 
 One change is that the OAI-PMH endpoint is no longer publicly accessible by default.
 If you need it to be, you can easily change that in the security configuration at `etc/security/mh_default_org.xml`.
+
+### Configuration Changes in 8.1
+
+- `etc/security/mh_default_org.xml`
+    - `/oaipmh` URL is now restricted to `ROLE_ADMIN`
+    - Removed `ROLE_COURSE_ADMIN` that was used for `/` and `/admin-ng` URLs
+    - replaced `<sec:remember-me key="opencast" user-service-ref="userDetailsService" />`
+with `<sec:remember-me services-ref="rememberMeServices" />`
+    - Added configuration for rememberMeServices
+    - Added CustomPasswordEncoder configuration instead of MD5
+- changed `exception-handler-workflow="error"` to `exception-handler-workflow="partial-error"` in several workflow definitions
 
 ### Fixed Security Issues
 

@@ -277,6 +277,7 @@ public class SeriesServiceImpl extends AbstractIndexProducer implements SeriesSe
       throw new IllegalArgumentException("ACL parameter must not be null");
     }
     if (needsUpdate(seriesId, accessControl) || overrideEpisodeAcl) {
+      logger.debug("Updating ACL of series {}", seriesId);
       boolean updated;
       // not found is thrown if it doesn't exist
       try {
@@ -296,7 +297,6 @@ public class SeriesServiceImpl extends AbstractIndexProducer implements SeriesSe
       }
       return updated;
     } else {
-      logger.warn("Series {} does not need update", seriesId);
       // todo not the right return code
       return true;
     }
