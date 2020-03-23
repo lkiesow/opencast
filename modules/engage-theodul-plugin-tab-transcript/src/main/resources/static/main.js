@@ -108,7 +108,7 @@ define(["jquery", "underscore", "backbone", "engage/core"], function($, _, Backb
 
         Engage.log("Tab:Transcript: Choosing english translations");
         jsonstr += "language/en.json";
-        
+
         $.ajax({
             url: jsonstr,
             dataType: "json",
@@ -191,14 +191,45 @@ define(["jquery", "underscore", "backbone", "engage/core"], function($, _, Backb
                     }
                 }
 
-                var tempVars = {
-                    search_str: translate("search_str", "Search"),
-                    search_placeholder_str: translate("search_placeholder_str", "Search terms (space separated)"),
-                    request_transcript_str: translate("request_transcript_str", "No captions or transcripts are available for this video. "),
-                    request_transcript_link_text_str: translate("request_transcript_link_text_str", "Request a transcript."),
-                    vttObjects: vttObjects
-                };
+                var parts = [],
+                    request_url = "https://docs.google.com/forms/d/e/1FAIpQLSdyQfJgXopbM7ZOHF7a3ODucNgCejsUQW77DrwNsXUBJJS95g/viewform",
+                    tempVars = {
+                        search_str: translate("search_str", "Search"),
+                        search_placeholder_str: translate("search_placeholder_str", "Search terms (space separated)"),
+                        request_transcript_str: translate("request_transcript_str", "No captions or transcripts are available for this video. "),
+                        request_transcript_link_text_str: translate("request_transcript_link_text_str", "Request a transcript."),
+                        request_transcript_link_mail: "mailto:help@vula.uct.ac.za?Subject=Captions%20request",
+                        request_transcript_link_form: request_url,
+                        vttObjects: vttObjects,
+                        user: Engage.model.get("meInfo").get("user"),
+                        mediaPackage_title: Engage.model.get('mediaPackage').get('title'),
+                        mediaPackage_eventid: 'E['+Engage.model.get('mediaPackage').get('eventid')+']',
+                        mediaPackage_series: Engage.model.get('mediaPackage').get('series'),
+                        mediaPackage_seriesid: 'S['+Engage.model.get('mediaPackage').get('seriesid')+']',
+                        mediaPackage_date: Engage.model.get('mediaPackage').get('date')
+                    };
 
+                if (tempVars.mediaPackage_title) {
+                    parts.push('entry.366340186=' + this.model.get('title'));
+                }
+                if (tempVars.user['email']) {
+                    parts.push('entry.1846851123=' + tempVars.user.email);
+                }
+
+                if (tempVars.mediaPackage_eventid && tempVars.mediaPackage_seriesid) {
+                    parts.push('entry.1294912390=' + tempVars.mediaPackage_seriesid + tempVars.mediaPackage_eventid);
+                } else if (tempVars.mediaPackage_seriesid) {
+                    parts.push('entry.1294912390=' + tempVars.mediaPackage_seriesid);
+                }
+
+                if (tempVars.mediaPackage_date) {
+                    var dt = new Date(tempVars.mediaPackage_date)
+                    parts.push('entry.1807657233_year=' + dt.getFullYear());
+                    parts.push('entry.18076572336_month=' + (dt.getMonth()+1));
+                    parts.push('entry.1807657233_day=' + dt.getDate());
+                }
+
+                tempVars['request_transcript_link_form'] =  encodeURI(request_url + (parts.length > 0 ? '?' + parts.join('&') : ''));
                 var tpl = _.template(this.template);
                 this.$el.html(tpl(tempVars));
                 addListeners(vttText);
@@ -209,7 +240,7 @@ define(["jquery", "underscore", "backbone", "engage/core"], function($, _, Backb
     function addListeners(vttText) {
         $( "#transcript_tab_search" ).keyup(filterText);
         $( "#clear_transcript_tab_search" ).click(filterText);
-        
+
         for (var i = 1; i < vttText.length; i++) {
             $( "#" + i ).click(updateVideo);
         }
@@ -221,14 +252,14 @@ define(["jquery", "underscore", "backbone", "engage/core"], function($, _, Backb
         if(searchTerms.length===1 && (searchTerms[0] === "" || this.id === "clear_transcript_tab_search")) {
             var nodes = document.getElementById('transcript').getElementsByTagName("span");
             for(var i=0; i<nodes.length; i++) {
-                nodes[i].classList.remove("greyout"); 
+                nodes[i].classList.remove("greyout");
             }
             return;
         }
 
         _.each(vttObjects, function (object, key) {
             var element = document.getElementById(key);
-            
+
             if (!checkIfContainsAnySearchTerms(key, searchTerms)) {
                 element.classList.add("greyout");
             }
@@ -264,12 +295,12 @@ define(["jquery", "underscore", "backbone", "engage/core"], function($, _, Backb
     function newLineRequired(line) {
         //new line is required after every 10 sentences.
         var sentenceEnd = (line.match(/[\.\?\!]/g) || []).length;
-        
+
         if(sentenceEnd === 0) {
             return false;
         } else {
             sentencesCount += sentenceEnd;
-            
+
             if(sentencesCount >= 10) {
                 sentencesCount = 0;
                 return true;
@@ -279,15 +310,15 @@ define(["jquery", "underscore", "backbone", "engage/core"], function($, _, Backb
         return false;
     }
 
-    function getIndexByTime(arr, time) { 
-        var index = -1; 
-        $.each(arr, function (i, el) { 
-            if ((el[startTime] <= time) && (time < el[endTime])) { 
+    function getIndexByTime(arr, time) {
+        var index = -1;
+        $.each(arr, function (i, el) {
+            if ((el[startTime] <= time) && (time < el[endTime])) {
                 index=i;
-                return; 
-            } 
-        }); 
-        return index; 
+                return;
+            }
+        });
+        return index;
     }
 
     function updateVideo() {
