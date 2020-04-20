@@ -20,15 +20,18 @@ Watch for announcements on list or just check which versions are available in th
 Currently Supported
 -------------------
 
-* Debian 8/9 amd64
-* Ubuntu 16.04 amd64
+* Debian 9 and newer amd64
+* Ubuntu 18.04 amd64
 
+**Debian 10 and newer requires a manual OpenJDK install**
 
-**Debian 8 requires a manual OpenJDK install**
+* Add Debian unstable to your sources, replacing the mirror URL with your local mirror:
 
-* Add jessie-backports to your sources, replacing the mirror URL with your local mirror:
+        echo "deb http://[YOUR_MIRROR]/debian unstable main" | sudo tee /etc/apt/sources.list.d/debian-unstable.list
 
-        echo "deb http://[YOUR_MIRROR]/debian jessie-backports main" | sudo tee /etc/apt/sources.list.d/jessie-backports.list
+* Ensure you don't accidentally upgrade your entire Debian install to unstable
+
+        echo "APT::Default-Release \"`dpkg --status tzdata|grep Provides|cut -f2 -d'-'`\";" | sudo tee /etc/apt/apt.conf.d/99defaultrelease
 
 * Update your package listing
 
@@ -36,19 +39,9 @@ Currently Supported
 
 * Install OpenJDK 8 from the backports
 
-        apt-get install -t jessie-backports openjdk-8-jre
+        apt-get install -t unstable openjdk-8-jre
 
 > *Other architectures like i386, i686, arm, … are not supported!*
-
-
-Registration
-------------
-
-Before you can start you need to get an account for the repository. You will need the credentials that you get by mail
-after the registration to successfully complete this manual. The placeholders `[your_username]` and `[your_password]`
-are used in this manual wherever the credentials are needed.
-
-[Please visit pkg.opencast.org](https://pkg.opencast.org)
 
 
 Activate Repository
@@ -63,14 +56,14 @@ First you have to install the necessary repositories so that your package manage
 * Add Opencast repository:
 
         cd /etc/apt/sources.list.d/
-        echo "deb https://[YOUR_USERNAME]:[YOUR_PASSWORD]@pkg.opencast.org/debian stable/" | sudo tee opencast.list
+        echo "deb https://pkg.opencast.org/debian stable/" | sudo tee opencast.list
 
     It might take some time after the release of a new Opencast version before the Debs are moved to the stable
     repository. If you need the new release prior to its promotion to stable you can use the testing repository.
     Note that the testing repository is an additional repository and still requires the stable repository to be active.
 
         cd /etc/apt/sources.list.d/
-        echo "deb https://[YOUR_USERNAME]:[YOUR_PASSWORD]@pkg.opencast.org/debian testing/" | sudo tee opencast.list
+        echo "deb https://pkg.opencast.org/debian testing/" | sudo tee opencast.list
 
 * Add the repository key to your apt keyring:
 
