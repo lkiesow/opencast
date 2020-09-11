@@ -13,7 +13,7 @@ distribution channels, and provide user interfaces to engage students with
 educational videos.
 
 
-Installation
+Install
 ------------
 
 Installation instructions can be found locally at `docs/guides/admin/docs` or in
