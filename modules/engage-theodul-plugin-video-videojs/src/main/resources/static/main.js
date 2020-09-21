@@ -1019,7 +1019,7 @@ define(['require', 'jquery', 'underscore', 'backbone', 'basil', 'bowser', 'engag
   }
 
   Engage.on(plugin.events.aspectRatioSet.getName(), function (param) {
-    if (param === undefined) {
+    if (param === undefined && aspectRatio) {
       Engage.trigger(plugin.events.aspectRatioSet.getName(), [aspectRatio[1], aspectRatio[2], (aspectRatio[1] / aspectRatio[2]) * 100]);
     }
   })
@@ -1477,11 +1477,6 @@ define(['require', 'jquery', 'underscore', 'backbone', 'basil', 'bowser', 'engag
       $engageVideoId.css('max-width', minWidth + 'px');
     }
     $engageVideoId.css('min-height', minVideoAreaHeight + 'px');
-    if (maxVideoAreaHeight > minVideoAreaHeight) {
-      $engageVideoId.css('max-height', maxVideoAreaHeight + 'px');
-    } else {
-      $engageVideoId.css('max-height', minVideoAreaHeight + 'px');
-    }
 
     if (!isDefaultLayout()) {
       if (isPiP) {
@@ -1528,8 +1523,9 @@ define(['require', 'jquery', 'underscore', 'backbone', 'basil', 'bowser', 'engag
   }
 
   function registerEventsAudioOnly(videoDisplay) {
-    var audioPlayer_id = $('#' + videoDisplay);
-    var audioPlayer = audioPlayer_id[0];
+    var video_display = $('#' + videoDisplay);
+    var audioPlayer_id = video_display.find('audio');
+    var audioPlayer = video_display[0].player;
     var audioLoadTimeout = window.setTimeout(function () {
       Engage.trigger(plugin.events.audioCodecNotSupported.getName());
       $('.' + class_audioDisplay).hide();
@@ -2068,7 +2064,7 @@ define(['require', 'jquery', 'underscore', 'backbone', 'basil', 'bowser', 'engag
         });
         $videoDisplayClass.removeClass(videoFocusedClass).removeClass(videoUnfocusedClass).addClass(videoDefaultLayoutClass);
         var numberDisplays = $videoDisplayClass.length;
-        $videoDisplayClass.css('width', (((1 / numberDisplays) * 100) - 0.5) + '%');
+        $videoDisplayClass.css('width', ((1 / numberDisplays) * 100) + '%');
         delayedCalculateVideoAreaAspectRatio();
       });
 
