@@ -60,7 +60,7 @@ Improvements
 - Reduced memory needed for Workflow Index rebuild
 - Ansible script documentation
 - Automatic publication of streaming URLs
-- S3 compatibility - Endpoint configuration for Amazon S3 alternatives added  
+- S3 compatibility - Endpoint configuration for Amazon S3 alternatives added
 - Theodul player ui config
 - Re-introduce ability to avoid data loss during ingest
 
@@ -75,6 +75,12 @@ API changes
 - Removed REST endpoints for modifying workflow definitions
     - DELETE /workflow/definition/{id}
     - PUT /workflow/definition
+
+Additional Notes About 8.7
+--------------------------
+
+This maintenance release fixes severals bugs including problems with the scheduler in multitenant systems and adds
+missing ACLs after asset uploads.
 
 Additional Notes About 8.6
 --------------------------
