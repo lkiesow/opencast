@@ -2,6 +2,7 @@ Security Policy
 ===============
 
 This is a sentence.
+Second sentence.
 
 Supported Versions
 ------------------
