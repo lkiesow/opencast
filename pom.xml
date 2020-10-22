@@ -133,6 +133,7 @@
     <module>modules/fex-fexsend</module>
     <module>modules/fex-service-workflowoperation</module>
     <module>modules/fileupload</module>
+    <module>modules/generate-smil-workflowoperation</module>
     <module>modules/hello-world-api</module>
     <module>modules/hello-world-impl</module>
     <module>modules/incident-workflowoperation</module>
