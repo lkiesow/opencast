@@ -1069,11 +1069,6 @@
         <version>${spring-security.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.springframework.security</groupId>
-        <artifactId>spring-security-openid</artifactId>
-        <version>${spring-security.version}</version>
-      </dependency>
-      <dependency>
         <groupId>org.springframework.security.oauth</groupId>
         <artifactId>spring-security-oauth</artifactId>
         <version>2.3.7.RELEASE</version>
@@ -1112,11 +1107,6 @@
         <groupId>org.jasig.cas.client</groupId>
         <artifactId>cas-client-core</artifactId>
         <version>3.3.3</version>
-      </dependency>
-      <dependency>
-        <groupId>org.openid4java</groupId>
-        <artifactId>com.springsource.org.openid4java</artifactId>
-        <version>0.9.5</version>
       </dependency>
       <dependency>
         <groupId>net.sourceforge.nekohtml</groupId>
@@ -1910,11 +1900,6 @@
       <id>central</id>
       <name>Central Maven Repository</name>
       <url>https://repo.maven.apache.org/maven2/</url>
-    </repository>
-    <repository>
-      <id>spring.io</id>
-      <name>Spring Framework Maven Plugins-Release Repository</name>
-      <url>https://repo.spring.io/plugins-release/</url>
     </repository>
     <repository>
       <id>mvn.opencast.org</id>
