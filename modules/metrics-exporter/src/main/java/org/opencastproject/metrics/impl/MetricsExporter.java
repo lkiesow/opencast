@@ -107,25 +107,15 @@ public class MetricsExporter {
       .help("Active workflows")
       .labelNames("organization")
       .register();
-  private final Gauge servicesAll = Gauge.build()
-      .name("opencast_services_all")
+  private final Gauge servicesTotal = Gauge.build()
+      .name("opencast_services_total")
       .help("Number of services in a cluster")
+      .labelNames("state")
       .register();
-  private final Gauge servicesWarning = Gauge.build()
-      .name("opencast_services_warning")
-      .help("Number of services in warning state")
-      .register();
-  private final Gauge servicesError = Gauge.build()
-      .name("opencast_services_error")
-      .help("Number of services in a cluster")
-      .register();
-  private final Gauge versionMajor = Gauge.build()
-      .name("opencast_version_major")
-      .help("Major version of Opencast")
-      .register();
-  private final Gauge versionMinor = Gauge.build()
-      .name("opencast_version_minor")
-      .help("Minor version of Opencast")
+  private final Gauge version = Gauge.build()
+      .name("opencast_version")
+      .help("Version of Opencast (based on metrics module)")
+      .labelNames("part")
       .register();
 
   /** The service */
@@ -135,8 +125,8 @@ public class MetricsExporter {
   @Activate
   public void activate(BundleContext bundleContext) {
     final Version version = bundleContext.getBundle().getVersion();
-    versionMajor.set(version.getMajor());
-    versionMinor.set(version.getMinor());
+    this.version.labels("major").set(version.getMajor());
+    this.version.labels("minor").set(version.getMinor());
   }
 
   @GET
@@ -154,9 +144,11 @@ public class MetricsExporter {
     final List<ServiceState> serviceStates = serviceRegistry.getServiceRegistrations().parallelStream()
         .map(ServiceRegistration::getServiceState)
         .collect(Collectors.toList());
-    servicesAll.set(serviceStates.size());
-    servicesError.set(serviceStates.parallelStream().filter(ServiceState.ERROR::equals).count());
-    servicesWarning.set(serviceStates.parallelStream().filter(ServiceState.WARNING::equals).count());
+    final long error = serviceStates.parallelStream().filter(ServiceState.ERROR::equals).count();
+    final long warn = serviceStates.parallelStream().filter(ServiceState.WARNING::equals).count();
+    servicesTotal.labels(ServiceState.NORMAL.name()).set(serviceStates.size() - error - warn);
+    servicesTotal.labels(ServiceState.WARNING.name()).set(warn);
+    servicesTotal.labels(ServiceState.ERROR.name()).set(error);
 
     // prepare series for jobs and workflows so we get a zero value if there is no job
     Map<String, Integer> workflows = new HashMap<>();
