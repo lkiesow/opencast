@@ -24,7 +24,10 @@ package org.opencastproject.metrics.impl;
 import org.opencastproject.security.api.DefaultOrganization;
 import org.opencastproject.security.api.Organization;
 import org.opencastproject.security.api.OrganizationDirectoryService;
+import org.opencastproject.serviceregistry.api.ServiceRegistration;
+import org.opencastproject.serviceregistry.api.ServiceRegistrationInMemoryImpl;
 import org.opencastproject.serviceregistry.api.ServiceRegistry;
+import org.opencastproject.serviceregistry.api.ServiceState;
 import org.opencastproject.serviceregistry.api.SystemLoad;
 
 import org.easymock.EasyMock;
@@ -61,9 +64,13 @@ public class MetricsExporterTest {
     nodeLoad.setMaxLoad(12.3F);
     nodeLoad.setCurrentLoad(1.23F);
     systemLoad.addNodeLoad(nodeLoad);
+    ServiceRegistration serviceRegistration = new ServiceRegistrationInMemoryImpl("service.type", "opencast.org",
+        ServiceState.ERROR.name(), false);
     ServiceRegistry serviceRegistry = EasyMock.createMock(ServiceRegistry.class);
     EasyMock.expect(serviceRegistry.getCurrentHostLoads()).andReturn(systemLoad).anyTimes();
     EasyMock.expect(serviceRegistry.getActiveJobs()).andReturn(Collections.emptyList()).anyTimes();
+    EasyMock.expect(serviceRegistry.getServiceRegistrations())
+        .andReturn(Collections.singletonList(serviceRegistration)).anyTimes();
 
     Organization organization = new DefaultOrganization();
     OrganizationDirectoryService directoryService = EasyMock.createMock(OrganizationDirectoryService.class);

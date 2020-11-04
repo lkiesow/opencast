@@ -24,12 +24,17 @@ package org.opencastproject.metrics.impl;
 import org.opencastproject.job.api.Job;
 import org.opencastproject.security.api.Organization;
 import org.opencastproject.security.api.OrganizationDirectoryService;
+import org.opencastproject.serviceregistry.api.ServiceRegistration;
 import org.opencastproject.serviceregistry.api.ServiceRegistry;
+import org.opencastproject.serviceregistry.api.ServiceState;
 import org.opencastproject.serviceregistry.api.SystemLoad;
 import org.opencastproject.util.doc.rest.RestQuery;
 import org.opencastproject.util.doc.rest.RestResponse;
 import org.opencastproject.util.doc.rest.RestService;
 
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.Version;
+import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
@@ -37,7 +42,9 @@ import org.slf4j.LoggerFactory;
 
 import java.io.StringWriter;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.GET;
@@ -100,21 +107,58 @@ public class MetricsExporter {
       .help("Active workflows")
       .labelNames("organization")
       .register();
+  private final Gauge servicesAll = Gauge.build()
+      .name("opencast_services_all")
+      .help("Number of services in a cluster")
+      .register();
+  private final Gauge servicesWarning = Gauge.build()
+      .name("opencast_services_warning")
+      .help("Number of services in warning state")
+      .register();
+  private final Gauge servicesError = Gauge.build()
+      .name("opencast_services_error")
+      .help("Number of services in a cluster")
+      .register();
+  private final Gauge versionMajor = Gauge.build()
+      .name("opencast_version_major")
+      .help("Major version of Opencast")
+      .register();
+  private final Gauge versionMinor = Gauge.build()
+      .name("opencast_version_minor")
+      .help("Minor version of Opencast")
+      .register();
 
   /** The service */
   private ServiceRegistry serviceRegistry;
   private OrganizationDirectoryService organizationDirectoryService;
 
+  @Activate
+  public void activate(BundleContext bundleContext) {
+    final Version version = bundleContext.getBundle().getVersion();
+    versionMajor.set(version.getMajor());
+    versionMinor.set(version.getMinor());
+  }
 
   @GET
   @Path("/")
   @Produces(TextFormat.CONTENT_TYPE_004)
-  //@Produces(MediaType.TEXT_PLAIN)
   @RestQuery(name = "metrics",
       description = "Metrics about Opencast",
       responses = {@RestResponse(description = "Metrics", responseCode = HttpServletResponse.SC_OK)},
       returnDescription = "OpenMetrics about Opencast.")
   public Response metrics() throws Exception {
+    // track requests
+    requests.inc();
+
+    // track service states
+    final List<ServiceState> serviceStates = serviceRegistry.getServiceRegistrations().parallelStream()
+        .map(ServiceRegistration::getServiceState)
+        .collect(Collectors.toList());
+    servicesAll.set(serviceStates.size());
+    servicesError.set(serviceStates.parallelStream().filter(ServiceState.ERROR::equals).count());
+    servicesWarning.set(serviceStates.parallelStream().filter(ServiceState.WARNING::equals).count());
+
+    // prepare series for jobs and workflows so we get a zero value if there is no job
     Map<String, Integer> workflows = new HashMap<>();
     Map<String, Map<String, Integer>> jobs = new HashMap<>();
     for (Organization organization: organizationDirectoryService.getOrganizations()) {
@@ -122,14 +166,18 @@ public class MetricsExporter {
       jobs.put(organization.getId(), new HashMap<>());
     }
 
-    requests.inc();
+    // track host loads
     for (SystemLoad.NodeLoad nodeLoad: serviceRegistry.getCurrentHostLoads().getNodeLoads()) {
       jobLoadCurrent.labels(nodeLoad.getHost()).set(nodeLoad.getCurrentLoad());
       jobLoadMax.labels(nodeLoad.getHost()).set(nodeLoad.getMaxLoad());
+
+      // initialize job hosts
       for (Map.Entry<String, Map<String, Integer>> entry: jobs.entrySet()) {
         entry.getValue().put(nodeLoad.getHost(), 0);
       }
     }
+
+    // count jobs and workflows
     for (Job job: serviceRegistry.getActiveJobs()) {
       Map<String, Integer> orgJobs = jobs.getOrDefault(job.getOrganization(), null);
       if (orgJobs != null) {
@@ -140,15 +188,19 @@ public class MetricsExporter {
       }
     }
 
+    // set workflows by organization
     for (Map.Entry<String, Integer> entry: workflows.entrySet()) {
       workflowsActive.labels(entry.getKey()).set(entry.getValue());
     }
 
+    // set jobs by organization and host
     for (Map.Entry<String, Map<String, Integer>> entry: jobs.entrySet()) {
       for (Map.Entry<String, Integer> orgEntry: entry.getValue().entrySet()) {
         jobsActive.labels(orgEntry.getKey(), entry.getKey()).set(orgEntry.getValue());
       }
     }
+
+    // collect metrics
     final StringWriter writer = new StringWriter();
     TextFormat.write004(writer, registry.metricFamilySamples());
     return Response.ok().entity(writer.toString()).build();
