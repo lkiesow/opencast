@@ -45,10 +45,10 @@ jobs:
     - name: initialize database
       run: |
         apt update -q
-        apt install -q -y mysql-client curl
+        apt install -q -y mysql-client curl bc
         mysql --host mydb -uroot -ppassword -e 'select version()'
 
     - name: check upgrade path
       run: |
         sed -i 's_remote=""_remote="--host mydb -ppassword"_' docs/upgrade/.test.sh
-        bash ./docs/upgrade/.test.sh
+        ./docs/upgrade/.test.sh
