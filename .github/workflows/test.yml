@@ -14,13 +14,38 @@ jobs:
     - name: set up python
       uses: actions/setup-python@v2
       with:
-        python-version: 3.8
+        python-version: 3.9
 
     - name: install dependencies
       run: |
-        pip install mkdocs markdown_inline_graphviz_extension mkdocs-windmill
+        pip install -q mkdocs markdown_inline_graphviz_extension mkdocs-windmill
         cd docs/guides
         npm ci
 
     - name: check documentation
       run: bash ./.style-and-markdown-build.sh
+
+  database:
+		strategy:
+			matrix:
+				db:
+          - 'mysql:8'
+          - 'mariadb:10'
+    runs-on: ubuntu-latest
+    container: ubuntu
+    services:
+      mydb:
+        image: ${{ matrix.db }}
+        env:
+          MYSQL_ROOT_PASSWORD: password
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=5
+    steps:
+    - name: initialize database
+      run: |
+        apt-get update
+        apt-get install -y mysql-client
+        mysql --host mydb -uroot -ppassword -e 'select version()'
+        mysql --host mydb -uroot -ppassword -e 'create database opencast;' | mysql -u root
+
+    - name: check upgrade path
+      run: bash ./docs/upgrade/.test.sh
