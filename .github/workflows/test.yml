@@ -42,10 +42,10 @@ jobs:
     steps:
     - name: initialize database
       run: |
-        apt-get update
-        apt-get install -y mysql-client
+        apt update -q
+        apt install -q -y mysql-client
         mysql --host mydb -uroot -ppassword -e 'select version()'
-        mysql --host mydb -uroot -ppassword -e 'create database opencast;' | mysql -u root
+        mysql --host mydb -uroot -ppassword -e 'create database opencast'
 
     - name: check upgrade path
       run: bash ./docs/upgrade/.test.sh
