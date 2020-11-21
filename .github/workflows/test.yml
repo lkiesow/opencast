@@ -1,0 +1,26 @@
+name: Test Opencast
+
+on:
+  - push
+  - pull_request
+
+jobs:
+  documentation:
+    runs-on: ubuntu-20.04
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: set up python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
+
+    - name: install dependencies
+      run: |
+        pip install mkdocs markdown_inline_graphviz_extension mkdocs-windmill
+        cd docs/guides
+        npm ci
+
+    - name: check documentation
+      run: bash ./.style-and-markdown-build.sh
