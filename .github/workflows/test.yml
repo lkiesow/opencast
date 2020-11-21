@@ -26,9 +26,9 @@ jobs:
       run: bash ./.style-and-markdown-build.sh
 
   database:
-		strategy:
-			matrix:
-				db:
+    strategy:
+      matrix:
+        db:
           - 'mysql:8'
           - 'mariadb:10'
     runs-on: ubuntu-latest
