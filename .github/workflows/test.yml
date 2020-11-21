@@ -5,6 +5,8 @@ on:
   - pull_request
 
 jobs:
+
+  # Check documentation with markdownlint and build it using mkdocs
   documentation:
     runs-on: ubuntu-20.04
 
@@ -25,6 +27,9 @@ jobs:
     - name: check documentation
       run: bash ./.style-and-markdown-build.sh
 
+
+  # Test database upgrade path.
+  # For this, we initialize a 2.2 database and upgrade all the way to the latest version
   database:
     strategy:
       matrix:
@@ -52,3 +57,30 @@ jobs:
       run: |
         sed -i 's_remote=""_remote="--host mydb -ppassword"_' docs/upgrade/.test.sh
         ./docs/upgrade/.test.sh
+
+
+  # Run admin interface browser tests
+  database:
+    strategy:
+      matrix:
+        browser:
+          - chrome
+          - firefox
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: use node.js 14.x
+      uses: actions/setup-node@v1
+      with:
+        node-version: 14.x
+
+    - name: install dependencies
+      run: |
+        cd modules/admin-ui-frontend
+        npm ci
+        ./node_modules/.bin/bower install
+
+    - name: run front-end tests
+      run: |
+        npm run test-${{ matrix.browser }}
