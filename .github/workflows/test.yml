@@ -123,7 +123,34 @@ jobs:
         run: |
           sed -i 's/build --skipTests=${skipTests}/build --skipTests=true/' modules/admin-ui-frontend/pom.xml
 
-      - name: run front-end tests
+      - name: build opencast
         run: |
           mvn --batch-mode -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn \
             clean install -Pnone
+
+
+  # Run mvn site
+  site-build:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: setup java
+        uses: actions/setup-java@v1
+        with:
+          java-version: 11
+
+      - name: quick build
+        run: |
+          mvn --batch-mode -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn \
+            install -DskipTests -Dcheckstyle.skip=true -P "none,!frontend"
+
+      - name: mvn site
+        run: |
+          mvn --batch-mode -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn \
+            site -Daggregate=true site:stage "-DstagingDirectory=$(pwd)/site" \
+            -P "none,!frontend" \
+            -DskipTests \
+            -Dcheckstyle.skip=true \
+            -Dpmd.skip=true \
+            -Dcpd.skip=true
