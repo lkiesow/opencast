@@ -83,4 +83,5 @@ jobs:
 
     - name: run front-end tests
       run: |
+        cd modules/admin-ui-frontend
         npm run test-${{ matrix.browser }}
