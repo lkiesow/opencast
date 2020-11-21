@@ -1,7 +1,6 @@
 Opencast
 ========
 
-
 [![Build Status](https://travis-ci.com/opencast/opencast.svg?branch=develop)
 ](https://travis-ci.com/opencast/opencast)
 

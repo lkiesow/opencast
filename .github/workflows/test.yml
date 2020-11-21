@@ -94,9 +94,18 @@ jobs:
         java:
           - 8
           - 11
+    name: build (java ${{ matrix.java }})
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
+
+      - name: cache local maven repository
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
 
       - name: setup java
         uses: actions/setup-java@v1
