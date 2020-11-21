@@ -45,7 +45,7 @@ jobs:
     - name: initialize database
       run: |
         apt update -q
-        apt install -q -y mysql-client
+        apt install -q -y mysql-client curl
         mysql --host mydb -uroot -ppassword -e 'select version()'
 
     - name: check upgrade path
