@@ -105,8 +105,8 @@ jobs:
 
       - name: install dependencies
         run: |
-          apt update -q
-          apt install -y -q \
+          sudo apt update -q
+          sudo apt install -y -q \
             bzip2 \
             ffmpeg \
             gzip \
