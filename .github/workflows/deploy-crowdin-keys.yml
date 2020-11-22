@@ -12,7 +12,7 @@ jobs:
   deploy-translation-keys:
     runs-on: ubuntu-20.04
     env:
-      DEPLOY_KEY: ${{ secrets.CROWDIN_API_KEY }}
+      CROWDIN_API_KEY: ${{ secrets.CROWDIN_API_KEY }}
     steps:
     - uses: actions/checkout@v2
 
