@@ -6,7 +6,7 @@ on:
 jobs:
 
   # Check documentation with markdownlint and build it using mkdocs
-  deploy-translation-keys:
+  update-translations:
     runs-on: ubuntu-20.04
     env:
       CROWDIN_API_KEY: ${{ secrets.CROWDIN_API_KEY }}
@@ -15,8 +15,8 @@ jobs:
 
     - name: prepare git
       run: |
-        git config  user.email 'crowdin-bot@opencast.org'
-        git config user.name 'Crowdin Bot'
+        git config --global user.email 'crowdin-bot@opencast.org'
+        git config --global user.name 'Crowdin Bot'
 
     - name: prepare crowdin client
       run: |
@@ -40,6 +40,7 @@ jobs:
 
     - name: upload translation source
       run: |
+        set -o errexit
         update() {
           git checkout "$1"
           crowdin --config .crowdin.yaml download -b "$2"
