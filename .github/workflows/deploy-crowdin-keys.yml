@@ -26,4 +26,4 @@ jobs:
       run: |
         echo ${GITHUB_REF##*/}
         crowdin --config .crowdin.yaml upload sources -b "${GITHUB_REF##*/}"
-      if: ${CROWDIN_API_KEY} != ''
+      if: ${{env.CROWDIN_API_KEY}} != ''
