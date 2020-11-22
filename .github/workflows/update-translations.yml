@@ -35,7 +35,8 @@ jobs:
 
     - name: clone repository
       run: |
-        git clone "git@github.com:opencast/opencast.git" ~/oc
+        #git clone "git@github.com:opencast/opencast.git" ~/oc
+        git clone "https://github.com/opencast/opencast.git" ~/oc
 
     - name: upload translation source
       run: |
