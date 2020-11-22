@@ -24,6 +24,5 @@ jobs:
 
     - name: upload translation source
       run: |
-        echo ${GITHUB_REF##*/}
-        crowdin --config .crowdin.yaml upload sources -b "${GITHUB_REF##*/}"
-      if: ${{env.CROWDIN_API_KEY}} != ''
+        test -z "${CROWDIN_API_KEY}" ||\
+          crowdin --config .crowdin.yaml upload sources -b "${GITHUB_REF##*/}"
