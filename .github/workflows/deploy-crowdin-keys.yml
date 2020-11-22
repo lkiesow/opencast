@@ -9,7 +9,7 @@ on:
 jobs:
 
   # Check documentation with markdownlint and build it using mkdocs
-  documentation:
+  deploy-translation-keys:
     runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v2
@@ -24,4 +24,4 @@ jobs:
       run: |
         echo ${GITHUB_REF##*/}
         crowdin --config .crowdin.yaml upload sources -b "${GITHUB_REF##*/}"
-      if: "${{secrets.CROWDIN_API_KEY}}" != ''
+      if: ${{secrets.CROWDIN_API_KEY}} != ''
