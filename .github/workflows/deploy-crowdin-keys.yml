@@ -24,5 +24,8 @@ jobs:
 
     - name: upload translation source
       run: |
-        test -z "${CROWDIN_API_KEY}" ||\
+        if [ -z "${CROWDIN_API_KEY}" ]; then
+          echo Skipping deployment without secret
+        else
           crowdin --config .crowdin.yaml upload sources -b "${GITHUB_REF##*/}"
+        fi
