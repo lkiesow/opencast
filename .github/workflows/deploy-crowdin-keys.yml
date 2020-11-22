@@ -11,9 +11,6 @@ jobs:
   # Check documentation with markdownlint and build it using mkdocs
   documentation:
     runs-on: ubuntu-20.04
-    env:
-      crowdin_key: ${{secrets.CROWDIN_API_KEY}}
-
     steps:
     - uses: actions/checkout@v2
 
@@ -21,10 +18,10 @@ jobs:
       run: |
         wget --quiet https://artifacts.crowdin.com/repo/deb/crowdin.deb
         sudo dpkg -i crowdin.deb
-        echo "api_key: ${CROWDIN_API_KEY}" > ~/.crowdin.yaml
+        echo "api_key: ${{secrets.CROWDIN_API_KEY}}" > ~/.crowdin.yaml
 
     - name: upload translation source
       run: |
         echo ${GITHUB_REF##*/}
         crowdin --config .crowdin.yaml upload sources -b "${GITHUB_REF##*/}"
-      if: ${{env.crowdin_key}} != ''
+      if: "${{secrets.CROWDIN_API_KEY}}" != ''
