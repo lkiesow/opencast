@@ -27,11 +27,6 @@
     </dependency>
     <dependency>
       <groupId>org.opencastproject</groupId>
-      <artifactId>opencast-composer-service-api</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.opencastproject</groupId>
       <artifactId>opencast-smil-api</artifactId>
       <version>${project.version}</version>
     </dependency>
