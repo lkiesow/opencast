@@ -18,6 +18,8 @@ jobs:
 
       - run: git remote -v
 
+      - run: git fetch origin
+
       - name: git log
         run: git log --oneline "origin/${BASE_REF}..HEAD"
 
