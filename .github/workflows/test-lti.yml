@@ -7,7 +7,7 @@ jobs:
   main:
     runs-on: ubuntu-20.04
     env:
-      BASE_REF: ${{ github.event.pull_request.base.ref }}
+      BASE_REF: origin/${{ github.event.pull_request.base.ref }}
     steps:
       - uses: actions/checkout@v2
 
@@ -21,7 +21,7 @@ jobs:
       - run: git fetch origin
 
       - name: git log
-        run: git log --oneline "origin/${BASE_REF}..HEAD"
+        run: git log --oneline "${BASE_REF}..HEAD"
 
       - name: git diff
         run: git diff --name-only "${BASE_REF}...HEAD"
