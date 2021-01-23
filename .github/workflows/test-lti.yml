@@ -1,7 +1,6 @@
 name: Test LTI Tools
 
 on:
-  - push
   - pull_request
 
 jobs:
