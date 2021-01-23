@@ -1,0 +1,15 @@
+name: Test LTI Tools
+
+on:
+  - push
+  - pull_request
+
+jobs:
+  main:
+    runs-on: ubuntu-20.04
+
+    steps:
+      - name: Dump GitHub context
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: echo "$GITHUB_CONTEXT"

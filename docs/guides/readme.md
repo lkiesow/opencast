@@ -1,6 +1,8 @@
 Opencast Documentation Sources
 ==============================
 
+TEST
+
 The documentation uses `mkdocs` and the `markdown_inline_graphviz` extension as static site generator. The documentation
 on [docs.opencast.org](https://docs.opencast.org) is updated once a day from these sources. For details about the
 automated build, check out:
