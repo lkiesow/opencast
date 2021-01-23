@@ -7,9 +7,20 @@ on:
 jobs:
   main:
     runs-on: ubuntu-20.04
-
+    env:
+      BASE_REF: ${{ github.event.pull_request.base.ref }}
     steps:
+      - uses: actions/checkout@v2
+
       - name: Dump GitHub context
         env:
           GITHUB_CONTEXT: ${{ toJson(github) }}
         run: echo "$GITHUB_CONTEXT"
+
+      - name: git log
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: git log --oneline "${BASE_REF}..HEAD"
+
+      - name: git diff
+        run: git diff --name-only "${BASE_REF}...HEAD"
