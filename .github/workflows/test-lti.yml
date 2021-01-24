@@ -16,7 +16,7 @@ jobs:
           GITHUB_CONTEXT: ${{ toJson(github) }}
         run: echo "$GITHUB_CONTEXT"
 
-      - run: git show HEAD
+      - run: git diff --name-only --diff-filter=AM ${{ github.event.before }} ${{ github.sha }}
 
       - run: git remote -v
 
