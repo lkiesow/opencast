@@ -19,7 +19,7 @@ jobs:
         run: |
           if [ -n "$(curl -s -L https://github.com/lkiesow/opencast/pull/15.patch | lsdiff --include='?/docs/*')" ]
           then
-          Write-Output "::set-output name=changed::true"
+          echo 'Write-Output "::set-output name=changed::true"'
           fi
 
       - name: Only if docs changes
