@@ -3,7 +3,7 @@ name: Test LTI Tools
 on:
   pull_request:
     paths:
-      - docs/**
+      - docx/**
 
 jobs:
   main:
