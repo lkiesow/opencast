@@ -6,8 +6,6 @@ on:
 jobs:
   main:
     runs-on: ubuntu-20.04
-    env:
-      BASE_REF: origin/${{ github.event.pull_request.base.ref }}
     steps:
       - name: install tools
         run: |
@@ -16,15 +14,17 @@ jobs:
 
       - name: check diff for docs changes
         id: check-changes
+        env:
+          CHECK_PATH: /docs/*
         run: |
-          if [ -n "$(curl -s -L https://github.com/lkiesow/opencast/pull/15.patch | lsdiff --include='?/docs/*')" ]
+          if [ -n "$(curl -s -L ${{ json.event.pull_request.patch_url }} | lsdiff --include="?${CHECK_PATH}")" ]
           then
           echo '::set-output name=changed::true'
           fi
 
       - run: echo ${{ steps.check-changes.outputs.changed }}
 
-      - run: echo ${{ steps.check-changess.output }}
+      - run: echo ${{ steps.check-changess.outputs }}
 
       - name: Only if docs changes
         if: ${{ steps.check-changes.outputs.changed == 'true' }}
