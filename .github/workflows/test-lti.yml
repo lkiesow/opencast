@@ -17,7 +17,7 @@ jobs:
         env:
           CHECK_PATH: /docs/*
         run: |
-          if [ -n "$(curl -s -L ${{ json.event.pull_request.patch_url }} | lsdiff --include="?${CHECK_PATH}")" ]
+          if [ -n "$(curl -s -L ${{ github.event.pull_request.patch_url }} | lsdiff --include="?${CHECK_PATH}")" ]
           then
           echo '::set-output name=changed::true'
           fi
