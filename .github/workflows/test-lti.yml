@@ -10,6 +10,8 @@ jobs:
       BASE_REF: origin/${{ github.event.pull_request.base.ref }}
     steps:
       - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Dump GitHub context
         env:
@@ -23,7 +25,7 @@ jobs:
       - run: git remote -v
 
       - name: git log
-        run: git log --oneline "${BASE_REF}..${{ github.event.pull_request.head.sha }}"
+        run: git log --oneline "${BASE_REF}..HEAD"
 
       - name: git diff
         run: git diff --name-only "${BASE_REF}...HEAD"
