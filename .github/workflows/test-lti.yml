@@ -22,11 +22,11 @@ jobs:
           echo '::set-output name=changed::true'
           fi
 
-      - run: echo ${{ steps.check-changes.output.changed }}
+      - run: echo ${{ steps.check-changes.outputs.changed }}
 
-      - run: echo ${{ steps.check-changes.output }}
+      - run: echo ${{ steps.check-changess.output }}
 
       - name: Only if docs changes
-        if: ${{ steps.check-changes.output.changed == 'true' }}
+        if: ${{ steps.check-changes.outputs.changed == 'true' }}
         run: |
           echo Docs have changed. Do something!
