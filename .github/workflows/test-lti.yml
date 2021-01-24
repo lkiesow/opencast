@@ -22,6 +22,10 @@ jobs:
           echo 'Write-Output "::set-output name=changed::true"'
           fi
 
+      - run: echo ${{ steps.check-changes.output.changed }}
+
+      - run: echo ${{ steps.check-changes.output }}
+
       - name: Only if docs changes
         if: ${{ steps.check-changes.output.changed == 'true' }}
         run: |
