@@ -23,7 +23,7 @@ jobs:
       - run: git remote -v
 
       - name: git log
-        run: git log --oneline "${BASE_REF}..HEAD"
+        run: git log --oneline "${BASE_REF}..${{ github.event.pull_request.head.sha }}"
 
       - name: git diff
         run: git diff --name-only "${BASE_REF}...HEAD"
