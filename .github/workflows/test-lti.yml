@@ -11,8 +11,8 @@ jobs:
     steps:
       - name: install tools
         run: |
-          apt update
-          apt install -qqy patchutils curl
+          sudo apt update -q
+          sudo apt install -qqy patchutils curl
 
       - name: check diff for docs changes
         id: check-changes
