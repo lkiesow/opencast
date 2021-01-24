@@ -1,7 +1,9 @@
 name: Test LTI Tools
 
 on:
-  - pull_request
+  pull_request:
+    paths:
+      - docs/**
 
 jobs:
   main:
@@ -17,7 +19,6 @@ jobs:
         env:
           CHECK_PATH: /docs/
         run: |
-          #if [ -n "$(curl -s -L ${{ github.event.pull_request.patch_url }} | lsdiff --include="?${CHECK_PATH}")" ]
           if curl -s -L ${{ github.event.pull_request.patch_url }} | lsdiff | grep -q "^.${CHECK_PATH}"
           then
           echo '::set-output name=changed::true'
