@@ -9,23 +9,20 @@ jobs:
     env:
       BASE_REF: origin/${{ github.event.pull_request.base.ref }}
     steps:
-      - uses: actions/checkout@v2
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
+      - name: install tools
+        run: |
+          apt update
+          apt install -qqy patchutils curl
 
-      - name: Dump GitHub context
-        env:
-          GITHUB_CONTEXT: ${{ toJson(github) }}
-        run: echo "$GITHUB_CONTEXT"
+      - name: check diff for docs changes
+        id: check-changes
+        run: |
+          if [ -n "$(curl -s -L https://github.com/lkiesow/opencast/pull/15.patch | lsdiff --include='?/docs/*')" ]
+          then
+          Write-Output "::set-output name=changed::true"
+          fi
 
-      - run: git fetch origin ${{ github.event.pull_request.base.ref }}
-
-      - run: git diff --name-only --diff-filter=AM ${{ github.event.before }} ${{ github.sha }}
-
-      - run: git remote -v
-
-      - name: git log
-        run: git log --oneline "${BASE_REF}..HEAD"
-
-      - name: git diff
-        run: git diff --name-only "${BASE_REF}...HEAD"
+      - name: Only if docs changes
+        if: ${{ steps.check-changes.output.changed == 'true' }}
+        run: |
+          echo Docs have changed. Do something!
