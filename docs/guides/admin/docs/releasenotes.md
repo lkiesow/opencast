@@ -76,6 +76,26 @@ API changes
     - DELETE /workflow/definition/{id}
     - PUT /workflow/definition
 
+Additional Notes about 8.10
+---------------------------
+
+This release contains an important bugfix where unprivileged users could not upload videos.
+
+
+Additional Notes about 8.9
+--------------------------
+
+Opencast 8.9 contains an important security fix regarding host verification. Upgrading is strongly recommended. If you
+use self-signed certificates, you now need to properly import them.
+Additionally, the UI of the docs were improved and and the Spring snapshot repository was removed to resolve build
+problems.
+5 other patches have been merged.
+
+Additional Notes About 8.8
+--------------------------
+
+This maintenance includes 12 patches.
+
 Additional Notes About 8.7
 --------------------------
 
