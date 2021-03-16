@@ -66,7 +66,7 @@ jobs:
       - name: build opencast
         run: |
           mvn --batch-mode -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn \
-            clean install -Pnone
+            clean install -Pnone -DskipTests
 
       - name: build assemblies
         working-directory: assemblies
@@ -76,13 +76,12 @@ jobs:
             clean install
 
       - name: save version
-        working-directory: assemblies
+        working-directory: build
         if: github.event_name == 'push' && matrix.java == 11 && github.repository == 'lkiesow/opencast' && startsWith(github.ref, 'refs/heads/r/')
         run: |
-          git log -n1 > "$(echo "${GITHUB_REF#refs/heads/} | sed 's#/#_#').commit"
+          git log -n1 > "$(echo "${GITHUB_REF#refs/heads/}" | sed 's#/#_#').commit"
 
       - name: configure s3cmd
-        working-directory: assemblies
         if: github.event_name == 'push' && matrix.java == 11 && github.repository == 'lkiesow/opencast' && startsWith(github.ref, 'refs/heads/r/')
         env:
           S3_HOST: ${{ secrets.S3_HOST }}
@@ -98,7 +97,7 @@ jobs:
           echo "signature_v2 = False" >> "$HOME/.s3cfg"
 
       - name: upload assets
-        working-directory: assemblies
+        working-directory: build
         if: github.event_name == 'push' && matrix.java == 11 && github.repository == 'lkiesow/opencast' && startsWith(github.ref, 'refs/heads/r/')
         run: |
           s3cmd put *.commit opencast-dist-allinone*tar.gz s3://opencast-daily/
