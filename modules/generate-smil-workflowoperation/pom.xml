@@ -34,7 +34,7 @@
       <groupId>org.opencastproject</groupId>
       <artifactId>opencast-workspace-api</artifactId>
       <version>${project.version}</version>
-    </dependency>    
+    </dependency>
      <dependency>
       <groupId>commons-io</groupId>
       <artifactId>commons-io</artifactId>

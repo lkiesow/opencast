@@ -64,7 +64,7 @@ public class GenerateSmilWorkflowOperationHandler extends AbstractWorkflowOperat
   public static final String OPT_SOURCE_FLAVORS = "source-flavors";
 
   public static final String OPT_TARGET_SMIL_FLAVOR = "target-smil-flavor";
-  
+
   /** The default file name for generated Smil catalogs. */
   private static final String TARGET_FILE_NAME = "cut.smil";
 
@@ -77,7 +77,7 @@ public class GenerateSmilWorkflowOperationHandler extends AbstractWorkflowOperat
     super.activate(cc);
     logger.info("Registering generate smil workflow operation handler");
   }
-  
+ 
   public void setWorkspace(Workspace workspace) {
     this.workspace = workspace;
   }
@@ -119,7 +119,7 @@ public class GenerateSmilWorkflowOperationHandler extends AbstractWorkflowOperat
     }
 
     MediaPackage mediaPackage = workflowInstance.getMediaPackage();
-    
+
     SmilResponse smilResponse = smilService.createNewSmil(mediaPackage);
 
     Track[] tracks = mediaPackage.getTracks(sourceFlavors);
@@ -135,7 +135,7 @@ public class GenerateSmilWorkflowOperationHandler extends AbstractWorkflowOperat
       throw new WorkflowOperationException(e);
     }
     Smil smil = smilResponse.getSmil();
-    
+ 
     //set default catalog Id if there is none existing
     String catalogId = smil.getId();
     Catalog[] catalogs = mediaPackage.getCatalogs();
@@ -179,7 +179,7 @@ public class GenerateSmilWorkflowOperationHandler extends AbstractWorkflowOperat
 
     // setting the URI to a new source so the checksum will most like be invalid
     catalog.setChecksum(null);
-    
+
     return createResult(workflowInstance.getMediaPackage(), Action.CONTINUE);
   }
 }
