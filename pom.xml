@@ -276,6 +276,8 @@
     <module>modules/videosegmenter-ffmpeg</module>
     <module>modules/videosegmenter-remote</module>
     <module>modules/videosegmenter-workflowoperation</module>
+    <module>modules/vital-livestream-api</module>
+    <module>modules/vital-livestream-impl</module>
     <module>modules/waveform-api</module>
     <module>modules/waveform-ffmpeg</module>
     <module>modules/waveform-remote</module>
