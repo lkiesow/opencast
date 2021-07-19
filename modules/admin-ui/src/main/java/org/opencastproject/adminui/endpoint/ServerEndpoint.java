@@ -120,42 +120,33 @@ public class ServerEndpoint {
 
     @Override
     public int compare(Server host1, Server host2) {
-      int result;
+      return (ascending ? 1 : -1) * compareByType(host1, host2);
+    }
 
+    private int compareByType(final Server host1, final Server host2) {
       switch (sortType) {
         case ONLINE:
-          result = Boolean.compare(host1.online, host2.online);
-          break;
+          return Boolean.compare(host1.online, host2.online);
         case CORES:
-          result = Long.compare(host1.cores, host2.cores);
-          break;
+          return Long.compare(host1.cores, host2.cores);
         case COMPLETED:
-          result = Long.compare(host1.completed, host2.completed);
-          break;
+          return Long.compare(host1.completed, host2.completed);
         case QUEUED:
-          result = Long.compare(host1.queued, host2.queued);
-          break;
+          return Long.compare(host1.queued, host2.queued);
         case MAINTENANCE:
-          result = Boolean.compare(host1.maintenance, host2.maintenance);
-          break;
+          return Boolean.compare(host1.maintenance, host2.maintenance);
         case RUNNING:
-          result = Long.compare(host1.running, host2.running);
-          break;
+          return Long.compare(host1.running, host2.running);
         case MEANQUEUETIME:
-          result = Long.compare(host1.meanQueueTime, host2.meanQueueTime);
-          break;
+          return Long.compare(host1.meanQueueTime, host2.meanQueueTime);
         case MEANRUNTIME:
-          result = Long.compare(host1.meanRunTime, host2.meanRunTime);
-          break;
+          return Long.compare(host1.meanRunTime, host2.meanRunTime);
         case NODENAME:
-          result = host1.nodeName.compareTo(host2.nodeName);
-          break;
+          return host1.nodeName.compareTo(host2.nodeName);
         case HOSTNAME:
         default:
-          result = host1.hostname.compareTo(host2.hostname);
+          return host1.hostname.compareTo(host2.hostname);
       }
-
-      return ascending ? result : -1 * result;
     }
   }
 
