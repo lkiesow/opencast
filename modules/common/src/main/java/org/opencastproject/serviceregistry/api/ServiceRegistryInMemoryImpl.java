@@ -35,6 +35,7 @@ import org.opencastproject.security.api.UserDirectoryService;
 import org.opencastproject.serviceregistry.api.SystemLoad.NodeLoad;
 import org.opencastproject.util.NotFoundException;
 
+import org.apache.commons.lang3.NotImplementedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1018,6 +1019,23 @@ public class ServiceRegistryInMemoryImpl implements ServiceRegistry {
     List<HostRegistration> hostList = new LinkedList<HostRegistration>();
     hostList.addAll(hosts.values());
     return hostList;
+  }
+
+  @Override
+  public HostStatistics getHostStatistics() {
+    throw new NotImplementedException("We don't actually have sensible statistics data for tests");
+    /*
+    HostStatistics statistics = new HostStatistics();
+    for (Map.Entry<ServiceRegistrationInMemoryImpl, Set<Job>> entry: jobHosts.entrySet()) {
+      final ServiceRegistrationInMemoryImpl service = entry.getKey();
+      final long queued = entry.getValue().stream().filter(job -> job.getStatus() == Status.QUEUED).count();
+      final long running = entry.getValue().stream().filter(job -> job.getStatus() == Status.RUNNING).count();
+      long long host = service.host.hashCode();
+      statistics.addQueued(host, statistics.queuedJobs(host) + queued);
+      statistics.addRunning(host, statistics.runningJobs(host) + running);
+    }
+    return statistics;
+     */
   }
 
   @Override

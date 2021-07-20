@@ -49,6 +49,7 @@ import org.opencastproject.security.api.TrustedHttpClientException;
 import org.opencastproject.security.api.User;
 import org.opencastproject.security.api.UserDirectoryService;
 import org.opencastproject.serviceregistry.api.HostRegistration;
+import org.opencastproject.serviceregistry.api.HostStatistics;
 import org.opencastproject.serviceregistry.api.IncidentService;
 import org.opencastproject.serviceregistry.api.Incidents;
 import org.opencastproject.serviceregistry.api.JaxbServiceStatistics;
@@ -1668,6 +1669,36 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
       if (em != null)
         em.close();
     }
+  }
+
+  @Override
+  public HostStatistics getHostStatistics() {
+    HostStatistics statistics = new HostStatistics();
+    EntityManager em = null;
+    try {
+      em = emf.createEntityManager();
+      /*
+      var results = em.createNativeQuery("select s.host_registration, j.status, count(*) "
+          + "from oc_service_registration s inner join oc_job j on s.id = j.processor_service "
+          + "where j.status in (" + Status.RUNNING.ordinal() + ", " + Status.QUEUED.ordinal() + ") "
+          + "group by s.host_registration, j.status", Long[].class).getResultList();
+          .setParameter("status", Arrays.asList(Status.QUEUED, Status.RUNNING))
+      */
+      List<long[]> results = em.createNamedQuery("HostRegistration.jobStatistics", long[].class)
+          .setParameter("status", Arrays.asList(Status.QUEUED, Status.RUNNING))
+          .getResultList();
+      for (long[] row: results) {
+        if (row[1] == Status.RUNNING.ordinal()) {
+          statistics.addRunning(row[0], row[2]);
+        } else {
+          statistics.addQueued(row[0], row[2]);
+        }
+      }
+    } finally {
+      if (em != null)
+        em.close();
+    }
+    return statistics;
   }
 
   /**

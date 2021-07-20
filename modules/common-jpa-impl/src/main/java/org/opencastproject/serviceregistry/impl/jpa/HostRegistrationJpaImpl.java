@@ -45,10 +45,17 @@ import javax.persistence.UniqueConstraint;
     @Index(name = "IX_oc_host_registration_active", columnList = ("active"))
   }, uniqueConstraints = @UniqueConstraint(columnNames = "host"))
 @NamedQueries({
-        @NamedQuery(name = "HostRegistration.getMaxLoad", query = "SELECT sum(hr.maxLoad) FROM HostRegistration hr where hr.active = true"),
-        @NamedQuery(name = "HostRegistration.getMaxLoadByHostName", query = "SELECT hr.maxLoad FROM HostRegistration hr where hr.baseUrl = :host and hr.active = true"),
-  @NamedQuery(name = "HostRegistration.byHostName", query = "SELECT hr from HostRegistration hr where hr.baseUrl = :host"),
-  @NamedQuery(name = "HostRegistration.getAll", query = "SELECT hr FROM HostRegistration hr where hr.active = true") })
+    @NamedQuery(name = "HostRegistration.getMaxLoad", query = "SELECT sum(hr.maxLoad) FROM HostRegistration hr where hr.active = true"),
+    @NamedQuery(name = "HostRegistration.getMaxLoadByHostName", query = "SELECT hr.maxLoad FROM HostRegistration hr where hr.baseUrl = :host and hr.active = true"),
+    @NamedQuery(name = "HostRegistration.byHostName", query = "SELECT hr from HostRegistration hr where hr.baseUrl = :host"),
+    @NamedQuery(name = "HostRegistration.jobStatistics", query =
+        "select h, j.status, count(j) "
+            + "from ServiceRegistration s inner join Job j on s.id = j.processorService "
+            + "  right outer join HostRegistration h on h.id = s.hostRegistration "
+            + "where j.status in (:status) "
+            + "group by h.id, j.status"
+    ),
+    @NamedQuery(name = "HostRegistration.getAll", query = "SELECT hr FROM HostRegistration hr where hr.active = true") })
 public class HostRegistrationJpaImpl implements HostRegistration {
 
   @Id
