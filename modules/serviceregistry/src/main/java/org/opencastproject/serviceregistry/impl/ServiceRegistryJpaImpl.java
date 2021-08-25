@@ -2935,6 +2935,12 @@ public class ServiceRegistryJpaImpl implements ServiceRegistry, ManagedService {
           if (dispatchableJobs.removeAll(workflowJobs) && dispatchableJobs.isEmpty())
             continue;
 
+          // Try to prioritize jobs from older workflows.
+          // This is no guaranteed prioritization since we do not load all jobs from the database.
+          var workflowDates = workflowJobs.stream().collect(Collectors.toMap(JpaJob::getId, JpaJob::getDateCreated));
+          var now = new Date();
+          dispatchableJobs.sort(Comparator.comparing(job -> workflowDates.getOrDefault(job.getRootJob().getId(), now)));
+
           dispatchDispatchableJobs(em, dispatchableJobs);
         } while (jobsFound);
 
