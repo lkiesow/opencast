@@ -104,7 +104,6 @@ import org.opencastproject.util.doc.rest.RestParameter.Type;
 import org.opencastproject.util.doc.rest.RestQuery;
 import org.opencastproject.util.doc.rest.RestResponse;
 import org.opencastproject.util.doc.rest.RestService;
-import org.opencastproject.util.requests.SortCriterion;
 import org.opencastproject.workflow.api.WorkflowDatabaseException;
 import org.opencastproject.workflow.api.WorkflowInstance;
 
@@ -424,20 +423,20 @@ public class EventsEndpoint implements ManagedService {
   @DELETE
   @Path("{eventId}")
   @RestQuery(name = "deleteevent", description = "Deletes an event.", returnDescription = "", pathParameters = {
-          @RestParameter(name = "eventId", description = "The event id", isRequired = true, type = STRING) }, responses = {
+          @RestParameter(name = "eventId", description = "The event id", isRequired = true, type = STRING) }, reponses = {
           @RestResponse(description = "The event has been deleted.", responseCode = HttpServletResponse.SC_NO_CONTENT),
           @RestResponse(description = "The retraction of publications has started.", responseCode = HttpServletResponse.SC_ACCEPTED),
           @RestResponse(description = "The specified event does not exist.", responseCode = HttpServletResponse.SC_NOT_FOUND) })
   public Response deleteEvent(@HeaderParam("Accept") String acceptHeader, @PathParam("eventId") String id)
-          throws SearchIndexException, UnauthorizedException {
+          throws NotFoundException, SearchIndexException, UnauthorizedException {
     final Opt<Event> event = indexService.getEvent(id, externalIndex);
     if (event.isNone()) {
       return RestUtil.R.notFound(id);
     }
     final Runnable doOnNotFound = () -> {
       try {
-        externalIndex.delete(Event.DOCUMENT_TYPE, id, getSecurityService().getOrganization().getId());
-      } catch (SearchIndexException e) {
+        indexService.removeEvent(id);
+      } catch (NotFoundException | UnauthorizedException e) {
         logger.error("error removing event {}: {}", id, e);
       }
     };
