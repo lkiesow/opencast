@@ -24,6 +24,12 @@ package org.opencastproject.kernel.security;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
 
+import java.io.IOException;
+
+import javax.servlet.FilterChain;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 
 /**
@@ -35,14 +41,21 @@ import javax.servlet.http.HttpServletRequest;
  */
 public class TrustedAnonymousAuthenticationFilter extends AnonymousAuthenticationFilter {
 
-  /**
-   * @see org.springframework.security.web.authentication.AnonymousAuthenticationFilter#applyAnonymousForThisRequest(javax
-   *      .servlet.http.HttpServletRequest)
-   */
+  public TrustedAnonymousAuthenticationFilter() {
+    super("opencast");
+  }
+
   @Override
-  @Deprecated
+  public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain)
+          throws IOException, ServletException {
+    if (applyAnonymousForThisRequest((HttpServletRequest) req)) {
+      super.doFilter(req, res, chain);
+    } else {
+      chain.doFilter(req, res);
+    }
+  }
+
   protected boolean applyAnonymousForThisRequest(HttpServletRequest request) {
     return StringUtils.isBlank(request.getHeader(DelegatingAuthenticationEntryPoint.REQUESTED_AUTH_HEADER));
   }
-
 }

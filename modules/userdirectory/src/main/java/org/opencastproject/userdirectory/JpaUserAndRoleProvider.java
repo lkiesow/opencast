@@ -47,6 +47,8 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -106,7 +108,7 @@ public class JpaUserAndRoleProvider implements UserProvider, RoleProvider {
   protected Object nullToken = new Object();
 
   /** Password encoder for storing user passwords */
-  private CustomPasswordEncoder passwordEncoder = new CustomPasswordEncoder();
+  private PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
   /** OSGi DI */
   @Reference(name = "entityManagerFactory", target = "(osgi.unit.name=org.opencastproject.common)")
@@ -329,7 +331,7 @@ public class JpaUserAndRoleProvider implements UserProvider, RoleProvider {
     }
 
     // Create a JPA user with an encoded password.
-    String encodedPassword = passwordEncoded ? user.getPassword() : passwordEncoder.encodePassword(user.getPassword());
+    String encodedPassword = passwordEncoded ? user.getPassword() : passwordEncoder.encode(user.getPassword());
 
     // Only save internal roles
     Set<JpaRole> roles = UserDirectoryPersistenceUtil.saveRoles(filterRoles(user.getRoles()), emf);
@@ -411,7 +413,7 @@ public class JpaUserAndRoleProvider implements UserProvider, RoleProvider {
       if (passwordEncoded) {
         encodedPassword = user.getPassword();
       } else {
-        encodedPassword = passwordEncoder.encodePassword(user.getPassword());
+        encodedPassword = passwordEncoder.encode(user.getPassword());
       }
     }
 

@@ -27,18 +27,15 @@ import org.springframework.security.authentication.RememberMeAuthenticationProvi
  * Authentication provider based on the remember-me cookie.
  */
 public class SystemTokenBasedRememberMeAuthenticationProvider extends RememberMeAuthenticationProvider {
-
-  @Deprecated
-  public SystemTokenBasedRememberMeAuthenticationProvider() {
-    super();
-  }
+  private final String systemKeyPart;
 
   public SystemTokenBasedRememberMeAuthenticationProvider(String key) {
-    super(SystemTokenRememberMeUtils.augmentKey(key));
+    super(key);
+    systemKeyPart = SystemTokenRememberMeUtils.getSystemKeyPart();
   }
 
   @Override
-  public void setKey(String key) {
-    super.setKey(SystemTokenRememberMeUtils.augmentKey(key));
+  public String getKey() {
+    return super.getKey() + systemKeyPart;
   }
 }

@@ -44,6 +44,8 @@ import org.apache.commons.collections4.IteratorUtils;
 import org.easymock.EasyMock;
 import org.junit.Before;
 import org.junit.Test;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.HashSet;
 import java.util.List;
@@ -55,7 +57,7 @@ public class JpaUserProviderTest {
   private JpaUserAndRoleProvider provider = null;
   private JpaOrganization org1 = null;
   private JpaOrganization org2 = null;
-  private CustomPasswordEncoder passwordEncoder = new CustomPasswordEncoder();
+  private PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
   @Before
   public void setUp() throws Exception {
@@ -83,7 +85,7 @@ public class JpaUserProviderTest {
     assertNotNull(loadUser);
 
     assertEquals(user.getUsername(), loadUser.getUsername());
-    assertTrue(passwordEncoder.isPasswordValid(loadUser.getPassword(), user.getPassword(), null));
+    assertTrue(passwordEncoder.matches(user.getPassword(), loadUser.getPassword()));
     assertEquals(user.getOrganization(), loadUser.getOrganization());
     assertEquals(user.getRoles(), loadUser.getRoles());
 
@@ -94,7 +96,7 @@ public class JpaUserProviderTest {
     assertNotNull(loadUser);
 
     assertEquals(user.getUsername(), loadUser.getUsername());
-    assertTrue(passwordEncoder.isPasswordValid(loadUser.getPassword(), user.getPassword(), null));
+    assertTrue(passwordEncoder.matches(user.getPassword(), loadUser.getPassword()));
     assertEquals(user.getOrganization(), loadUser.getOrganization());
     assertEquals(user.getRoles(), loadUser.getRoles());
   }
@@ -227,7 +229,7 @@ public class JpaUserProviderTest {
 
     assertNotNull(loadUpdatedUser);
     assertEquals(user.getUsername(), loadUpdatedUser.getUsername());
-    assertTrue(passwordEncoder.isPasswordValid(loadUpdatedUser.getPassword(), newPassword, null));
+    assertTrue(passwordEncoder.matches(newPassword, loadUpdatedUser.getPassword()));
     assertEquals(authorities.size(), loadUpdatedUser.getRoles().size());
 
     updateUser = new JpaUser("unknown", newPassword, org1, provider.getName(), true, authorities);

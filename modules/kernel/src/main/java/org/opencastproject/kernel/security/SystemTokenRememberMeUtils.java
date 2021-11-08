@@ -35,7 +35,6 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
-import java.util.Objects;
 
 /**
  *
@@ -47,9 +46,9 @@ public final class SystemTokenRememberMeUtils {
   private SystemTokenRememberMeUtils() {
   }
 
-  public static String augmentKey(String key) {
+  public static String getSystemKeyPart() {
     // Start with a user key if provided
-    StringBuilder keyBuilder = new StringBuilder(Objects.toString(key, ""));
+    StringBuilder keyBuilder = new StringBuilder();
 
     // This will give us the hostname and IP address as something which should be unique per system.
     // For example: lk.elan-ev.de/10.10.10.31
@@ -73,7 +72,7 @@ public final class SystemTokenRememberMeUtils {
     // If we still have no proper key, just generate a random one.
     // This will work just fine with the single drawback that restarting Opencast invalidates all remember-me tokens.
     // But it should be a sufficiently good fallback.
-    key = keyBuilder.toString();
+    var key = keyBuilder.toString();
     if (key.isEmpty()) {
       logger.warn("Could not generate semi-persistent remember-me key. Will generate a non-persistent random one.");
       key = Double.toString(Math.random());

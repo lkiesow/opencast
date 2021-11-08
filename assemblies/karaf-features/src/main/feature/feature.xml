@@ -85,25 +85,29 @@
     <bundle>mvn:org.apache.servicemix.bundles/org.apache.servicemix.bundles.aws-java-sdk/${aws.version}</bundle>
 
     <!-- Spring Framework / Security -->
+    <!--
     <bundle>mvn:org.springframework.ldap/org.springframework.ldap/1.3.1.RELEASE</bundle>
     <bundle>mvn:org.springframework.osgi/spring-osgi-core/1.2.1</bundle>
     <bundle>mvn:org.springframework.osgi/spring-osgi-extender/1.2.1</bundle>
     <bundle>mvn:org.springframework.osgi/spring-osgi-io/1.2.1</bundle>
-    <bundle>mvn:org.springframework.security/spring-security-config/${spring-security.version}</bundle>
-    <bundle>mvn:org.springframework.security/spring-security-core/${spring-security.version}</bundle>
+    -->
+    <bundle>wrap:mvn:org.springframework.security/spring-security-config/${spring-security.version}</bundle>
+    <bundle>wrap:mvn:org.springframework.security/spring-security-core/${spring-security.version}</bundle>
     <!--
     <bundle>mvn:org.springframework.security/spring-security-ldap/${spring-security.version}</bundle>
     -->
-    <bundle>mvn:org.springframework.security/spring-security-web/${spring-security.version}</bundle>
-    <bundle>mvn:org.springframework/spring-aop/${spring.version}</bundle>
+    <bundle>wrap:mvn:org.springframework.security/spring-security-web/${spring-security.version}</bundle>
+    <bundle>wrap:mvn:org.springframework/spring-aop/${spring.version}</bundle>
+    <!--
     <bundle>mvn:org.springframework/spring-asm/${spring.version}</bundle>
-    <bundle>mvn:org.springframework/spring-beans/${spring.version}</bundle>
-    <bundle>mvn:org.springframework/spring-context-support/${spring.version}</bundle>
-    <bundle>mvn:org.springframework/spring-context/${spring.version}</bundle>
-    <bundle>mvn:org.springframework/spring-core/${spring.version}</bundle>
-    <bundle>mvn:org.springframework/spring-expression/${spring.version}</bundle>
-    <bundle>mvn:org.springframework/spring-tx/${spring.version}</bundle>
-    <bundle>mvn:org.springframework/spring-web/${spring.version}</bundle>
+    -->
+    <bundle>wrap:mvn:org.springframework/spring-beans/${spring.version}</bundle>
+    <bundle>wrap:mvn:org.springframework/spring-context-support/${spring.version}</bundle>
+    <bundle>wrap:mvn:org.springframework/spring-context/${spring.version}</bundle>
+    <bundle>wrap:mvn:org.springframework/spring-core/${spring.version}</bundle>
+    <bundle>wrap:mvn:org.springframework/spring-expression/${spring.version}</bundle>
+    <bundle>wrap:mvn:org.springframework/spring-tx/${spring.version}</bundle>
+    <bundle>wrap:mvn:org.springframework/spring-web/${spring.version}</bundle>
   </feature>
 
   <feature name="opencast-core" version="${project.version}">

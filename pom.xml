@@ -260,7 +260,9 @@
     <module>modules/urlsigning-verifier-service-api</module>
     <module>modules/urlsigning-verifier-service-impl</module>
     <module>modules/userdirectory</module>
+    <!--
     <module>modules/userdirectory-ldap</module>
+    -->
     <module>modules/userdirectory-moodle</module>
     <module>modules/userdirectory-sakai</module>
     <module>modules/userdirectory-brightspace</module>
@@ -936,6 +938,11 @@
         <artifactId>jersey-server</artifactId>
         <version>${jersey.version}</version>
       </dependency>
+      <dependency>
+        <groupId>org.glassfish.jersey.core</groupId>
+        <artifactId>jersey-common</artifactId>
+        <version>${jersey.version}</version>
+      </dependency>
       <!-- JPA -->
       <dependency>
         <groupId>org.eclipse.persistence</groupId>
@@ -1014,6 +1021,7 @@
         <artifactId>spring-web</artifactId>
         <version>${spring.version}</version>
       </dependency>
+      <!--
       <dependency>
         <groupId>org.springframework.osgi</groupId>
         <artifactId>org.springframework.osgi.io</artifactId>
@@ -1029,6 +1037,7 @@
         <artifactId>org.springframework.osgi.extender</artifactId>
         <version>1.2.1</version>
       </dependency>
+      -->
       <dependency>
         <groupId>org.springframework.security</groupId>
         <artifactId>spring-security-core</artifactId>
@@ -1045,6 +1054,12 @@
         <version>${spring-security.version}</version>
       </dependency>
       <dependency>
+        <groupId>org.springframework.security</groupId>
+        <artifactId>spring-security-crypto</artifactId>
+        <version>${spring-security.version}</version>
+      </dependency>
+      <!--
+      <dependency>
         <groupId>org.springframework.security.oauth</groupId>
         <artifactId>spring-security-oauth</artifactId>
         <version>2.3.7.RELEASE</version>
@@ -1059,6 +1074,7 @@
         <artifactId>spring-security-ldap</artifactId>
         <version>${spring-security.version}</version>
       </dependency>
+      -->
       <dependency>
         <groupId>org.apache.velocity</groupId>
         <artifactId>velocity</artifactId>

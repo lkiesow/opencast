@@ -38,25 +38,20 @@ import java.security.NoSuchAlgorithmException;
 public class SystemTokenBasedRememberMeService extends TokenBasedRememberMeServices {
   private Logger logger = LoggerFactory.getLogger(SystemTokenBasedRememberMeService.class);
 
-  @Deprecated
-  public SystemTokenBasedRememberMeService() {
-    super();
-  }
+  private final String systemKeyPart;
 
   public SystemTokenBasedRememberMeService(String key, UserDetailsService userDetailsService) {
-    super(SystemTokenRememberMeUtils.augmentKey(key), userDetailsService);
+    super(key, userDetailsService);
+    systemKeyPart = SystemTokenRememberMeUtils.getSystemKeyPart();
   }
 
   /**
-   * Set a new key to be used when generating remember-me tokens.
-   *
-   * Note that the key passed to this method will be augmented by seldom changing but generally unique system
-   * properties like hostname, IP address, file system information and Linux kernel. Hence, even setting no custom
-   * key should be safe.
+   * Augment the default key with system properties.
+   * @return Augmented key
    */
   @Override
-  public void setKey(String key) {
-    super.setKey(SystemTokenRememberMeUtils.augmentKey(key));
+  public String getKey() {
+    return super.getKey() + systemKeyPart;
   }
 
   /**
