@@ -835,7 +835,9 @@
   <!-- # Spring Security Internals # -->
   <!-- ############################# -->
 
+  <!--
   <bean id="passwordEncoder" class="org.opencastproject.kernel.security.CustomPasswordEncoder" />
+  -->
 
   <sec:authentication-manager alias="authenticationManager">
     <sec:authentication-provider ref="rememberMeAuthenticationProvider"/>
@@ -847,10 +849,11 @@
     <!-- <sec:authentication-provider ref="ldapAuthProvider" /> -->
     <sec:authentication-provider user-service-ref="userDetailsService">
       <!-- The JPA user directory stores bcrypt hashed passwords, but still works with legacy md5 hashes -->
+      <!--
       <sec:password-encoder ref="passwordEncoder">
-        <!-- This salt is used only for decoding legacy MD5 hased passwords -->
         <sec:salt-source user-property="username" />
       </sec:password-encoder>
+      -->
     </sec:authentication-provider>
   </sec:authentication-manager>
 

@@ -52,7 +52,7 @@ public class SystemTokenBasedRememberMeService extends TokenBasedRememberMeServi
    *
    * Note that the key passed to this method will be augmented by seldom changing but generally unique system
    * properties like hostname, IP address, file system information and Linux kernel. Hence, even setting no custom
-   * key should be save.
+   * key should be safe.
    */
   @Override
   public void setKey(String key) {

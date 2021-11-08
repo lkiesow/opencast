@@ -29,7 +29,6 @@ import static org.junit.Assert.fail;
 import static org.opencastproject.util.data.Collections.set;
 import static org.opencastproject.util.persistence.PersistenceUtil.newTestEntityManagerFactory;
 
-import org.opencastproject.kernel.security.CustomPasswordEncoder;
 import org.opencastproject.security.api.Role;
 import org.opencastproject.security.api.SecurityConstants;
 import org.opencastproject.security.api.SecurityService;

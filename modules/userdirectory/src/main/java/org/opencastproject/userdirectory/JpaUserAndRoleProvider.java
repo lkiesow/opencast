@@ -21,7 +21,6 @@
 
 package org.opencastproject.userdirectory;
 
-import org.opencastproject.kernel.security.CustomPasswordEncoder;
 import org.opencastproject.security.api.Group;
 import org.opencastproject.security.api.Role;
 import org.opencastproject.security.api.RoleProvider;
