@@ -157,6 +157,7 @@
     <bundle start-level="82">mvn:org.opencastproject/opencast-admin-ui-frontend/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-admin-ui-index/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-animate-workflowoperation/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-speech-to-text-workflowoperation/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-annotation-api/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-annotation-impl/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-asset-manager-impl/${project.version}</bundle>
@@ -286,6 +287,9 @@
     <bundle start-level="82">mvn:org.opencastproject/opencast-animate-api/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-animate-remote/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-animate-workflowoperation/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-speech-to-text-api/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-speech-to-text-remote/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-speech-to-text-workflowoperation/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-asset-manager-impl/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-asset-manager-storage-aws/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-asset-manager-storage-fs/${project.version}</bundle>
@@ -420,6 +424,9 @@
     <bundle start-level="82">mvn:org.opencastproject/opencast-animate-api/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-animate-remote/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-animate-workflowoperation/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-speech-to-text-api/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-speech-to-text-remote/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-speech-to-text-workflowoperation/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-annotation-api/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-annotation-impl/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-asset-manager-impl/${project.version}</bundle>
@@ -588,6 +595,8 @@
 
     <bundle start-level="82">mvn:org.opencastproject/opencast-animate-api/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-animate-impl/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-speech-to-text-api/${project.version}</bundle>
+    <bundle start-level="82">mvn:org.opencastproject/opencast-speech-to-text-impl/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-composer-ffmpeg/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-composer-service-api/${project.version}</bundle>
     <bundle start-level="82">mvn:org.opencastproject/opencast-crop-api/${project.version}</bundle>
