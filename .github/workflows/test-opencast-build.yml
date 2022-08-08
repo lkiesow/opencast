@@ -158,11 +158,10 @@ jobs:
           s3cmd put -P *.commit opencast-dist-allinone*tar.gz s3://opencast-daily/
 
       - name: upload pull request artifact
-        working-directory: build
+        uses: actions/upload-artifact@v3
         if: >
           github.event_name == 'pull_request'
           && matrix.java == 11
-        uses: actions/upload-artifact@v3
         with:
           name: allinone-tarball
-          path: opencast-dist-allinone*tar.gz
+          path: build/opencast-dist-allinone*tar.gz
