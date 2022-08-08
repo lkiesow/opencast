@@ -1,5 +1,5 @@
 {
-  "name": "adminui",
+  "name": "admin-ui",
   "private": true,
   "devDependencies": {
     "autoprefixer": "^9.8.8",
