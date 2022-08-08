@@ -5,7 +5,7 @@
   <artifactId>base</artifactId>
   <version>12-SNAPSHOT</version>
   <packaging>pom</packaging>
-  <name>opencast</name>
+  <name>opencats</name>
   <description>Opencast is a media capture, processing, management and distribution system</description>
   <url>https://opencast.org</url>
   <inceptionYear>2009</inceptionYear>
