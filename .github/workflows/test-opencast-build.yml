@@ -156,3 +156,13 @@ jobs:
           && (github.ref == 'refs/heads/develop' || startsWith(github.ref, 'refs/heads/r/'))
         run: |
           s3cmd put -P *.commit opencast-dist-allinone*tar.gz s3://opencast-daily/
+
+      - name: upload pull request artifact
+        working-directory: build
+        if: >
+          github.event_name == 'pull_request'
+          && matrix.java == 11
+        uses: actions/upload-artifact@v3
+        with:
+          name: allinone-tarball
+          path: opencast-dist-allinone*tar.gz
