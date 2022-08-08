@@ -19,6 +19,6 @@ Steps to reproduce the behavior:
 4. See error
 
 **Environment Information**
- - OS: [e.g. iOS 8.1, CentOS 7]
+ - OS: [e.g. iOS 8.1, CentOS 8]
  - Browser [e.g. Safari, Chrome]
  - Opencast version with minor release [e.g. 7.0, 7.2, 7.x if using a branch]
