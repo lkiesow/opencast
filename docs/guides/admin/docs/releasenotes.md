@@ -1,4 +1,4 @@
-# Opencast 15: Release Notes
+# Opencast 16: Release Notes
 
 ## Opencast 15.3
 
