@@ -153,16 +153,22 @@ public class MetricsExporter {
     // track requests
     requests.inc();
 
+    logger.warn("01");
+    // TODO: Start at 0ms
     // track service states
     final List<ServiceState> serviceStates = serviceRegistry.getServiceRegistrations().parallelStream()
         .map(ServiceRegistration::getServiceState)
         .collect(Collectors.toList());
+    logger.warn("02");
+    // TODO: Reached at 31ms
     final long error = serviceStates.parallelStream().filter(ServiceState.ERROR::equals).count();
     final long warn = serviceStates.parallelStream().filter(ServiceState.WARNING::equals).count();
     servicesTotal.labels(ServiceState.NORMAL.name()).set(serviceStates.size() - error - warn);
     servicesTotal.labels(ServiceState.WARNING.name()).set(warn);
     servicesTotal.labels(ServiceState.ERROR.name()).set(error);
 
+    logger.warn("03");
+    // TODO: Reached at 32ms
     // prepare series for jobs and workflows so we get a zero value if there is no job
     Map<String, Integer> workflows = new HashMap<>();
     Map<String, Map<String, Integer>> jobs = new HashMap<>();
@@ -171,6 +177,8 @@ public class MetricsExporter {
       jobs.put(organization.getId(), new HashMap<>());
     }
 
+    logger.warn("04");
+    // TODO: Reached at 32ms
     // track host loads
     for (SystemLoad.NodeLoad nodeLoad: serviceRegistry.getCurrentHostLoads().getNodeLoads()) {
       jobLoadCurrent.labels(nodeLoad.getHost()).set(nodeLoad.getCurrentLoad());
@@ -182,6 +190,8 @@ public class MetricsExporter {
       }
     }
 
+    logger.warn("05");
+    // TODO: Reached at 34ms
     // count jobs and workflows
     for (Job job: serviceRegistry.getActiveJobs()) {
       Map<String, Integer> orgJobs = jobs.getOrDefault(job.getOrganization(), null);
@@ -193,11 +203,15 @@ public class MetricsExporter {
       }
     }
 
+    logger.warn("06");
+    // TODO: Reached at 23788ms (Block above took 23.754 seconds)
     // set workflows by organization
     for (Map.Entry<String, Integer> entry: workflows.entrySet()) {
       workflowsActive.labels(entry.getKey()).set(entry.getValue());
     }
 
+    logger.warn("07");
+    // TODO: Reached at 23789ms
     // set jobs by organization and host
     for (Map.Entry<String, Map<String, Integer>> entry: jobs.entrySet()) {
       for (Map.Entry<String, Integer> orgEntry: entry.getValue().entrySet()) {
@@ -205,6 +219,8 @@ public class MetricsExporter {
       }
     }
 
+    logger.warn("08");
+    // TODO: Reached at 23789ms
     // Get numbers from asset manager
     if (assetManager != null) {
       for (Organization organization: organizationDirectoryService.getOrganizations()) {
@@ -214,6 +230,8 @@ public class MetricsExporter {
       }
     }
 
+    logger.warn("09");
+    // TODO: Reached at 24801ms (Block above took 1.012 seconds)
     // collect metrics
     final StringWriter writer = new StringWriter();
     TextFormat.writeOpenMetrics100(writer, registry.metricFamilySamples());
