@@ -21,8 +21,8 @@
 
 package org.opencastproject.kernel.filter.proxy;
 
-import org.apache.commons.lang3.StringUtils;
 import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ServiceScope;
 import org.osgi.service.component.propertytypes.ServiceRanking;
 import org.osgi.service.http.whiteboard.propertytypes.HttpWhiteboardContextSelect;
@@ -42,8 +42,11 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 
 /**
- * This filter is looking for <code>X-FORWARDED-FOR</code> headers in the HTTP request and if found sets it as the
- * original IP.
+ * This filter is looking for <code>X-Forwarded-For</code> headers in the HTTP request and, if the request came from a
+ * trusted reverse proxy, sets the address found in it as the original IP.
+ * <p>
+ * It is the only place in Opencast which reads that header. Everything else asks the request for its remote address
+ * and hence needs this filter to run first, which is what its high service ranking is for.
  */
 @Component(
     service = Filter.class,
@@ -52,7 +55,9 @@ import javax.servlet.http.HttpServletRequest;
         "service.description=Transparent Proxy Filter",
     }
 )
-@ServiceRanking(6)
+// Must run before every filter relying on the client address or on FORWARDED_HEADERS_TRUSTED, namely HttpsFilter (990),
+// OrganizationFilter (980) and UrlSigningFilter (7)
+@ServiceRanking(995)
 @HttpWhiteboardFilterName("TransparentProxyFilter")
 @HttpWhiteboardFilterPattern("/*")
 @HttpWhiteboardContextSelect("(osgi.http.whiteboard.context.name=opencast)")
@@ -64,20 +69,45 @@ public class TransparentProxyFilter implements Filter {
   public static final String X_FORWARDED_FOR = "X-Forwarded-For";
 
   /**
+   * Request attribute set to <code>Boolean.TRUE</code> if the request was received from a trusted reverse proxy, so
+   * that filters running later can tell whether the remaining <code>X-Forwarded-*</code> headers mean anything. They
+   * cannot work this out themselves since the remote address has been rewritten by then.
+   */
+  public static final String FORWARDED_HEADERS_TRUSTED = "org.opencastproject.forwarded.trusted";
+
+  /** The trusted proxy configuration */
+  private TrustedProxies trustedProxies;
+
+  /** OSGi DI */
+  @Reference
+  public void setTrustedProxies(TrustedProxies trustedProxies) {
+    this.trustedProxies = trustedProxies;
+  }
+
+  /**
    * @see javax.servlet.Filter#doFilter(javax.servlet.ServletRequest, javax.servlet.ServletResponse,
    *      javax.servlet.FilterChain)
    */
   public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException,
           ServletException {
-    HttpServletRequest httpReqquest = (HttpServletRequest) request;
+    HttpServletRequest httpRequest = (HttpServletRequest) request;
 
-    // Check if the X-Forwarded-For header is set
-    if (StringUtils.isNotBlank(httpReqquest.getHeader(X_FORWARDED_FOR))) {
-      logger.debug("Found X-Forwarded-For header. Resetting source IP");
-      httpReqquest = new TransparentProxyRequestWrapper(httpReqquest);
+    final String peer = httpRequest.getRemoteAddr();
+    if (!trustedProxies.isTrusted(peer)) {
+      logger.debug("Request from '{}' which is not a trusted proxy. Ignoring X-Forwarded-* headers.", peer);
+      chain.doFilter(httpRequest, response);
+      return;
     }
 
-    chain.doFilter(httpReqquest, response);
+    httpRequest.setAttribute(FORWARDED_HEADERS_TRUSTED, Boolean.TRUE);
+
+    final String client = trustedProxies.resolveClientAddress(peer, httpRequest.getHeader(X_FORWARDED_FOR));
+    if (!peer.equals(client)) {
+      logger.debug("Trusted proxy '{}' reported client IP '{}'", peer, client);
+      httpRequest = new TransparentProxyRequestWrapper(httpRequest, client);
+    }
+
+    chain.doFilter(httpRequest, response);
   }
 
   public void init(FilterConfig filterConfig) throws ServletException {
