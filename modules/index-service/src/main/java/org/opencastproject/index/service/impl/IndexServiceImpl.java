@@ -23,6 +23,7 @@ package org.opencastproject.index.service.impl;
 
 import static org.opencastproject.metadata.dublincore.DublinCore.PROPERTY_IDENTIFIER;
 import static org.opencastproject.security.api.DefaultOrganization.DEFAULT_ORGANIZATION_ID;
+import static org.opencastproject.security.api.SecurityConstants.GLOBAL_ADMIN_ROLE;
 import static org.opencastproject.workflow.api.ConfiguredWorkflow.workflow;
 
 import org.opencastproject.assetmanager.api.AssetManager;
@@ -1462,6 +1463,8 @@ public class IndexServiceImpl implements IndexService {
   @Override
   public EventRemovalResult removeEvent(Event event, String retractWorkflowId)
           throws UnauthorizedException, WorkflowDatabaseException, NotFoundException {
+    assertCanDeleteEvent(event.getIdentifier());
+
     Set<Publication> filteredPublications = event.getPublications().stream()
         .filter(pub -> !pub.getChannel().equals(EventUtils.ENGAGE_LIVE_CHANNEL_ID))
         .collect(Collectors.toSet());
@@ -1471,12 +1474,56 @@ public class IndexServiceImpl implements IndexService {
       return EventRemovalResult.RETRACTING;
     } else {
       try {
-        final boolean success = removeEvent(event.getIdentifier());
+        final boolean success = removeEventUnchecked(event.getIdentifier());
         return success ? EventRemovalResult.SUCCESS : EventRemovalResult.GENERAL_FAILURE;
       } catch (NotFoundException e) {
         return EventRemovalResult.NOT_FOUND;
       }
     }
+  }
+
+  /**
+   * Ensure the current user is allowed to delete the given event.
+   * <p>
+   * The media package is resolved through the asset manager rather than through
+   * {@link #getEventMediapackage(Event)} on purpose: every event has a snapshot (the scheduler takes one when an event
+   * is scheduled, ingest takes one straight away), and unlike the index, publications or workflow state, that snapshot
+   * is still available while an event is being retracted. This keeps the check working for the deferred deletion done
+   * by {@link org.opencastproject.index.service.impl.util.RetractionListener}.
+   * <p>
+   * {@code SchedulerServiceImpl.assertCanRemoveEvent} performs the same check to protect the scheduler's own data.
+   * The only difference is that this method reports a non-existing event as {@link NotFoundException}, while the
+   * scheduler leaves that to its regular not-found handling. Keep both in sync until the permission checks are
+   * harmonized (see opencast/opencast#7873).
+   *
+   * @param id
+   *          the media package identifier of the event to delete
+   * @throws NotFoundException
+   *           if no such event exists in the current organization
+   * @throws UnauthorizedException
+   *           if the current user may not delete the event
+   */
+  private void assertCanDeleteEvent(String id) throws NotFoundException, UnauthorizedException {
+    final User user = securityService.getUser();
+    Optional<MediaPackage> mediaPackage = assetManager.getMediaPackage(id);
+    if (mediaPackage.isPresent()) {
+      // hasPermission() only evaluates the ACL, so administrators have to be let through explicitly. Checking the
+      // organization admin role is enough here: unless the user is a global admin, the asset manager only returns
+      // media packages of the current organization.
+      boolean isAdmin = user.hasRole(GLOBAL_ADMIN_ROLE)
+              || user.hasRole(securityService.getOrganization().getAdminRole());
+      if (!isAdmin && !authorizationService.hasPermission(mediaPackage.get(), Permissions.Action.WRITE.toString())) {
+        throw new UnauthorizedException(user, Permissions.Action.WRITE.toString());
+      }
+      return;
+    }
+
+    // The media package could not be read. Only report it as missing if it really does not exist, so that a user
+    // without read access does not learn anything about events they may not see.
+    if (assetManager.snapshotExists(id, securityService.getOrganization().getId())) {
+      throw new UnauthorizedException(user, Permissions.Action.WRITE.toString());
+    }
+    throw new NotFoundException("Event id " + id + " not found.");
   }
 
   private void retractAndRemoveEvent(String id, String retractWorkflowId)
@@ -1496,6 +1543,19 @@ public class IndexServiceImpl implements IndexService {
 
   @Override
   public boolean removeEvent(String id) throws NotFoundException, UnauthorizedException {
+    assertCanDeleteEvent(id);
+    return removeEventUnchecked(id);
+  }
+
+  /**
+   * Remove an event without checking whether the current user is allowed to do so. Callers are responsible for having
+   * performed that check, see {@link #assertCanDeleteEvent(String)}.
+   *
+   * @param id
+   *          the media package identifier of the event to delete
+   * @return true if the event was removed from all services which still knew about it
+   */
+  private boolean removeEventUnchecked(String id) throws NotFoundException, UnauthorizedException {
     boolean unauthorizedWorkflow = false;
     boolean notFoundWorkflow = false;
     boolean removedWorkflow = false;
@@ -1548,8 +1608,10 @@ public class IndexServiceImpl implements IndexService {
     try {
       List<Snapshot> snapshots = assetManager.getSnapshotsById(id);
       if (snapshots.size() > 0) {
-        assetManager.deleteSnapshots(id);
-        removedArchive = true;
+        // deleteSnapshots() does not throw if the user is not allowed to delete. It just does not delete anything,
+        // so the number of deleted snapshots is what tells us whether the deletion actually happened.
+        removedArchive = assetManager.deleteSnapshots(id) > 0;
+        unauthorizedArchive = !removedArchive;
       } else {
         notFoundArchive = true;
       }

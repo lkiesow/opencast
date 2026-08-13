@@ -29,6 +29,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.opencastproject.db.DBTestEnv.getDbSessionFactory;
@@ -116,7 +117,9 @@ import org.opencastproject.security.api.Organization;
 import org.opencastproject.security.api.OrganizationDirectoryService;
 import org.opencastproject.security.api.Role;
 import org.opencastproject.security.api.SecurityService;
+import org.opencastproject.security.api.UnauthorizedException;
 import org.opencastproject.security.api.User;
+import org.opencastproject.security.util.SecurityUtil;
 import org.opencastproject.series.api.SeriesService;
 import org.opencastproject.util.FileSupport;
 import org.opencastproject.util.IoSupport;
@@ -208,6 +211,8 @@ public class SchedulerServiceImplTest {
 
   private static AccessControlList acl;
 
+  private static AuthorizationService authorizationService;
+
   private static Map<String, String> wfProperties = new HashMap<>();
   private static Map<String, String> wfPropertiesUpdated = new HashMap<>();
 
@@ -222,12 +227,16 @@ public class SchedulerServiceImplTest {
 
     workspace = new UnitTestWorkspace();
 
-    AuthorizationService authorizationService = EasyMock.createNiceMock(AuthorizationService.class);
+    authorizationService = EasyMock.createNiceMock(AuthorizationService.class);
     acl = new AccessControlList(new AccessControlEntry("ROLE_ADMIN", "write", true),
             new AccessControlEntry("ROLE_ADMIN", "read", true), new AccessControlEntry("ROLE_USER", "read", true));
     EasyMock.expect(
             authorizationService.getActiveAcl(EasyMock.anyObject(MediaPackage.class)))
             .andReturn(tuple(acl, AclScope.Episode)).anyTimes();
+    // The tests run as an administrator, who the above ACL grants write access to.
+    EasyMock.expect(
+            authorizationService.hasPermission(EasyMock.anyObject(MediaPackage.class), EasyMock.anyString()))
+            .andReturn(true).anyTimes();
 
 
     orgDirectoryService = EasyMock.createNiceMock(OrganizationDirectoryService.class);
@@ -1208,6 +1217,90 @@ public class SchedulerServiceImplTest {
       Assert.fail("No media package should be found since it has been deleted before");
     } catch (NotFoundException ignore) {
     }
+  }
+
+  /**
+   * A user without write access must not be able to remove a scheduled event, and nothing may be deleted while finding
+   * that out.
+   */
+  @Test
+  public void testRemoveEventWithoutWriteAccess() throws Exception {
+    final Date start = new Date(System.currentTimeMillis() - 160000);
+    final Date end = new Date(System.currentTimeMillis() - 60000);
+    final String captureDeviceID = "demo";
+    final MediaPackage mp = generateEvent(Optional.empty());
+    final String mpId = mp.getIdentifier().toString();
+    final DublinCoreCatalog event = generateEvent(captureDeviceID, start, end);
+    addDublinCore(Optional.empty(), mp, event);
+    schedSvc.addEvent(start, end, captureDeviceID, Collections.<String> emptySet(), mp, wfProperties,
+            generateCaptureAgentMetadata(captureDeviceID), Optional.empty());
+
+    // Deny write access for the duration of this test only. The scheduler service is shared between tests, so the
+    // permissive mock has to be put back afterwards.
+    AuthorizationService denyingAuthorizationService = EasyMock.createNiceMock(AuthorizationService.class);
+    EasyMock.expect(denyingAuthorizationService.getActiveAcl(EasyMock.anyObject(MediaPackage.class)))
+            .andReturn(tuple(acl, AclScope.Episode)).anyTimes();
+    EasyMock.expect(
+            denyingAuthorizationService.hasPermission(EasyMock.anyObject(MediaPackage.class), EasyMock.anyString()))
+            .andReturn(false).anyTimes();
+    EasyMock.replay(denyingAuthorizationService);
+
+    try {
+      schedSvc.setAuthorizationService(denyingAuthorizationService);
+      assertThrows(UnauthorizedException.class, () -> schedSvc.removeEvent(mpId));
+    } finally {
+      schedSvc.setAuthorizationService(authorizationService);
+    }
+
+    // The event must still be there
+    assertTrue("The event must not have been removed", assetManager.snapshotExists(mpId));
+    assertNotNull("The event must still be scheduled", schedSvc.getMediaPackage(mpId));
+
+    // Clean up, the scheduler database is shared between the tests of this class
+    schedSvc.removeEvent(mpId);
+  }
+
+  /**
+   * Administrators may remove an event even if its ACL does not grant them write access. This in particular covers the
+   * system user which removes outdated scheduled events.
+   */
+  @Test
+  public void testRemoveEventAsAdminWithoutAclWriteAccess() throws Exception {
+    final Date start = new Date(System.currentTimeMillis() - 160000);
+    final Date end = new Date(System.currentTimeMillis() - 60000);
+    final String captureDeviceID = "demo";
+    final MediaPackage mp = generateEvent(Optional.empty());
+    final String mpId = mp.getIdentifier().toString();
+    final DublinCoreCatalog event = generateEvent(captureDeviceID, start, end);
+    addDublinCore(Optional.empty(), mp, event);
+    schedSvc.addEvent(start, end, captureDeviceID, Collections.<String> emptySet(), mp, wfProperties,
+            generateCaptureAgentMetadata(captureDeviceID), Optional.empty());
+
+    // The ACL does not grant write access to anyone, but the system user is an administrator
+    AuthorizationService denyingAuthorizationService = EasyMock.createNiceMock(AuthorizationService.class);
+    EasyMock.expect(denyingAuthorizationService.getActiveAcl(EasyMock.anyObject(MediaPackage.class)))
+            .andReturn(tuple(acl, AclScope.Episode)).anyTimes();
+    EasyMock.expect(
+            denyingAuthorizationService.hasPermission(EasyMock.anyObject(MediaPackage.class), EasyMock.anyString()))
+            .andReturn(false).anyTimes();
+    EasyMock.replay(denyingAuthorizationService);
+
+    User systemUser = SecurityUtil.createSystemUser("opencast_system_account", currentOrg);
+    SecurityService systemSecurityService = EasyMock.createNiceMock(SecurityService.class);
+    EasyMock.expect(systemSecurityService.getUser()).andReturn(systemUser).anyTimes();
+    EasyMock.expect(systemSecurityService.getOrganization()).andReturn(currentOrg).anyTimes();
+    EasyMock.replay(systemSecurityService);
+
+    try {
+      schedSvc.setAuthorizationService(denyingAuthorizationService);
+      schedSvc.setSecurityService(systemSecurityService);
+      schedSvc.removeEvent(mpId);
+    } finally {
+      schedSvc.setAuthorizationService(authorizationService);
+      schedSvc.setSecurityService(securityService);
+    }
+
+    assertThrows(NotFoundException.class, () -> schedSvc.getMediaPackage(mpId));
   }
 
   @Test

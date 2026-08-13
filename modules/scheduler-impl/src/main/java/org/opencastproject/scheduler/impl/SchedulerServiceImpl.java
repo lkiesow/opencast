@@ -77,6 +77,7 @@ import org.opencastproject.security.api.AccessControlUtil;
 import org.opencastproject.security.api.AuthorizationService;
 import org.opencastproject.security.api.Organization;
 import org.opencastproject.security.api.OrganizationDirectoryService;
+import org.opencastproject.security.api.Permissions;
 import org.opencastproject.security.api.SecurityService;
 import org.opencastproject.security.api.UnauthorizedException;
 import org.opencastproject.security.api.User;
@@ -821,6 +822,38 @@ public class SchedulerServiceImpl extends AbstractIndexProducer implements Sched
             || securityService.getUser().hasRole(securityService.getOrganization().getAdminRole()));
   }
 
+  /**
+   * Ensure the current user is allowed to remove the given event, before anything is actually removed.
+   * <p>
+   * {@code IndexServiceImpl.assertCanDeleteEvent} performs the same check before deleting an event from all services.
+   * The only difference is that this method does not report a non-existing event, but leaves that to the regular
+   * not-found handling of the caller. Keep both in sync until the permission checks are harmonized (see
+   * opencast/opencast#7873).
+   *
+   * @param mediaPackageId
+   *          the media package identifier of the event to remove
+   * @throws UnauthorizedException
+   *           if the current user may not remove the event
+   */
+  private void assertCanRemoveEvent(String mediaPackageId) throws UnauthorizedException {
+    Optional<MediaPackage> mediaPackage = assetManager.getMediaPackage(mediaPackageId);
+    if (mediaPackage.isPresent()) {
+      // hasPermission() only evaluates the ACL, so administrators have to be let through explicitly. Checking the
+      // organization admin role is enough here: unless the user is a global admin, the asset manager only returns
+      // media packages of the current organization.
+      if (!isAdmin() && !authorizationService.hasPermission(mediaPackage.get(), Permissions.Action.WRITE.toString())) {
+        throw new UnauthorizedException(securityService.getUser(), Permissions.Action.WRITE.toString());
+      }
+      return;
+    }
+
+    // The media package could not be read. If it exists nonetheless, the current user is not allowed to see it and
+    // must not be allowed to remove it either. If it does not exist, leave it to the regular not-found handling.
+    if (assetManager.snapshotExists(mediaPackageId, securityService.getOrganization().getId())) {
+      throw new UnauthorizedException(securityService.getUser(), Permissions.Action.WRITE.toString());
+    }
+  }
+
   private Optional<DublinCoreCatalog> loadEpisodeDublinCoreFromAsset(Snapshot snapshot) {
     Optional<MediaPackageElement> dcCatalog = Arrays.stream(snapshot.getMediaPackage().getElements())
             .filter(MediaPackageSupport.Filters::isEpisodeDublinCore)
@@ -850,8 +883,9 @@ public class SchedulerServiceImpl extends AbstractIndexProducer implements Sched
 
   @Override
   public synchronized void removeEvent(String mediaPackageId)
-          throws NotFoundException, SchedulerException {
+          throws NotFoundException, UnauthorizedException, SchedulerException {
     notEmpty(mediaPackageId, "mediaPackageId");
+    assertCanRemoveEvent(mediaPackageId);
 
     boolean notFoundInDatabase = false;
     boolean notFoundInAssetManager;
